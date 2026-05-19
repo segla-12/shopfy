@@ -16,6 +16,13 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://shopfy.site"),
   title: "Shopfy - Marketplace moderne",
   description: "Acheter et vendre simplement avec Shopfy.",
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/shopfy-favicon.png", type: "image/png", sizes: "512x512" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
   alternates: {
     canonical: "/",
   },
