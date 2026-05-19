@@ -4,36 +4,53 @@ import type {
   ProductCreateInput,
   ProductOwnershipInput,
   ProductUpdateInput,
+  SupabaseProductRow,
 } from "@/types/marketplace";
 import { supabase } from "@/lib/supabase";
-import { mapSupabaseProduct, PRODUCT_SELECT_FIELDS } from "@/lib/productMapping";
+import {
+  mapSupabaseProduct,
+  PRODUCT_SELECT_FIELDS,
+  PRODUCT_SELECT_FIELDS_WITH_CERTIFICATION,
+} from "@/lib/productMapping";
 
 export async function getProducts(): Promise<Product[]> {
-  const { data, error } = await supabase
+  const result = await supabase
     .from("products")
-    .select(PRODUCT_SELECT_FIELDS)
+    .select(PRODUCT_SELECT_FIELDS_WITH_CERTIFICATION)
     .order("is_certified", { ascending: false })
     .order("created_at", { ascending: false });
 
-  if (error) {
-    return [];
+  if (result.error) {
+    const fallback = await supabase
+      .from("products")
+      .select(PRODUCT_SELECT_FIELDS)
+      .order("is_certified", { ascending: false })
+      .order("created_at", { ascending: false });
+
+    return fallback.error ? [] : mapProductRows(fallback.data);
   }
 
-  return (data || []).map(mapSupabaseProduct);
+  return mapProductRows(result.data);
 }
 
 export async function getProductById(id: string): Promise<Product | null> {
-  const { data, error } = await supabase
+  const result = await supabase
     .from("products")
-    .select(PRODUCT_SELECT_FIELDS)
+    .select(PRODUCT_SELECT_FIELDS_WITH_CERTIFICATION)
     .eq("id", id)
     .single();
 
-  if (error) {
-    return null;
+  if (result.error) {
+    const fallback = await supabase
+      .from("products")
+      .select(PRODUCT_SELECT_FIELDS)
+      .eq("id", id)
+      .single();
+
+    return fallback.error ? null : mapSupabaseProduct(fallback.data as unknown as SupabaseProductRow);
   }
 
-  return mapSupabaseProduct(data);
+  return mapSupabaseProduct(result.data as unknown as SupabaseProductRow);
 }
 
 export async function createProduct(product: ProductCreateInput): Promise<Product | null> {
@@ -49,28 +66,47 @@ export async function createProduct(product: ProductCreateInput): Promise<Produc
       location: product.location || "",
       is_certified: false,
     })
-    .select(PRODUCT_SELECT_FIELDS)
+    .select(PRODUCT_SELECT_FIELDS_WITH_CERTIFICATION)
     .single();
 
   if (error) {
-    return null;
+    const fallback = await supabase
+      .from("products")
+      .select(PRODUCT_SELECT_FIELDS)
+      .eq("title", product.title)
+      .eq("phone", product.sellerPhone)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (fallback.error) {
+      return null;
+    }
+
+    return mapSupabaseProduct(fallback.data);
   }
 
-  return mapSupabaseProduct(data);
+  return mapSupabaseProduct(data as unknown as SupabaseProductRow);
 }
 
 export async function getProductsByPhone(phone: string): Promise<Product[]> {
-  const { data, error } = await supabase
+  const result = await supabase
     .from("products")
-    .select(PRODUCT_SELECT_FIELDS)
+    .select(PRODUCT_SELECT_FIELDS_WITH_CERTIFICATION)
     .eq("phone", phone)
     .order("created_at", { ascending: false });
 
-  if (error) {
-    return [];
+  if (result.error) {
+    const fallback = await supabase
+      .from("products")
+      .select(PRODUCT_SELECT_FIELDS)
+      .eq("phone", phone)
+      .order("created_at", { ascending: false });
+
+    return fallback.error ? [] : mapProductRows(fallback.data);
   }
 
-  return (data || []).map(mapSupabaseProduct);
+  return mapProductRows(result.data);
 }
 
 export async function updateProductByPhone(
@@ -108,4 +144,8 @@ export async function deleteProductByPhone(ownership: ProductOwnershipInput): Pr
 export async function setProductCertification(_input: ProductCertificationInput): Promise<Product | null> {
   void _input;
   return null;
+}
+
+function mapProductRows(rows: unknown) {
+  return ((rows || []) as SupabaseProductRow[]).map(mapSupabaseProduct);
 }

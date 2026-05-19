@@ -13,6 +13,10 @@ export type Product = {
   sellerId?: string;
   isNew?: boolean;
   isCertified?: boolean;
+  certificationStartedAt?: string;
+  certificationExpiresAt?: string;
+  certificationDurationMonths?: number;
+  certificationAmount?: number;
   createdAt?: string;
 };
 
@@ -42,6 +46,10 @@ export type SupabaseProductRow = {
   phone: string;
   location?: string | null;
   is_certified: boolean;
+  certification_started_at?: string | null;
+  certification_expires_at?: string | null;
+  certification_duration_months?: number | null;
+  certification_amount?: number | null;
   created_at: string;
 };
 

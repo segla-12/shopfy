@@ -15,6 +15,8 @@ export default function AdminPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
+  const [certificationDates, setCertificationDates] = useState<Record<string, string>>({});
+  const [certificationDurations, setCertificationDurations] = useState<Record<string, number>>({});
 
   async function handleUnlock(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -47,6 +49,8 @@ export default function AdminPage() {
     setIsLoading(true);
     setMessage("");
 
+    const durationMonths = certificationDurations[product.id] || 1;
+    const certificationStartDate = certificationDates[product.id] || getTodayInputDate();
     const response = await fetch("/api/admin/certification", {
       method: "POST",
       headers: {
@@ -56,6 +60,8 @@ export default function AdminPage() {
         adminSecret,
         productId: product.id,
         isCertified,
+        certificationStartDate,
+        durationMonths,
       }),
     });
 
@@ -69,7 +75,7 @@ export default function AdminPage() {
 
     const loadedProducts = await getProducts();
     setProducts(loadedProducts);
-    setMessage(isCertified ? "Annonce certifiee." : "Certification retiree.");
+    setMessage(result.message || (isCertified ? `Annonce certifiee pour ${durationMonths} mois.` : "Certification retiree."));
     setIsLoading(false);
   }
 
@@ -82,7 +88,7 @@ export default function AdminPage() {
           <p className="text-sm font-black uppercase tracking-wide text-orange-500">Administration</p>
           <h1 className="mt-2 text-4xl font-black tracking-tight text-gray-950">Certification des annonces</h1>
           <p className="mt-3 max-w-2xl leading-7 text-gray-600">
-            Page privee non liee dans la navigation. Entre ton code admin pour gerer les badges.
+            Gere les annonces certifiees, la duree payee et la date d&apos;expiration. Tarif: 1500 FCFA par mois.
           </p>
         </div>
 
@@ -124,15 +130,51 @@ export default function AdminPage() {
                     </div>
                     <p className="mt-1 font-black text-orange-500">{formatPrice(product.price)} FCFA</p>
                     <p className="mt-1 text-sm text-gray-500">{product.category}</p>
+                    <div className="mt-3 grid gap-1 text-sm text-gray-500">
+                      <p>Certification: {getCertificationStatus(product)}</p>
+                      <p>Expiration: {formatCertificationDate(product.certificationExpiresAt)}</p>
+                      <p>Montant: {formatPrice(product.certificationAmount || getCertificationAmount(certificationDurations[product.id] || 1))} FCFA</p>
+                    </div>
                   </div>
 
-                  <div className="grid gap-2 sm:w-52">
+                  <div className="grid gap-2 sm:w-64">
+                    <label className="grid gap-1">
+                      <span className="text-xs font-black uppercase tracking-wide text-gray-500">Date debut</span>
+                      <input
+                        type="date"
+                        value={certificationDates[product.id] || getTodayInputDate()}
+                        onChange={(event) => setCertificationDates((dates) => ({
+                          ...dates,
+                          [product.id]: event.target.value,
+                        }))}
+                        className="min-h-10 rounded-xl border border-gray-200 px-3 text-sm outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100"
+                      />
+                    </label>
+
+                    <label className="grid gap-1">
+                      <span className="text-xs font-black uppercase tracking-wide text-gray-500">Duree</span>
+                      <select
+                        value={certificationDurations[product.id] || 1}
+                        onChange={(event) => setCertificationDurations((durations) => ({
+                          ...durations,
+                          [product.id]: Number(event.target.value),
+                        }))}
+                        className="min-h-10 rounded-xl border border-gray-200 px-3 text-sm font-bold outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100"
+                      >
+                        <option value={1}>1 mois - 1500 FCFA</option>
+                        <option value={2}>2 mois - 3000 FCFA</option>
+                        <option value={3}>3 mois - 4500 FCFA</option>
+                        <option value={6}>6 mois - 9000 FCFA</option>
+                        <option value={12}>12 mois - 18000 FCFA</option>
+                      </select>
+                    </label>
+
                     <button
                       onClick={() => handleCertification(product, true)}
-                      disabled={isLoading || product.isCertified}
+                      disabled={isLoading}
                       className="min-h-10 rounded-full bg-blue-600 px-4 text-sm font-black text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      Certifier
+                      {product.isCertified ? "Renouveler" : "Certifier"}
                     </button>
                     <button
                       onClick={() => handleCertification(product, false)}
@@ -152,4 +194,36 @@ export default function AdminPage() {
       <Footer />
     </main>
   );
+}
+
+function getTodayInputDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function getCertificationAmount(durationMonths: number) {
+  return durationMonths * 1500;
+}
+
+function formatCertificationDate(date?: string) {
+  if (!date) {
+    return "Non definie";
+  }
+
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(new Date(date));
+}
+
+function getCertificationStatus(product: Product) {
+  if (product.isCertified) {
+    return "Active";
+  }
+
+  if (product.certificationExpiresAt && new Date(product.certificationExpiresAt).getTime() <= Date.now()) {
+    return "Expiree";
+  }
+
+  return "Non certifiee";
 }
