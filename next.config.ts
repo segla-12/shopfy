@@ -9,6 +9,21 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: "/:path*",
+        has: [
+          {
+            type: "host",
+            value: "shopfy-plum\\.vercel\\.app",
+          },
+        ],
+        destination: "https://shopfy.site/:path*",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {
