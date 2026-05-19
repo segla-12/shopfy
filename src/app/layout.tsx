@@ -13,8 +13,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://shopfy.site"),
   title: "Shopfy - Marketplace moderne",
   description: "Acheter et vendre simplement avec Shopfy.",
+  alternates: {
+    canonical: "/",
+  },
 };
 
 export default function RootLayout({
