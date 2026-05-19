@@ -126,7 +126,7 @@ export default function ManagePage() {
           <p className="text-sm font-black uppercase tracking-wide text-orange-500">Gestion annonce</p>
           <h1 className="mt-2 text-4xl font-black tracking-tight text-gray-950">Modifier ou supprimer une annonce</h1>
           <p className="mt-3 max-w-2xl leading-7 text-gray-600">
-            Entrez le meme numero que celui utilise lors de la publication.
+            Entrez le même numéro que celui utiliser lors de la publication.
           </p>
         </div>
 
@@ -136,7 +136,7 @@ export default function ManagePage() {
             onChange={(event) => setPhone(event.target.value)}
             required
             type="tel"
-            placeholder="Numero utilise pour publier"
+            placeholder="Numéro utiliser pour publier"
             className="min-h-12 flex-1 rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100"
           />
           <button disabled={isLoading} className="min-h-12 rounded-full bg-orange-500 px-5 text-sm font-black text-white transition hover:bg-orange-600 disabled:cursor-wait disabled:opacity-70">

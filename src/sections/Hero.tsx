@@ -11,7 +11,7 @@ export function Hero() {
             Trouve, compare et contacte les vendeurs plus vite.
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-gray-600">
-            Shopfy rassemble les produits locaux dans une experience claire, rapide et prete pour passer a Supabase.
+            Shopfy rassemble les produits locaux dans une experience claire, rapide et facile à utiliser.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <ButtonLink href="#products">Explorer les produits</ButtonLink>

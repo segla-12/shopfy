@@ -51,7 +51,7 @@ export function ProductCard({ product }: ProductCardProps) {
             href={detailHref}
             className="inline-flex min-h-10 items-center justify-center rounded-full border border-gray-200 text-sm font-bold text-gray-900 transition hover:border-orange-200 hover:text-orange-600"
           >
-            Voir detail
+            Voir détails
           </Link>
           <WhatsappButton phone={product.sellerPhone} />
         </div>
