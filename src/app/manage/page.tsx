@@ -3,16 +3,19 @@
 /* eslint-disable @next/next/no-img-element */
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import { Navbar } from "@/components/Navbar";
 import { productCategories } from "@/data/categories";
 import { formatPrice } from "@/lib/format";
+import { TranslationKey } from "@/lib/i18n";
+import { useLanguage } from "@/lib/language";
 import {
   deleteProductByPhone,
   getProductsByPhone,
   updateProductByPhone,
 } from "@/services/productService";
 import type { Product, ProductCategory } from "@/types/marketplace";
+import { PhoneInput } from "@/ui/PhoneInput";
 
 function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -25,16 +28,17 @@ function fileToDataUrl(file: File): Promise<string> {
 
 export default function ManagePage() {
   const router = useRouter();
+  const { t, categoryLabel } = useLanguage();
   const [phone, setPhone] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [message, setMessage] = useState("");
+  const [messageKey, setMessageKey] = useState<TranslationKey | "">("");
   const [isLoading, setIsLoading] = useState(false);
 
   async function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsLoading(true);
-    setMessage("");
+    setMessageKey("");
     setSelectedProduct(null);
 
     const results = await getProductsByPhone(phone);
@@ -43,7 +47,7 @@ export default function ManagePage() {
     setIsLoading(false);
 
     if (results.length === 0) {
-      setMessage("Aucune annonce trouvee pour ce numero.");
+      setMessageKey("manage.noProducts");
     }
   }
 
@@ -55,7 +59,7 @@ export default function ManagePage() {
     }
 
     setIsLoading(true);
-    setMessage("");
+    setMessageKey("");
 
     const formData = new FormData(event.currentTarget);
     const imageFile = formData.get("image");
@@ -79,7 +83,7 @@ export default function ManagePage() {
     );
 
     if (!updatedProduct) {
-      setMessage("Modification refusee. Verifiez que le numero correspond a cette annonce.");
+      setMessageKey("manage.updateDenied");
       setIsLoading(false);
       return;
     }
@@ -87,7 +91,7 @@ export default function ManagePage() {
     const refreshedProducts = await getProductsByPhone(phone);
     setProducts(refreshedProducts);
     setSelectedProduct(updatedProduct);
-    setMessage("Modification réussie.");
+    setMessageKey("manage.updateSuccess");
     setIsLoading(false);
 
     window.setTimeout(() => {
@@ -97,7 +101,7 @@ export default function ManagePage() {
 
   async function handleDelete(product: Product) {
     setIsLoading(true);
-    setMessage("");
+    setMessageKey("");
 
     const deleted = await deleteProductByPhone({
       productId: product.id,
@@ -105,7 +109,7 @@ export default function ManagePage() {
     });
 
     if (!deleted) {
-      setMessage("Suppression refusee. Verifiez que le numero correspond a cette annonce.");
+      setMessageKey("manage.deleteDenied");
       setIsLoading(false);
       return;
     }
@@ -113,40 +117,38 @@ export default function ManagePage() {
     const refreshedProducts = await getProductsByPhone(phone);
     setProducts(refreshedProducts);
     setSelectedProduct(null);
-    setMessage("Annonce supprimee avec succes.");
+    setMessageKey("manage.deleteSuccess");
     setIsLoading(false);
   }
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-gray-50 transition-colors dark:bg-gray-950">
       <Navbar />
 
       <section className="mx-auto max-w-5xl px-4 py-10">
         <div className="mb-7">
-          <p className="text-sm font-black uppercase tracking-wide text-orange-500">Gestion annonce</p>
-          <h1 className="mt-2 text-4xl font-black tracking-tight text-gray-950">Modifier ou supprimer une annonce</h1>
-          <p className="mt-3 max-w-2xl leading-7 text-gray-600">
-            Entrez le même numéro que celui utiliser lors de la publication.
+          <p className="text-sm font-black uppercase tracking-wide text-orange-500">{t("manage.kicker")}</p>
+          <h1 className="mt-2 text-4xl font-black tracking-tight text-gray-950 dark:text-white">{t("manage.title")}</h1>
+          <p className="mt-3 max-w-2xl leading-7 text-gray-600 dark:text-gray-300">
+            {t("manage.description")}
           </p>
         </div>
 
-        <form onSubmit={handleSearch} className="mb-6 flex flex-col gap-3 rounded-3xl border border-gray-100 bg-white p-5 shadow-sm sm:flex-row">
-          <input
+        <form onSubmit={handleSearch} className="mb-6 grid gap-4 rounded-3xl border border-gray-100 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-gray-900 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+          <PhoneInput
+            name="sellerPhone"
+            label={t("phone.manageLabel")}
             value={phone}
-            onChange={(event) => setPhone(event.target.value)}
-            required
-            type="tel"
-            placeholder="Numéro utiliser pour publier"
-            className="min-h-12 flex-1 rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100"
+            onChange={setPhone}
           />
           <button disabled={isLoading} className="min-h-12 rounded-full bg-orange-500 px-5 text-sm font-black text-white transition hover:bg-orange-600 disabled:cursor-wait disabled:opacity-70">
-            {isLoading ? "Recherche..." : "Retrouver mes annonces"}
+            {isLoading ? t("manage.searching") : t("manage.searchButton")}
           </button>
         </form>
 
-        {message ? (
+        {messageKey ? (
           <p className="mb-6 rounded-2xl border border-gray-100 bg-white p-4 text-sm font-bold text-gray-700">
-            {message}
+            {t(messageKey)}
           </p>
         ) : null}
 
@@ -159,16 +161,16 @@ export default function ManagePage() {
                   <div className="min-w-0 flex-1">
                     <h2 className="font-black text-gray-950">{product.title}</h2>
                     <p className="mt-1 font-black text-orange-500">{formatPrice(product.price)} FCFA</p>
-                    <p className="mt-1 text-sm text-gray-500">{product.category}</p>
+                    <p className="mt-1 text-sm text-gray-500">{categoryLabel(product.category)}</p>
                   </div>
                 </div>
 
                 <div className="mt-4 grid gap-2 sm:grid-cols-2">
                   <button onClick={() => setSelectedProduct(product)} className="min-h-10 rounded-full border border-gray-200 text-sm font-bold text-gray-900 transition hover:border-orange-200 hover:text-orange-600">
-                    Modifier
+                    {t("manage.edit")}
                   </button>
                   <button onClick={() => handleDelete(product)} className="min-h-10 rounded-full bg-red-500 text-sm font-bold text-white transition hover:bg-red-600">
-                    Supprimer
+                    {t("manage.delete")}
                   </button>
                 </div>
               </article>
@@ -177,44 +179,44 @@ export default function ManagePage() {
 
           {selectedProduct ? (
             <form onSubmit={handleUpdate} className="grid gap-5 rounded-3xl border border-gray-100 bg-white p-5 shadow-sm md:p-8">
-              <h2 className="text-2xl font-black text-gray-950">Modifier l&apos;annonce</h2>
+              <h2 className="text-2xl font-black text-gray-950">{t("manage.editTitle")}</h2>
 
               <label className="grid gap-2">
-                <span className="text-sm font-black text-gray-900">Titre</span>
+                <span className="text-sm font-black text-gray-900">{t("sell.titleLabel")}</span>
                 <input name="title" required defaultValue={selectedProduct.title} className="min-h-12 rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100" />
               </label>
 
               <label className="grid gap-2">
-                <span className="text-sm font-black text-gray-900">Prix</span>
+                <span className="text-sm font-black text-gray-900">{t("sell.priceLabel")}</span>
                 <input name="price" required type="number" min="1" defaultValue={selectedProduct.price} className="min-h-12 rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100" />
               </label>
 
               <label className="grid gap-2">
-                <span className="text-sm font-black text-gray-900">Categorie</span>
+                <span className="text-sm font-black text-gray-900">{t("manage.categoryLabel")}</span>
                 <select name="category" defaultValue={selectedProduct.category} className="min-h-12 rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100">
                   {productCategories.map((category) => (
-                    <option key={category} value={category}>{category}</option>
+                    <option key={category} value={category}>{categoryLabel(category)}</option>
                   ))}
                 </select>
               </label>
 
               <label className="grid gap-2">
-                <span className="text-sm font-black text-gray-900">Localisation</span>
+                <span className="text-sm font-black text-gray-900">{t("sell.locationLabel")}</span>
                 <input name="location" defaultValue={selectedProduct.location || ""} className="min-h-12 rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100" />
               </label>
 
               <label className="grid gap-2">
-                <span className="text-sm font-black text-gray-900">Image</span>
+                <span className="text-sm font-black text-gray-900">{t("sell.imageLabel")}</span>
                 <input name="image" type="file" accept="image/*" className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-4 text-sm" />
               </label>
 
               <label className="grid gap-2">
-                <span className="text-sm font-black text-gray-900">Description</span>
+                <span className="text-sm font-black text-gray-900">{t("sell.descriptionLabel")}</span>
                 <textarea name="description" required rows={5} defaultValue={selectedProduct.description} className="rounded-2xl border border-gray-200 px-4 py-3 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100" />
               </label>
 
               <button disabled={isLoading} className="min-h-12 rounded-full bg-orange-500 px-5 text-sm font-black text-white transition hover:bg-orange-600 disabled:cursor-wait disabled:opacity-70">
-                {isLoading ? "Enregistrement..." : "Enregistrer les modifications"}
+                {isLoading ? t("manage.saving") : t("manage.save")}
               </button>
             </form>
           ) : null}

@@ -1,6 +1,8 @@
 @import "../styles/theme.css";
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 * {
   box-sizing: border-box;
 }
@@ -14,6 +16,7 @@ body {
   background: var(--shopfy-bg);
   color: var(--shopfy-text);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  transition: background-color 200ms ease, color 200ms ease;
 }
 
 button,
@@ -25,4 +28,57 @@ textarea {
 
 img {
   display: block;
+}
+
+@keyframes safetyNoticeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+html.dark body {
+  background: #030712;
+  color: #f9fafb;
+}
+
+html.dark input,
+html.dark select,
+html.dark textarea {
+  color: #f9fafb;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #9ca3af;
+}
+
+html.dark .bg-white {
+  background-color: #111827;
+}
+
+html.dark .bg-gray-50 {
+  background-color: #111827;
+}
+
+html.dark .border-gray-100,
+html.dark .border-gray-200,
+html.dark .border-gray-300 {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+html.dark .text-gray-950,
+html.dark .text-gray-900 {
+  color: #f9fafb;
+}
+
+html.dark .text-gray-700,
+html.dark .text-gray-600,
+html.dark .text-gray-500 {
+  color: #d1d5db;
 }

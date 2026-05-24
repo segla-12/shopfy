@@ -1,15 +1,21 @@
+"use client";
+
+import { useLanguage } from "@/lib/language";
+
 export function Footer() {
+  const { t } = useLanguage();
+
   return (
-    <footer className="border-t border-gray-100 bg-white">
+    <footer className="border-t border-gray-100 bg-white transition-colors dark:border-white/10 dark:bg-gray-950">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-center gap-5 px-4 py-8 text-center text-sm text-gray-500 md:flex-row md:justify-between md:text-left">
         <div className="grid gap-1">
           <p className="text-lg font-black tracking-tight text-orange-500">Shopfy</p>
-          <p className="font-semibold text-gray-600">© 2025 - Tous droits réservés</p>
+          <p className="font-semibold text-gray-600">{t("footer.rights")}</p>
         </div>
 
         <div className="flex items-center justify-center gap-3">
           <a
-            href="https://wa.me/2290159398749"
+            href="https://wa.me/2290149341219"
             target="_blank"
             rel="noopener noreferrer"
             aria-label="WhatsApp"

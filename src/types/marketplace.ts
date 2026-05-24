@@ -9,7 +9,11 @@ export type Product = {
   images?: string[];
   description: string;
   location?: string;
+  country?: string;
+  city?: string;
   sellerPhone: string;
+  sellerName?: string;
+  sellerPhoto?: string;
   sellerId?: string;
   isNew?: boolean;
   isCertified?: boolean;
@@ -23,7 +27,7 @@ export type Product = {
 export type ProductCreateInput = Omit<Product, "id" | "createdAt" | "isCertified">;
 
 export type ProductUpdateInput = Partial<
-  Pick<Product, "title" | "price" | "category" | "image" | "description" | "location">
+  Pick<Product, "title" | "price" | "category" | "image" | "description" | "location" | "country" | "city">
 >;
 
 export type ProductOwnershipInput = {
@@ -45,6 +49,10 @@ export type SupabaseProductRow = {
   category: string;
   phone: string;
   location?: string | null;
+  country?: string | null;
+  city?: string | null;
+  seller_name?: string | null;
+  seller_photo?: string | null;
   is_certified: boolean;
   certification_started_at?: string | null;
   certification_expires_at?: string | null;

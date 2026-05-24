@@ -1,3 +1,6 @@
+"use client";
+
+import { useLanguage } from "@/lib/language";
 import type { Product } from "@/types/marketplace";
 import { ProductCard } from "./ProductCard";
 
@@ -6,11 +9,13 @@ type ProductGridProps = {
 };
 
 export function ProductGrid({ products }: ProductGridProps) {
+  const { t } = useLanguage();
+
   if (products.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-10 text-center">
-        <h3 className="text-lg font-black text-gray-950">Aucun produit trouve</h3>
-        <p className="mt-2 text-sm text-gray-500">Essayez une autre recherche ou une autre categorie.</p>
+        <h3 className="text-lg font-black text-gray-950">{t("marketplace.emptyTitle")}</h3>
+        <p className="mt-2 text-sm text-gray-500">{t("marketplace.emptyText")}</p>
       </div>
     );
   }

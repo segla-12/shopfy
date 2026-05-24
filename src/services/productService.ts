@@ -10,13 +10,13 @@ import { supabase } from "@/lib/supabase";
 import {
   mapSupabaseProduct,
   PRODUCT_SELECT_FIELDS,
-  PRODUCT_SELECT_FIELDS_WITH_CERTIFICATION,
+  PRODUCT_SELECT_FIELDS_WITH_FEATURES,
 } from "@/lib/productMapping";
 
 export async function getProducts(): Promise<Product[]> {
   const result = await supabase
     .from("products")
-    .select(PRODUCT_SELECT_FIELDS_WITH_CERTIFICATION)
+    .select(PRODUCT_SELECT_FIELDS_WITH_FEATURES)
     .order("is_certified", { ascending: false })
     .order("created_at", { ascending: false });
 
@@ -36,7 +36,7 @@ export async function getProducts(): Promise<Product[]> {
 export async function getProductById(id: string): Promise<Product | null> {
   const result = await supabase
     .from("products")
-    .select(PRODUCT_SELECT_FIELDS_WITH_CERTIFICATION)
+    .select(PRODUCT_SELECT_FIELDS_WITH_FEATURES)
     .eq("id", id)
     .single();
 
@@ -64,12 +64,35 @@ export async function createProduct(product: ProductCreateInput): Promise<Produc
       category: product.category,
       phone: product.sellerPhone,
       location: product.location || "",
+      country: product.country || "",
+      city: product.city || product.location || "",
+      seller_name: product.sellerName || "Vendeur Shopfy",
+      seller_photo: product.sellerPhoto || "",
       is_certified: false,
     })
-    .select(PRODUCT_SELECT_FIELDS_WITH_CERTIFICATION)
+    .select(PRODUCT_SELECT_FIELDS_WITH_FEATURES)
     .single();
 
   if (error) {
+    const fallbackInsert = await supabase
+      .from("products")
+      .insert({
+        title: product.title,
+        price: product.price,
+        image: product.image,
+        description: product.description,
+        category: product.category,
+        phone: product.sellerPhone,
+        location: product.location || "",
+        is_certified: false,
+      })
+      .select(PRODUCT_SELECT_FIELDS)
+      .single();
+
+    if (!fallbackInsert.error && fallbackInsert.data) {
+      return mapSupabaseProduct(fallbackInsert.data);
+    }
+
     const fallback = await supabase
       .from("products")
       .select(PRODUCT_SELECT_FIELDS)
@@ -92,7 +115,7 @@ export async function createProduct(product: ProductCreateInput): Promise<Produc
 export async function getProductsByPhone(phone: string): Promise<Product[]> {
   const result = await supabase
     .from("products")
-    .select(PRODUCT_SELECT_FIELDS_WITH_CERTIFICATION)
+    .select(PRODUCT_SELECT_FIELDS_WITH_FEATURES)
     .eq("phone", phone)
     .order("created_at", { ascending: false });
 

@@ -25,7 +25,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const { id } = await params;
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-gray-50 transition-colors dark:bg-gray-950">
       <Navbar />
       <ProductDetail productId={id} />
       <Footer />

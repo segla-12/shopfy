@@ -1,28 +1,42 @@
+"use client";
+
 import Link from "next/link";
+import { useLanguage } from "@/lib/language";
+import { LanguageSwitcher } from "@/ui/LanguageSwitcher";
+import { ThemeToggle } from "@/ui/ThemeToggle";
 
 export function Navbar() {
-  return (
-    <header className="sticky top-0 z-50 border-b border-gray-100 bg-white/95 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl flex-col gap-3 px-3 py-3 sm:px-4 md:h-16 md:flex-row md:items-center md:gap-4 md:py-0">
-        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between md:contents">
-          <Link href="/" className="shrink-0 text-center text-2xl font-black tracking-tight text-orange-500 sm:text-left">
-            Shopfy
-          </Link>
+  const { t } = useLanguage();
 
-          <nav className="grid w-full min-w-0 grid-cols-3 gap-2 text-center text-xs font-black text-gray-600 sm:w-auto sm:min-w-fit sm:flex sm:items-center sm:justify-end md:ml-auto md:order-3 md:gap-3 md:text-sm">
-            <Link className="min-w-0 rounded-full px-2 py-2 transition hover:bg-orange-50 hover:text-orange-500 md:px-3" href="/">Accueil</Link>
-            <Link className="min-w-0 rounded-full px-2 py-2 transition hover:bg-orange-50 hover:text-orange-500 md:px-3" href="/sell">Vendre</Link>
-            <Link className="min-w-0 rounded-full px-2 py-2 transition hover:bg-orange-50 hover:text-orange-500 md:px-3" href="/manage">Compte</Link>
-          </nav>
+  return (
+    <header className="sticky top-0 z-50 border-b border-gray-100 bg-white/95 backdrop-blur transition-colors dark:border-white/10 dark:bg-gray-950/95">
+      <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-3 px-3 py-3 sm:px-4 md:h-16 md:grid-cols-[auto_minmax(220px,1fr)_auto_auto] md:gap-4 md:py-0">
+        <Link
+          href="/"
+          className="flex h-10 min-w-0 items-center text-2xl font-black tracking-tight text-orange-500 transition hover:text-orange-600 md:shrink-0"
+        >
+          Shopfy
+        </Link>
+
+        <div className="flex h-9 shrink-0 items-center justify-end gap-2 md:order-4">
+          <ThemeToggle />
+          <LanguageSwitcher />
         </div>
 
-        <div className="w-full min-w-0 flex-1 md:order-2 md:block">
+        <div className="col-span-2 min-w-0 md:order-2 md:col-span-1">
           <input
             type="search"
-            placeholder="Rechercher un produit..."
-            className="h-11 w-full max-w-full rounded-full border border-gray-200 bg-gray-50 px-4 text-sm outline-none transition focus:border-orange-300 focus:bg-white focus:ring-4 focus:ring-orange-100"
+            placeholder={t("nav.searchPlaceholder")}
+            className="h-10 w-full max-w-full rounded-full border border-gray-200 bg-gray-50 px-4 text-sm text-gray-950 outline-none transition focus:border-orange-300 focus:bg-white focus:ring-4 focus:ring-orange-100 dark:border-white/10 dark:bg-white/10 dark:text-white dark:placeholder:text-gray-400 dark:focus:bg-gray-900 md:h-11"
           />
         </div>
+
+        <nav className="col-span-2 grid min-w-0 grid-cols-4 items-center gap-1 text-center text-xs font-black text-gray-600 dark:text-gray-300 sm:gap-2 md:order-3 md:col-span-1 md:flex md:h-10 md:items-center md:justify-end md:gap-1 md:text-sm">
+          <Link className="flex h-9 min-w-0 items-center justify-center rounded-full px-1 transition hover:bg-orange-50 hover:text-orange-500 dark:hover:bg-white/10 md:h-10 md:px-3" href="/">{t("nav.home")}</Link>
+          <Link className="flex h-9 min-w-0 items-center justify-center rounded-full px-1 transition hover:bg-orange-50 hover:text-orange-500 dark:hover:bg-white/10 md:h-10 md:px-3" href="/sell">{t("nav.sell")}</Link>
+          <Link className="flex h-9 min-w-0 items-center justify-center rounded-full px-1 transition hover:bg-orange-50 hover:text-orange-500 dark:hover:bg-white/10 md:h-10 md:px-3" href="/manage">{t("nav.account")}</Link>
+          <Link className="flex h-9 min-w-0 items-center justify-center rounded-full px-1 transition hover:bg-orange-50 hover:text-orange-500 dark:hover:bg-white/10 md:h-10 md:px-3" href="/favorites">{t("nav.favorites")}</Link>
+        </nav>
       </div>
     </header>
   );
