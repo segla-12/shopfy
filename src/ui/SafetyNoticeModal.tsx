@@ -28,15 +28,15 @@ export function SafetyNoticeModal() {
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-950/55 px-4 py-6 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-950/55 px-3 py-4 backdrop-blur-sm sm:px-4 sm:py-6">
       <section
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
-        className="w-full max-w-2xl animate-[safetyNoticeIn_240ms_ease-out] overflow-hidden rounded-3xl border border-white/70 bg-white text-gray-950 shadow-2xl shadow-gray-950/20 dark:border-white/10 dark:bg-gray-950 dark:text-white"
+        className="flex max-h-[calc(100dvh-2rem)] w-full max-w-2xl animate-[safetyNoticeIn_240ms_ease-out] flex-col overflow-hidden rounded-3xl border border-white/70 bg-white text-gray-950 shadow-2xl shadow-gray-950/20 dark:border-white/10 dark:bg-gray-950 dark:text-white sm:max-h-[calc(100dvh-3rem)]"
       >
-        <div className="grid gap-5 p-5 sm:p-7">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain scroll-smooth p-5 sm:p-7">
           <div className="flex items-start gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-orange-100 bg-orange-50 text-orange-600 shadow-sm dark:border-orange-400/20 dark:bg-orange-400/10 dark:text-orange-300">
               <svg aria-hidden="true" viewBox="0 0 24 24" className="h-6 w-6" fill="none">
@@ -74,13 +74,15 @@ export function SafetyNoticeModal() {
             </div>
           </div>
 
-          <div className="grid gap-3 rounded-2xl border border-gray-100 bg-gray-50 p-4 text-sm leading-6 text-gray-700 dark:border-white/10 dark:bg-white/5 dark:text-gray-200">
+          <div className="mt-5 grid gap-3 rounded-2xl border border-gray-100 bg-gray-50 p-4 text-sm leading-6 text-gray-700 dark:border-white/10 dark:bg-white/5 dark:text-gray-200">
             <p>{t("safety.noAdvancePayment")}</p>
             <p>{t("safety.precautions")}</p>
             <p>{t("safety.marketplaceRole")}</p>
             <p>{t("safety.disclaimer")}</p>
           </div>
+        </div>
 
+        <div className="grid shrink-0 gap-4 border-t border-gray-100 bg-white p-4 dark:border-white/10 dark:bg-gray-950 sm:p-5">
           <label className="flex items-start gap-3 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/5">
             <input
               type="checkbox"
