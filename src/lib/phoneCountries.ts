@@ -51,7 +51,7 @@ const phoneCountrySeeds: PhoneCountrySeed[] = [
   { code: "BB", dialCode: "+1246" },
   { code: "BE", dialCode: "+32" },
   { code: "BZ", dialCode: "+501" },
-  { code: "BJ", dialCode: "+229", nationalLength: 8 },
+  { code: "BJ", dialCode: "+229", nationalLength: 10 },
   { code: "BM", dialCode: "+1441" },
   { code: "BT", dialCode: "+975" },
   { code: "BY", dialCode: "+375" },

@@ -16,8 +16,8 @@ export async function generateMetadata({ params }: SellerPageProps) {
   const { phone } = await params;
 
   return {
-    title: `Vendeur ${decodeURIComponent(phone)} - Shopfy`,
-    description: "Profil vendeur Shopfy",
+    title: `Fournisseur ${decodeURIComponent(phone)} - Shopfy`,
+    description: "Profil fournisseur grossiste Shopfy",
   };
 }
 

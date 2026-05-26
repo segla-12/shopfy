@@ -29,7 +29,7 @@ function fileToDataUrl(file: File): Promise<string> {
 export default function ManagePage() {
   const router = useRouter();
   const { t, categoryLabel } = useLanguage();
-  const [phone, setPhone] = useState("");
+  const [sellerPhone, setSellerPhone] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [messageKey, setMessageKey] = useState<TranslationKey | "">("");
@@ -41,7 +41,7 @@ export default function ManagePage() {
     setMessageKey("");
     setSelectedProduct(null);
 
-    const results = await getProductsByPhone(phone);
+    const results = await getProductsByPhone(sellerPhone);
 
     setProducts(results);
     setIsLoading(false);
@@ -70,7 +70,7 @@ export default function ManagePage() {
     const updatedProduct = await updateProductByPhone(
       {
         productId: selectedProduct.id,
-        sellerPhone: phone,
+        sellerPhone,
       },
       {
         title: String(formData.get("title") || ""),
@@ -88,7 +88,7 @@ export default function ManagePage() {
       return;
     }
 
-    const refreshedProducts = await getProductsByPhone(phone);
+    const refreshedProducts = await getProductsByPhone(sellerPhone);
     setProducts(refreshedProducts);
     setSelectedProduct(updatedProduct);
     setMessageKey("manage.updateSuccess");
@@ -105,7 +105,7 @@ export default function ManagePage() {
 
     const deleted = await deleteProductByPhone({
       productId: product.id,
-      sellerPhone: phone,
+      sellerPhone,
     });
 
     if (!deleted) {
@@ -114,7 +114,7 @@ export default function ManagePage() {
       return;
     }
 
-    const refreshedProducts = await getProductsByPhone(phone);
+    const refreshedProducts = await getProductsByPhone(sellerPhone);
     setProducts(refreshedProducts);
     setSelectedProduct(null);
     setMessageKey("manage.deleteSuccess");
@@ -135,12 +135,17 @@ export default function ManagePage() {
         </div>
 
         <form onSubmit={handleSearch} className="mb-6 grid gap-4 rounded-3xl border border-gray-100 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-gray-900 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-          <PhoneInput
-            name="sellerPhone"
-            label={t("phone.manageLabel")}
-            value={phone}
-            onChange={setPhone}
-          />
+          <div className="grid gap-2">
+            <PhoneInput
+              name="sellerPhone"
+              label={t("phone.manageLabel")}
+              value={sellerPhone}
+              onChange={setSellerPhone}
+            />
+            <p className="text-xs font-bold leading-5 text-gray-500 dark:text-gray-400">
+              {t("manage.supplierPhoneHelper")}
+            </p>
+          </div>
           <button disabled={isLoading} className="min-h-12 rounded-full bg-orange-500 px-5 text-sm font-black text-white transition hover:bg-orange-600 disabled:cursor-wait disabled:opacity-70">
             {isLoading ? t("manage.searching") : t("manage.searchButton")}
           </button>

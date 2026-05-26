@@ -1,14 +1,15 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element */
-import { FormEvent, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { formatPrice } from "@/lib/format";
 import { TranslationKey } from "@/lib/i18n";
 import { useLanguage } from "@/lib/language";
+import { buildWholesaleSuppliers } from "@/lib/supplierDirectory";
 import { getProducts } from "@/services/productService";
-import type { Product } from "@/types/marketplace";
+import type { Product, WholesaleSupplier } from "@/types/marketplace";
 import { CertifiedBadge } from "@/ui/CertifiedBadge";
 
 type MessageState = {
@@ -25,6 +26,8 @@ export default function AdminPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [certificationDates, setCertificationDates] = useState<Record<string, string>>({});
   const [certificationDurations, setCertificationDurations] = useState<Record<string, number>>({});
+  const suppliers = useMemo(() => buildWholesaleSuppliers(products), [products]);
+  const supplierCopy = getAdminSupplierCopy(language);
 
   async function handleUnlock(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -131,18 +134,26 @@ export default function AdminPage() {
               </p>
             ) : null}
 
-            {products.map((product) => (
-              <article key={product.id} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-                <div className="flex flex-col gap-4 sm:flex-row">
-                  <img src={product.image} alt={product.title} className="h-28 w-28 rounded-xl object-contain" />
+            {suppliers.map((supplier) => {
+              const product = getSupplierCertificationProduct(supplier);
 
+              if (!product) {
+                return null;
+              }
+
+              const categories = supplier.categories.map(categoryLabel).join(" / ");
+
+              return (
+                <article key={supplier.id} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+                  <div className="flex flex-col gap-4 sm:flex-row">
+                    <img src={supplier.photo || supplier.firstProductImage || product.image} alt={supplier.name} className="h-28 w-28 rounded-xl object-cover" />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="font-black text-gray-950">{product.title}</h2>
-                      {product.isCertified ? <CertifiedBadge /> : null}
+                      <h2 className="font-black text-gray-950">{supplier.name}</h2>
+                      {supplier.isCertified ? <CertifiedBadge /> : null}
                     </div>
-                    <p className="mt-1 font-black text-orange-500">{formatPrice(product.price)} FCFA</p>
-                    <p className="mt-1 text-sm text-gray-500">{categoryLabel(product.category)}</p>
+                    <p className="mt-1 font-black text-orange-500">{supplierCopy.productCount(supplier.productCount)}</p>
+                    <p className="mt-1 text-sm text-gray-500">{categories || supplierCopy.noCategory}</p>
                     <div className="mt-3 grid gap-1 text-sm text-gray-500">
                       <p>{t("admin.certificationLabel")}: {getCertificationStatus(product, t)}</p>
                       <p>{t("admin.expirationLabel")}: {formatCertificationDate(product.certificationExpiresAt, language, t)}</p>
@@ -197,7 +208,8 @@ export default function AdminPage() {
                   </div>
                 </div>
               </article>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
@@ -205,6 +217,24 @@ export default function AdminPage() {
       <Footer />
     </main>
   );
+}
+
+function getSupplierCertificationProduct(supplier: WholesaleSupplier) {
+  return supplier.products.find((product) => product.isCertified) || supplier.products[0];
+}
+
+function getAdminSupplierCopy(language: "fr" | "en") {
+  if (language === "en") {
+    return {
+      noCategory: "No category",
+      productCount: (count: number) => `${count} catalog product${count > 1 ? "s" : ""}`,
+    };
+  }
+
+  return {
+    noCategory: "Aucune categorie",
+    productCount: (count: number) => `${count} produit${count > 1 ? "s" : ""} au catalogue`,
+  };
 }
 
 function getTodayInputDate() {

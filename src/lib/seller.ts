@@ -4,6 +4,10 @@ export function getSellerProfileHref(product: Product) {
   return `/seller/${encodeURIComponent(product.sellerPhone)}`;
 }
 
+export function getSupplierProfileHref(phone: string) {
+  return `/seller/${encodeURIComponent(phone)}`;
+}
+
 export function getSellerDisplayName(product?: Product | null) {
   return product?.sellerName || "Vendeur Shopfy";
 }

@@ -11,6 +11,13 @@ export type Product = {
   location?: string;
   country?: string;
   city?: string;
+  latitude?: number;
+  longitude?: number;
+  minimumOrderQuantity?: string | number;
+  wholesalePrice?: number;
+  deliveryMethod?: string;
+  deliveryServiceName?: string;
+  deliveryContact?: string;
   sellerPhone: string;
   sellerName?: string;
   sellerPhoto?: string;
@@ -22,6 +29,27 @@ export type Product = {
   certificationDurationMonths?: number;
   certificationAmount?: number;
   createdAt?: string;
+};
+
+export type WholesaleSupplier = {
+  id: string;
+  name: string;
+  phone: string;
+  photo?: string;
+  country?: string;
+  city?: string;
+  location?: string;
+  latitude?: number;
+  longitude?: number;
+  deliveryMethods: string[];
+  deliveryServices: string[];
+  deliveryContacts: string[];
+  categories: ProductCategory[];
+  products: Product[];
+  productCount: number;
+  isCertified: boolean;
+  firstProductImage?: string;
+  firstJoinedAt?: string;
 };
 
 export type ProductCreateInput = Omit<Product, "id" | "createdAt" | "isCertified">;
