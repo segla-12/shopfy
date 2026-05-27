@@ -114,8 +114,8 @@ export function ProductDetail({ productId, initialProduct = null }: ProductDetai
   return (
     <section className="mx-auto max-w-6xl px-4 py-8 sm:py-10">
       <article className="overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm dark:border-white/10 dark:bg-gray-900">
-        <div className="grid lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]">
-          <div className="border-b border-gray-100 bg-white p-3 sm:p-4 lg:border-b-0 lg:border-r dark:border-white/10 dark:bg-gray-950">
+        <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)] lg:items-start">
+          <div className="border-b border-gray-100 bg-white p-3 sm:p-4 lg:self-start lg:border-b-0 lg:border-r dark:border-white/10 dark:bg-gray-950">
             <div className="relative">
               <button
                 type="button"
@@ -165,7 +165,7 @@ export function ProductDetail({ productId, initialProduct = null }: ProductDetai
             ) : null}
           </div>
 
-          <div className="grid gap-4 p-4 md:p-6">
+          <div className="grid min-w-0 gap-4 p-4 md:p-6 lg:max-w-[420px]">
             <div>
               {supplierIsCertified ? (
                 <CertifiedBadge className="mb-2 w-fit" />
@@ -248,7 +248,7 @@ export function ProductDetail({ productId, initialProduct = null }: ProductDetai
             <p className="text-sm font-black text-gray-950 dark:text-white">{t("product.securityTitle")}</p>
             <p className="mt-1 text-sm font-bold text-gray-700 dark:text-gray-200">{t("product.securityText")}</p>
             <a
-              href={`mailto:support@shopfy.site?subject=${encodeURIComponent(`Signalement annonce ${product.id}`)}`}
+              href={`mailto:support@shopfy.site?subject=${encodeURIComponent(`Report listing ${product.id}`)}`}
               className="mt-3 inline-flex min-h-10 items-center justify-center rounded-md border border-orange-200 bg-white px-4 text-sm font-black text-orange-600 transition hover:bg-orange-100 dark:border-orange-300/30 dark:bg-transparent dark:text-orange-300 dark:hover:bg-orange-300/10"
             >
               {t("product.reportListing")}

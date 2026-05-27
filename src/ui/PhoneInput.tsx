@@ -113,6 +113,7 @@ export function PhoneInput({
           <input
             required
             type="search"
+            suppressHydrationWarning
             role="combobox"
             aria-expanded={isCountryOpen}
             aria-controls={countryListId}
@@ -173,6 +174,7 @@ export function PhoneInput({
             <input
               required
               type="tel"
+              suppressHydrationWarning
               inputMode="numeric"
               pattern={bounds ? `\\d{${bounds.min},${bounds.max}}` : "\\d+"}
               maxLength={bounds?.max}
@@ -187,8 +189,8 @@ export function PhoneInput({
         </label>
       </div>
 
-      <input name={name} type="hidden" required value={value ?? internationalPhone} readOnly />
-      <input name={countryName} type="hidden" value={selectedCountry?.code || ""} readOnly />
+      <input name={name} type="hidden" required value={value ?? internationalPhone} readOnly suppressHydrationWarning />
+      <input name={countryName} type="hidden" value={selectedCountry?.code || ""} readOnly suppressHydrationWarning />
 
       <p className={`text-xs font-bold ${nationalNumber.length > 0 && !isComplete ? "text-red-600" : "text-gray-500"}`}>
         {nationalNumber.length > 0 && !isComplete && bounds

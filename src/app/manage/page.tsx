@@ -188,17 +188,17 @@ export default function ManagePage() {
 
               <label className="grid gap-2">
                 <span className="text-sm font-black text-gray-900">{t("sell.titleLabel")}</span>
-                <input name="title" required defaultValue={selectedProduct.title} className="min-h-12 rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100" />
+                <input name="title" required suppressHydrationWarning defaultValue={selectedProduct.title} className="min-h-12 rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100" />
               </label>
 
               <label className="grid gap-2">
                 <span className="text-sm font-black text-gray-900">{t("sell.priceLabel")}</span>
-                <input name="price" required type="number" min="1" defaultValue={selectedProduct.price} className="min-h-12 rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100" />
+                <input name="price" required type="number" min="1" suppressHydrationWarning defaultValue={selectedProduct.price} className="min-h-12 rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100" />
               </label>
 
               <label className="grid gap-2">
                 <span className="text-sm font-black text-gray-900">{t("manage.categoryLabel")}</span>
-                <select name="category" defaultValue={selectedProduct.category} className="min-h-12 rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100">
+                <select name="category" defaultValue={selectedProduct.category} suppressHydrationWarning className="min-h-12 rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100">
                   {productCategories.map((category) => (
                     <option key={category} value={category}>{categoryLabel(category)}</option>
                   ))}
@@ -207,17 +207,17 @@ export default function ManagePage() {
 
               <label className="grid gap-2">
                 <span className="text-sm font-black text-gray-900">{t("sell.locationLabel")}</span>
-                <input name="location" defaultValue={selectedProduct.location || ""} className="min-h-12 rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100" />
+                <input name="location" suppressHydrationWarning defaultValue={selectedProduct.location || ""} className="min-h-12 rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100" />
               </label>
 
               <label className="grid gap-2">
                 <span className="text-sm font-black text-gray-900">{t("sell.imageLabel")}</span>
-                <input name="image" type="file" accept="image/*" className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-4 text-sm" />
+                <input name="image" type="file" accept="image/*" suppressHydrationWarning className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-4 text-sm" />
               </label>
 
               <label className="grid gap-2">
                 <span className="text-sm font-black text-gray-900">{t("sell.descriptionLabel")}</span>
-                <textarea name="description" required rows={5} defaultValue={selectedProduct.description} className="rounded-2xl border border-gray-200 px-4 py-3 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100" />
+                <textarea name="description" required rows={5} suppressHydrationWarning defaultValue={selectedProduct.description} className="rounded-2xl border border-gray-200 px-4 py-3 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100" />
               </label>
 
               <button disabled={isLoading} className="min-h-12 rounded-full bg-orange-500 px-5 text-sm font-black text-white transition hover:bg-orange-600 disabled:cursor-wait disabled:opacity-70">

@@ -33,7 +33,7 @@ type LanguageContextValue = {
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<Language>("fr");
+  const [language, setLanguageState] = useState<Language>("en");
   const [isReady, setIsReady] = useState(false);
   const [isPending, startTransition] = useTransition();
 

@@ -24,16 +24,16 @@ export function SupplierCard({ supplier }: SupplierCardProps) {
   const price = featuredProduct ? `${formatPrice(featuredProduct.price)} FCFA` : copy.priceFallback;
 
   return (
-    <article className="grid min-h-[166px] grid-cols-[112px_minmax(0,1fr)] overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:border-orange-300 hover:shadow-md dark:border-white/10 dark:bg-gray-900 sm:grid-cols-[170px_minmax(0,1fr)] lg:grid-cols-[210px_minmax(0,1fr)]">
-      <Link href={profileHref} className="relative min-h-full overflow-hidden border-r border-gray-100 bg-gray-50 dark:border-white/10 dark:bg-gray-950">
+    <article className="grid grid-cols-[132px_minmax(0,1fr)] items-start overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:border-orange-300 hover:shadow-md dark:border-white/10 dark:bg-gray-900 sm:grid-cols-[190px_minmax(0,1fr)] lg:grid-cols-[220px_minmax(0,1fr)]">
+      <Link href={profileHref} className="relative h-[clamp(204px,58vw,232px)] overflow-hidden border-r border-gray-100 bg-gray-50 sm:h-[clamp(196px,24vw,224px)] dark:border-white/10 dark:bg-gray-950">
         {supplierImage ? (
           <Image
             src={supplierImage}
             alt={supplier.name}
             fill
             unoptimized={supplierImage.startsWith("data:")}
-            sizes="(min-width: 1024px) 210px, (min-width: 640px) 170px, 112px"
-            className="object-cover p-2 transition duration-300 hover:scale-[1.03] sm:p-3"
+            sizes="(min-width: 1024px) 220px, (min-width: 640px) 190px, 132px"
+            className="object-contain object-center p-3"
           />
         ) : (
           <div className="flex h-full items-center justify-center p-3">
@@ -42,8 +42,8 @@ export function SupplierCard({ supplier }: SupplierCardProps) {
         )}
       </Link>
 
-      <div className="flex min-w-0 flex-col gap-3 p-3 sm:p-5">
-        <div className="min-w-0">
+      <div className="flex h-[clamp(204px,58vw,232px)] min-w-0 flex-col gap-2 overflow-hidden p-3 sm:h-[clamp(196px,24vw,224px)] sm:gap-3 sm:p-4">
+        <div className="min-w-0 overflow-hidden">
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <span className="rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-[10px] font-black uppercase text-gray-600 dark:border-white/10 dark:bg-white/5 dark:text-gray-300">
               {copy.supplierBadge}
@@ -59,21 +59,21 @@ export function SupplierCard({ supplier }: SupplierCardProps) {
           </p>
         </div>
 
-        <div className="grid max-w-sm gap-2">
-          <div className="rounded-md border border-gray-200 bg-white px-3 py-2 dark:border-white/10 dark:bg-white/5">
-            <p className="text-[11px] font-black uppercase text-gray-500 dark:text-gray-400">{copy.moqLabel}</p>
-            <p className="mt-0.5 text-sm font-black text-gray-950 dark:text-white">{moq}</p>
+        <div className="grid min-w-0 grid-cols-2 gap-1.5">
+          <div className="flex min-h-10 min-w-0 flex-col justify-center rounded-md border border-gray-200 bg-white px-2 py-1.5 dark:border-white/10 dark:bg-white/5">
+            <p className="truncate text-[10px] font-black uppercase leading-none text-gray-500 dark:text-gray-400">{copy.moqLabel}</p>
+            <p className="mt-1 truncate text-xs font-black leading-none text-gray-950 dark:text-white">{moq}</p>
           </div>
-          <div className="rounded-md border border-orange-200 bg-orange-50 px-3 py-2 dark:border-orange-400/20 dark:bg-orange-400/10">
-            <p className="text-[11px] font-black uppercase text-orange-700 dark:text-orange-300">{copy.priceLabel}</p>
-            <p className="mt-0.5 text-sm font-black text-gray-950 dark:text-white">{price}</p>
+          <div className="flex min-h-10 min-w-0 flex-col justify-center rounded-md border border-orange-200 bg-orange-50 px-2 py-1.5 dark:border-orange-400/20 dark:bg-orange-400/10">
+            <p className="truncate text-[10px] font-black uppercase leading-none text-orange-700 dark:text-orange-300">{copy.priceLabel}</p>
+            <p className="mt-1 truncate text-xs font-black leading-none text-gray-950 dark:text-white">{price}</p>
           </div>
         </div>
 
-        <div className="mt-auto flex justify-start">
+        <div className="mt-auto flex justify-start overflow-hidden">
           <Link
             href={profileHref}
-            className="inline-flex min-h-10 w-full items-center justify-center rounded-md bg-orange-500 px-4 text-sm font-black text-white shadow-sm transition hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-100 sm:w-auto sm:min-w-44 dark:bg-orange-500 dark:hover:bg-orange-400 dark:focus:ring-orange-400/20"
+            className="inline-flex min-h-9 w-full items-center justify-center rounded-md bg-orange-500 px-3 text-sm font-black text-white shadow-sm transition hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-100 sm:min-h-10 sm:w-auto sm:min-w-44 sm:px-4 dark:bg-orange-500 dark:hover:bg-orange-400 dark:focus:ring-orange-400/20"
           >
             {copy.viewProfile}
           </Link>
@@ -87,11 +87,11 @@ function getSupplierCardCopy(language: string) {
   if (language === "en") {
     return {
       supplierBadge: "Supplier",
-      priceLabel: "Wholesale price",
+      priceLabel: "Wholesale Price",
       priceFallback: "On request",
       moqLabel: "MOQ",
       moqFallback: "Ask supplier",
-      unitLabel: "units minimum",
+      unitLabel: "units",
       descriptionFallback: "Wholesale supplier with a professional product catalog.",
       viewProfile: "View supplier",
     };
@@ -116,6 +116,10 @@ function formatMoq(value: string | number | undefined, copy: ReturnType<typeof g
 
   if (typeof value === "number") {
     return `${formatPrice(value)} ${copy.unitLabel}`;
+  }
+
+  if (/^\d+(\.\d+)?$/.test(value.trim())) {
+    return `${formatPrice(Number(value))} ${copy.unitLabel}`;
   }
 
   return value;

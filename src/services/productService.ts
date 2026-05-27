@@ -6,6 +6,8 @@ import type {
   ProductUpdateInput,
   SupabaseProductRow,
 } from "@/types/marketplace";
+import { toEnglishOptionalText, toEnglishText } from "@/lib/englishText";
+import { toEnglishWholesaleDescription } from "@/lib/productWholesale";
 import { supabase } from "@/lib/supabase";
 import {
   mapSupabaseProduct,
@@ -54,20 +56,28 @@ export async function getProductById(id: string): Promise<Product | null> {
 }
 
 export async function createProduct(product: ProductCreateInput): Promise<Product | null> {
+  const englishProduct = {
+    ...product,
+    title: toEnglishText(product.title),
+    description: toEnglishWholesaleDescription(product.description),
+    location: toEnglishOptionalText(product.location) || "",
+    city: toEnglishOptionalText(product.city || product.location) || "",
+    sellerName: toEnglishText(product.sellerName || "Shopfy Seller", "Shopfy Seller"),
+  };
   const { data, error } = await supabase
     .from("products")
     .insert({
-      title: product.title,
-      price: product.price,
-      image: product.image,
-      description: product.description,
-      category: product.category,
-      phone: product.sellerPhone,
-      location: product.location || "",
-      country: product.country || "",
-      city: product.city || product.location || "",
-      seller_name: product.sellerName || "Vendeur Shopfy",
-      seller_photo: product.sellerPhoto || "",
+      title: englishProduct.title,
+      price: englishProduct.price,
+      image: englishProduct.image,
+      description: englishProduct.description,
+      category: englishProduct.category,
+      phone: englishProduct.sellerPhone,
+      location: englishProduct.location,
+      country: englishProduct.country || "",
+      city: englishProduct.city,
+      seller_name: englishProduct.sellerName,
+      seller_photo: englishProduct.sellerPhoto || "",
       is_certified: false,
     })
     .select(PRODUCT_SELECT_FIELDS_WITH_FEATURES)
@@ -77,13 +87,13 @@ export async function createProduct(product: ProductCreateInput): Promise<Produc
     const fallbackInsert = await supabase
       .from("products")
       .insert({
-        title: product.title,
-        price: product.price,
-        image: product.image,
-        description: product.description,
-        category: product.category,
-        phone: product.sellerPhone,
-        location: product.location || "",
+        title: englishProduct.title,
+        price: englishProduct.price,
+        image: englishProduct.image,
+        description: englishProduct.description,
+        category: englishProduct.category,
+        phone: englishProduct.sellerPhone,
+        location: englishProduct.location,
         is_certified: false,
       })
       .select(PRODUCT_SELECT_FIELDS)
@@ -96,8 +106,8 @@ export async function createProduct(product: ProductCreateInput): Promise<Produc
     const fallback = await supabase
       .from("products")
       .select(PRODUCT_SELECT_FIELDS)
-      .eq("title", product.title)
-      .eq("phone", product.sellerPhone)
+      .eq("title", englishProduct.title)
+      .eq("phone", englishProduct.sellerPhone)
       .order("created_at", { ascending: false })
       .limit(1)
       .single();

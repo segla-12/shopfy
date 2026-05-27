@@ -63,7 +63,7 @@ function buildWholesaleSupplier(supplierKey: string, products: Product[]): Whole
 
   return {
     id: supplierKey,
-    name: profileProduct?.sellerName || "Fournisseur grossiste",
+    name: profileProduct?.sellerName || "Wholesale supplier",
     phone: profileProduct?.sellerPhone || supplierKey,
     photo: profileProduct?.sellerPhoto,
     country: profileProduct?.country || firstDefined(products.map((product) => product.country)),

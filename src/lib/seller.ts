@@ -9,7 +9,7 @@ export function getSupplierProfileHref(phone: string) {
 }
 
 export function getSellerDisplayName(product?: Product | null) {
-  return product?.sellerName || "Vendeur Shopfy";
+  return product?.sellerName || "Shopfy Seller";
 }
 
 export function getSellerInitials(name: string) {

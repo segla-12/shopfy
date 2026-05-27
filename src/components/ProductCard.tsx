@@ -30,8 +30,8 @@ export function ProductCard({ product, action = "supplier" }: ProductCardProps) 
         alt={product.title}
         fill
         unoptimized={isLocalImage}
-        sizes="(min-width: 1024px) 192px, (min-width: 640px) 176px, 118px"
-        className="object-contain p-3 transition duration-300 group-hover:scale-[1.03] sm:p-4"
+        sizes="(min-width: 640px) 192px, 132px"
+        className="object-contain object-center p-3"
       />
       {product.isNew ? (
         <span className="absolute left-2 top-2 rounded-md bg-orange-500 px-2 py-1 text-[10px] font-black uppercase text-white shadow-sm sm:left-3 sm:top-3">
@@ -42,22 +42,22 @@ export function ProductCard({ product, action = "supplier" }: ProductCardProps) 
   );
 
   return (
-    <article className="group relative flex min-h-[168px] overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition duration-200 hover:border-orange-300 hover:shadow-md dark:border-white/10 dark:bg-gray-900">
-      <div className="relative w-[118px] shrink-0 overflow-hidden border-r border-gray-100 bg-white sm:w-48 dark:border-white/10 dark:bg-gray-950">
+    <article className="group relative grid grid-cols-[132px_minmax(0,1fr)] items-start overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition duration-200 hover:border-orange-300 hover:shadow-md dark:border-white/10 dark:bg-gray-900 sm:grid-cols-[192px_minmax(0,1fr)]">
+      <div className="relative h-[clamp(204px,58vw,232px)] overflow-hidden border-r border-gray-100 bg-white sm:h-[clamp(196px,24vw,224px)] dark:border-white/10 dark:bg-gray-950">
         {action === "supplier" ? (
-          <Link href={supplierHref} className="relative block h-full min-h-[168px] p-3 sm:p-4">
+          <Link href={supplierHref} className="relative block h-full">
             {imageContent}
           </Link>
         ) : (
-          <div className="relative block h-full min-h-[168px] p-3 sm:p-4">
+          <div className="relative block h-full">
             {imageContent}
           </div>
         )}
         <FavoriteButton productId={product.id} compact className="absolute bottom-2 left-2 z-10 h-9 w-9 sm:bottom-3 sm:left-3" />
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-3 p-3 sm:p-4">
-        <div className="min-w-0">
+      <div className="flex h-[clamp(204px,58vw,232px)] min-w-0 flex-col gap-2 overflow-hidden p-3 sm:h-[clamp(196px,24vw,224px)] sm:gap-3 sm:p-4">
+        <div className="min-w-0 overflow-hidden">
           {product.isCertified ? (
             <div className="mb-2 flex flex-wrap items-center gap-2 pr-2">
               <CertifiedBadge className="min-h-6 rounded-md px-2 text-[10px]" />
@@ -66,28 +66,28 @@ export function ProductCard({ product, action = "supplier" }: ProductCardProps) 
           <h3 className="line-clamp-2 text-base font-black leading-snug text-gray-950 sm:text-lg dark:text-white">
             {product.title}
           </h3>
-          <p className="mt-1 line-clamp-2 text-sm leading-6 text-gray-600 dark:text-gray-300">
+          <p className="mt-1 line-clamp-1 text-sm leading-5 text-gray-600 sm:line-clamp-2 sm:leading-6 dark:text-gray-300">
             {product.description}
           </p>
         </div>
 
-        <div className={action === "order" ? "grid gap-2" : "grid gap-2 sm:grid-cols-2"}>
-          <div className="rounded-md border border-orange-200 bg-orange-50 px-3 py-2 dark:border-orange-400/20 dark:bg-orange-400/10">
-            <p className="text-[11px] font-black uppercase text-orange-700 dark:text-orange-300">{copy.moqLabel}</p>
-            <p className="mt-0.5 text-sm font-black text-gray-950 dark:text-white">{moq}</p>
+        <div className="grid min-w-0 grid-cols-2 gap-1.5">
+          <div className="flex min-h-10 min-w-0 flex-col justify-center rounded-md border border-orange-200 bg-orange-50 px-2 py-1.5 dark:border-orange-400/20 dark:bg-orange-400/10">
+            <p className="truncate text-[10px] font-black uppercase leading-none text-orange-700 dark:text-orange-300">{copy.moqLabel}</p>
+            <p className="mt-1 truncate text-xs font-black leading-none text-gray-950 dark:text-white">{moq}</p>
           </div>
-          <div className="rounded-md border border-gray-200 bg-white px-3 py-2 dark:border-white/10 dark:bg-white/5">
-            <p className="text-[11px] font-black uppercase text-gray-500 dark:text-gray-400">{copy.wholesalePriceLabel}</p>
-            <p className="mt-0.5 text-sm font-black text-gray-950 dark:text-white">{wholesalePrice}</p>
+          <div className="flex min-h-10 min-w-0 flex-col justify-center rounded-md border border-gray-200 bg-white px-2 py-1.5 dark:border-white/10 dark:bg-white/5">
+            <p className="truncate text-[10px] font-black uppercase leading-none text-gray-500 dark:text-gray-400">{copy.wholesalePriceLabel}</p>
+            <p className="mt-1 truncate text-xs font-black leading-none text-gray-950 dark:text-white">{wholesalePrice}</p>
           </div>
         </div>
 
-        <div className="mt-auto flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs font-bold text-gray-500 dark:text-gray-400">{copy.wholesaleOnly}</p>
+        <div className="mt-auto flex min-w-0 flex-col gap-2 overflow-hidden sm:flex-row sm:items-center sm:justify-between">
+          <p className="line-clamp-1 text-xs font-bold text-gray-500 dark:text-gray-400">{copy.wholesaleOnly}</p>
           {action === "supplier" ? (
             <Link
               href={supplierHref}
-              className="inline-flex min-h-10 items-center justify-center rounded-md bg-orange-500 px-4 text-sm font-black text-white shadow-sm transition hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-100 sm:min-w-40 dark:bg-orange-500 dark:hover:bg-orange-400 dark:focus:ring-orange-400/20"
+              className="inline-flex min-h-9 items-center justify-center rounded-md bg-orange-500 px-3 text-sm font-black text-white shadow-sm transition hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-100 sm:min-h-10 sm:min-w-40 sm:px-4 dark:bg-orange-500 dark:hover:bg-orange-400 dark:focus:ring-orange-400/20"
             >
               {copy.viewSupplier}
             </Link>
@@ -97,7 +97,7 @@ export function ProductCard({ product, action = "supplier" }: ProductCardProps) 
               href={orderHref}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex min-h-10 items-center justify-center rounded-md bg-green-500 px-4 text-sm font-black text-white shadow-sm transition hover:bg-green-600 focus:outline-none focus:ring-4 focus:ring-green-100 sm:min-w-40 dark:bg-green-500 dark:hover:bg-green-600 dark:focus:ring-green-400/20"
+              className="inline-flex min-h-9 items-center justify-center rounded-md bg-green-500 px-3 text-sm font-black text-white shadow-sm transition hover:bg-green-600 focus:outline-none focus:ring-4 focus:ring-green-100 sm:min-h-10 sm:min-w-40 sm:px-4 dark:bg-green-500 dark:hover:bg-green-600 dark:focus:ring-green-400/20"
             >
               {copy.order}
             </a>
@@ -113,8 +113,8 @@ function getProductCardCopy(language: string) {
     return {
       moqLabel: "MOQ",
       moqFallback: "Ask supplier",
-      unitLabel: "units minimum",
-      wholesalePriceLabel: "Wholesale price",
+      unitLabel: "units",
+      wholesalePriceLabel: "Wholesale Price",
       priceOnRequest: "On request",
       order: "Order",
       viewSupplier: "View supplier",
@@ -143,6 +143,10 @@ function formatMoq(product: Product, copy: ReturnType<typeof getProductCardCopy>
 
   if (typeof rawMoq === "number") {
     return `${formatPrice(rawMoq)} ${copy.unitLabel}`;
+  }
+
+  if (/^\d+(\.\d+)?$/.test(rawMoq.trim())) {
+    return `${formatPrice(Number(rawMoq))} ${copy.unitLabel}`;
   }
 
   return rawMoq;

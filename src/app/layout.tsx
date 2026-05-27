@@ -18,8 +18,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://shopfy.site"),
-  title: "Shopfy - Marketplace moderne",
-  description: "Acheter et vendre simplement avec Shopfy.",
+  title: "Shopfy - Modern marketplace",
+  description: "Buy and sell easily with Shopfy.",
   icons: {
     icon: [
       { url: "/favicon.ico" },
@@ -39,7 +39,8 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="fr"
+      lang="en"
+      suppressHydrationWarning
       data-scroll-behavior="smooth"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >

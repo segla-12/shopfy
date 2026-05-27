@@ -1,17 +1,22 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useState, useSyncExternalStore } from "react";
 import { useLanguage } from "@/lib/language";
+
+const emptySubscribe = () => () => undefined;
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
 
 export function SafetyNoticeModal() {
   const { t } = useLanguage();
+  const isMounted = useSyncExternalStore(emptySubscribe, getClientSnapshot, getServerSnapshot);
   const [isOpen, setIsOpen] = useState(true);
   const [isAccepted, setIsAccepted] = useState(false);
   const titleId = useId();
   const descriptionId = useId();
 
   useEffect(() => {
-    if (!isOpen) {
+    if (!isMounted || !isOpen) {
       return;
     }
 
@@ -21,9 +26,9 @@ export function SafetyNoticeModal() {
     return () => {
       document.body.style.overflow = previousOverflow;
     };
-  }, [isOpen]);
+  }, [isMounted, isOpen]);
 
-  if (!isOpen) {
+  if (!isMounted || !isOpen) {
     return null;
   }
 
@@ -86,6 +91,7 @@ export function SafetyNoticeModal() {
           <label className="flex items-start gap-3 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/5">
             <input
               type="checkbox"
+              suppressHydrationWarning
               checked={isAccepted}
               onChange={(event) => setIsAccepted(event.target.checked)}
               className="mt-1 h-5 w-5 shrink-0 rounded border-gray-300 accent-orange-500"

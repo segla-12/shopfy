@@ -16,8 +16,8 @@ export async function generateMetadata({ params }: ProductPageProps) {
   const { id } = await params;
 
   return {
-    title: `Produit ${id} - Shopfy`,
-    description: "Detail produit Shopfy",
+    title: `Product ${id} - Shopfy`,
+    description: "Shopfy product detail",
   };
 }
 

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import { mapSupabaseProduct, PRODUCT_SELECT_FIELDS } from "@/lib/productMapping";
+import { toEnglishText } from "@/lib/englishText";
+import { toEnglishWholesaleDescription } from "@/lib/productWholesale";
 import { cleanImage, cleanPrice, cleanText } from "@/lib/validation";
 
 type ManageRequest = {
@@ -30,12 +32,12 @@ export async function PATCH(request: Request) {
   const updates = body.updates || {};
   const image = updates.image === undefined ? undefined : cleanImage(updates.image);
   const payload = {
-    ...(updates.title !== undefined ? { title: cleanText(updates.title) } : {}),
+    ...(updates.title !== undefined ? { title: toEnglishText(cleanText(updates.title)) } : {}),
     ...(updates.price !== undefined ? { price: cleanPrice(updates.price) } : {}),
     ...(image !== undefined && image ? { image } : {}),
-    ...(updates.description !== undefined ? { description: cleanText(updates.description) } : {}),
+    ...(updates.description !== undefined ? { description: toEnglishWholesaleDescription(cleanText(updates.description)) } : {}),
     ...(updates.category !== undefined ? { category: cleanText(updates.category) } : {}),
-    ...(updates.location !== undefined ? { location: cleanText(updates.location) } : {}),
+    ...(updates.location !== undefined ? { location: toEnglishText(cleanText(updates.location)) } : {}),
   };
 
   let data;
@@ -54,7 +56,7 @@ export async function PATCH(request: Request) {
     data = result.data;
     error = result.error;
   } catch {
-    return NextResponse.json({ success: false, message: "Configuration serveur manquante." }, { status: 500 });
+    return NextResponse.json({ success: false, message: "Missing server configuration." }, { status: 500 });
   }
 
   if (error || !data) {
@@ -85,7 +87,7 @@ export async function DELETE(request: Request) {
 
     error = result.error;
   } catch {
-    return NextResponse.json({ success: false, message: "Configuration serveur manquante." }, { status: 500 });
+    return NextResponse.json({ success: false, message: "Missing server configuration." }, { status: 500 });
   }
 
   if (error) {

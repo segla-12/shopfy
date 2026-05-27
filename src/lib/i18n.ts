@@ -343,13 +343,13 @@ export function formatTranslation(
   key: TranslationKey,
   values: Record<string, string | number> = {},
 ) {
-  const template = translations[language][key] || translations.fr[key];
+  const template = translations[language][key] || translations.en[key] || translations.fr[key];
 
   return template.replace(/\{(\w+)\}/g, (_, token: string) => String(values[token] ?? ""));
 }
 
 export function translateCategory(category: string, language: Language) {
-  return categoryTranslations[language][category] || category;
+  return categoryTranslations[language][category] || categoryTranslations.en[category] || category;
 }
 
 export function translateCountry(countryCode: string | undefined, language: Language) {
@@ -358,5 +358,5 @@ export function translateCountry(countryCode: string | undefined, language: Lang
   }
 
   const country = getPhoneCountry(countryCode);
-  return country?.name[language] || countryCode;
+  return country?.name[language] || country?.name.en || countryCode;
 }

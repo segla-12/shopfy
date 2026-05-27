@@ -117,6 +117,7 @@ export default function AdminPage() {
                 onChange={(event) => setAdminSecret(event.target.value)}
                 required
                 type="password"
+                suppressHydrationWarning
                 placeholder={t("admin.codePlaceholder")}
                 className="min-h-12 rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100"
               />
@@ -166,6 +167,7 @@ export default function AdminPage() {
                       <span className="text-xs font-black uppercase tracking-wide text-gray-500">{t("admin.startDateLabel")}</span>
                       <input
                         type="date"
+                        suppressHydrationWarning
                         value={certificationDates[product.id] || getTodayInputDate()}
                         onChange={(event) => setCertificationDates((dates) => ({
                           ...dates,
@@ -179,6 +181,7 @@ export default function AdminPage() {
                       <span className="text-xs font-black uppercase tracking-wide text-gray-500">{t("admin.durationLabel")}</span>
                       <select
                         value={certificationDurations[product.id] || 1}
+                        suppressHydrationWarning
                         onChange={(event) => setCertificationDurations((durations) => ({
                           ...durations,
                           [product.id]: Number(event.target.value),
@@ -298,14 +301,19 @@ function getCertificationMessageKey(isCertified: boolean, durationMonths: number
 
 function getAdminMessageKey(message: string | undefined, fallback: TranslationKey): TranslationKey {
   switch (message) {
+    case "Admin access denied.":
     case "Acces admin refuse.":
       return "admin.accessDenied";
+    case "Incomplete request.":
     case "Requete incomplete.":
       return "admin.incompleteRequest";
+    case "Certification failed.":
     case "Certification impossible.":
       return "admin.certificationImpossible";
+    case "Missing server configuration.":
     case "Configuration serveur manquante.":
       return "admin.serverMissing";
+    case "Certification updated, but the date columns are missing in Supabase.":
     case "Certification mise a jour, mais les colonnes de dates manquent dans Supabase.":
       return "admin.updatedMissingColumns";
     default:

@@ -26,6 +26,7 @@ export function Navbar() {
         <div className="col-span-2 min-w-0 md:order-2 md:col-span-1">
           <input
             type="search"
+            suppressHydrationWarning
             placeholder={t("nav.searchPlaceholder")}
             className="h-10 w-full max-w-full rounded-full border border-gray-200 bg-gray-50 px-4 text-sm text-gray-950 outline-none transition focus:border-orange-300 focus:bg-white focus:ring-4 focus:ring-orange-100 dark:border-white/10 dark:bg-white/10 dark:text-white dark:placeholder:text-gray-400 dark:focus:bg-gray-900 md:h-11"
           />

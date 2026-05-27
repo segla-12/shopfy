@@ -1,3 +1,5 @@
+import { toEnglishOptionalText, toEnglishText } from "@/lib/englishText";
+
 export const MAX_PRODUCT_IMAGES = 3;
 
 const WHOLESALE_META_PREFIX = "<!--SHOPFY_WHOLESALE_META:";
@@ -29,6 +31,16 @@ export function buildWholesaleDescription(description: string, metadata: Product
   }
 
   return `${displayDescription}\n\n${WHOLESALE_META_PREFIX}${encodeURIComponent(JSON.stringify(cleanMetadata))}-->`;
+}
+
+export function buildEnglishWholesaleDescription(description: string, metadata: ProductWholesaleMetadata) {
+  return buildWholesaleDescription(toEnglishText(description), toEnglishWholesaleMetadata(metadata));
+}
+
+export function toEnglishWholesaleDescription(description: string) {
+  const extracted = extractWholesaleMetadata(description);
+
+  return buildEnglishWholesaleDescription(extracted.description, extracted.metadata);
 }
 
 export function extractWholesaleMetadata(description: string) {
@@ -109,6 +121,26 @@ function normalizeWholesaleMetadata(metadata: ProductWholesaleMetadata): Product
   }
 
   return cleanMetadata;
+}
+
+function toEnglishWholesaleMetadata(metadata: ProductWholesaleMetadata): ProductWholesaleMetadata {
+  return {
+    ...metadata,
+    minimumOrderQuantity: toEnglishOptionalText(metadata.minimumOrderQuantity),
+    delivery: metadata.delivery
+      ? {
+          method: toEnglishOptionalText(metadata.delivery.method),
+          serviceName: toEnglishOptionalText(metadata.delivery.serviceName),
+          contact: metadata.delivery.contact,
+        }
+      : undefined,
+    geo: metadata.geo
+      ? {
+          ...metadata.geo,
+          city: toEnglishOptionalText(metadata.geo.city),
+        }
+      : undefined,
+  };
 }
 
 function hasWholesaleMetadata(metadata: ProductWholesaleMetadata) {

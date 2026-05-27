@@ -6,9 +6,10 @@ import { useRouter } from "next/navigation";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { productCategories } from "@/data/categories";
+import { toEnglishText } from "@/lib/englishText";
 import { TranslationKey } from "@/lib/i18n";
 import { useLanguage } from "@/lib/language";
-import { buildWholesaleDescription, MAX_PRODUCT_IMAGES } from "@/lib/productWholesale";
+import { buildEnglishWholesaleDescription, MAX_PRODUCT_IMAGES } from "@/lib/productWholesale";
 import { getSupplierProfileHref } from "@/lib/seller";
 import { createProduct } from "@/services/productService";
 import type { ProductCategory } from "@/types/marketplace";
@@ -147,7 +148,7 @@ export default function SellPage() {
     const productImages = uploadedImages.length > 0 ? uploadedImages : [fallbackImage];
     const image = productImages[0];
     const sellerPhoto = await fileToDataUrl(sellerPhotoFile, 640);
-    const description = buildWholesaleDescription(String(formData.get("description") || ""), {
+    const description = buildEnglishWholesaleDescription(String(formData.get("description") || ""), {
       version: 1,
       minimumOrderQuantity: String(formData.get("minimumOrderQuantity") || ""),
       images: productImages,
@@ -165,23 +166,23 @@ export default function SellPage() {
     });
 
     const product = await createProduct({
-      title: String(formData.get("title") || ""),
+      title: toEnglishText(formData.get("title")),
       price: Number(formData.get("price") || 0),
       category: String(formData.get("category") || "Telephones") as ProductCategory,
       image,
       images: productImages,
       description,
-      location: city,
-      city,
+      location: toEnglishText(city),
+      city: toEnglishText(city),
       country,
       latitude,
       longitude,
       minimumOrderQuantity: String(formData.get("minimumOrderQuantity") || ""),
       deliveryMethod: String(formData.get("deliveryMethod") || ""),
-      deliveryServiceName: String(formData.get("deliveryServiceName") || ""),
+      deliveryServiceName: toEnglishText(formData.get("deliveryServiceName")),
       deliveryContact: String(formData.get("deliveryContact") || ""),
       sellerPhone: String(formData.get("sellerPhone") || ""),
-      sellerName: String(formData.get("sellerName") || "Vendeur Shopfy"),
+      sellerName: toEnglishText(formData.get("sellerName") || "Shopfy Seller", "Shopfy Seller"),
       sellerPhoto,
     });
 
@@ -218,22 +219,22 @@ export default function SellPage() {
           <div className="grid w-full max-w-full gap-5 md:grid-cols-2">
             <label className="grid min-w-0 gap-2">
               <span className="text-sm font-black text-gray-900">{t("sell.titleLabel")}</span>
-              <input name="title" required maxLength={80} placeholder={t("sell.titlePlaceholder")} className="min-h-12 w-full max-w-full rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100" />
+              <input name="title" required maxLength={80} suppressHydrationWarning placeholder={t("sell.titlePlaceholder")} className="min-h-12 w-full max-w-full rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100" />
             </label>
 
             <label className="grid min-w-0 gap-2">
               <span className="text-sm font-black text-gray-900">{t("sell.priceLabel")}</span>
-              <input name="price" required type="number" min="1" placeholder={t("sell.pricePlaceholder")} className="min-h-12 w-full max-w-full rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100" />
+              <input name="price" required type="number" min="1" suppressHydrationWarning placeholder={t("sell.pricePlaceholder")} className="min-h-12 w-full max-w-full rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100" />
             </label>
 
             <label className="grid min-w-0 gap-2">
               <span className="text-sm font-black text-gray-900">{copy.moqLabel}</span>
-              <input name="minimumOrderQuantity" required type="number" min="1" placeholder={copy.moqPlaceholder} className="min-h-12 w-full max-w-full rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100" />
+              <input name="minimumOrderQuantity" required type="number" min="1" suppressHydrationWarning placeholder={copy.moqPlaceholder} className="min-h-12 w-full max-w-full rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100" />
             </label>
 
             <label className="grid min-w-0 gap-2">
               <span className="text-sm font-black text-gray-900">{t("sell.categoryLabel")}</span>
-              <select name="category" className="min-h-12 w-full max-w-full rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100">
+              <select name="category" suppressHydrationWarning className="min-h-12 w-full max-w-full rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100">
                 {productCategories.map((category) => (
                   <option key={category} value={category}>{categoryLabel(category)}</option>
                 ))}
@@ -242,7 +243,7 @@ export default function SellPage() {
 
             <label className="grid min-w-0 gap-2">
               <span className="text-sm font-black text-gray-900">{copy.cityLabel}</span>
-              <input name="city" required placeholder={copy.cityPlaceholder} className="min-h-12 w-full max-w-full rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100" />
+              <input name="city" required suppressHydrationWarning placeholder={copy.cityPlaceholder} className="min-h-12 w-full max-w-full rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100" />
             </label>
 
             <PhoneInput className="md:col-span-2" />
@@ -250,12 +251,12 @@ export default function SellPage() {
             <div className="grid gap-5 border-t border-gray-100 pt-5 md:col-span-2 md:grid-cols-2">
               <label className="grid min-w-0 gap-2">
                 <span className="text-sm font-black text-gray-900">{copy.latitudeLabel}</span>
-                <input name="latitude" type="number" step="any" min="-90" max="90" inputMode="decimal" placeholder={copy.latitudePlaceholder} className="min-h-12 w-full max-w-full rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100" />
+                <input name="latitude" type="number" step="any" min="-90" max="90" inputMode="decimal" suppressHydrationWarning placeholder={copy.latitudePlaceholder} className="min-h-12 w-full max-w-full rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100" />
               </label>
 
               <label className="grid min-w-0 gap-2">
                 <span className="text-sm font-black text-gray-900">{copy.longitudeLabel}</span>
-                <input name="longitude" type="number" step="any" min="-180" max="180" inputMode="decimal" placeholder={copy.longitudePlaceholder} className="min-h-12 w-full max-w-full rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100" />
+                <input name="longitude" type="number" step="any" min="-180" max="180" inputMode="decimal" suppressHydrationWarning placeholder={copy.longitudePlaceholder} className="min-h-12 w-full max-w-full rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100" />
               </label>
             </div>
 
@@ -268,6 +269,7 @@ export default function SellPage() {
                       <input
                         name="deliveryMethod"
                         type="radio"
+                        suppressHydrationWarning
                         value={method}
                         required
                         defaultChecked={index === 0}
@@ -283,18 +285,18 @@ export default function SellPage() {
 
               <label className="grid min-w-0 gap-2">
                 <span className="text-sm font-black text-gray-900">{copy.deliveryServiceLabel}</span>
-                <input name="deliveryServiceName" placeholder={copy.deliveryServicePlaceholder} className="min-h-12 w-full max-w-full rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100" />
+                <input name="deliveryServiceName" suppressHydrationWarning placeholder={copy.deliveryServicePlaceholder} className="min-h-12 w-full max-w-full rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100" />
               </label>
 
               <label className="grid min-w-0 gap-2">
                 <span className="text-sm font-black text-gray-900">{copy.deliveryContactLabel}</span>
-                <input name="deliveryContact" required type="tel" placeholder={copy.deliveryContactPlaceholder} className="min-h-12 w-full max-w-full rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100" />
+                <input name="deliveryContact" required type="tel" suppressHydrationWarning placeholder={copy.deliveryContactPlaceholder} className="min-h-12 w-full max-w-full rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100" />
               </label>
             </div>
 
             <label className="grid min-w-0 gap-2">
               <span className="text-sm font-black text-gray-900">{t("sell.sellerNameLabel")}</span>
-              <input name="sellerName" placeholder={t("sell.sellerNamePlaceholder")} className="min-h-12 w-full max-w-full rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100" />
+              <input name="sellerName" suppressHydrationWarning placeholder={t("sell.sellerNamePlaceholder")} className="min-h-12 w-full max-w-full rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100" />
             </label>
 
             <label className="grid min-w-0 gap-2">
@@ -303,6 +305,7 @@ export default function SellPage() {
                 name="sellerPhoto"
                 required
                 type="file"
+                suppressHydrationWarning
                 accept="image/jpeg,image/png,image/webp"
                 onChange={handleSupplierPhotoChange}
                 onInvalid={(event) => {
@@ -329,7 +332,7 @@ export default function SellPage() {
 
             <label className="grid min-w-0 gap-2 md:col-span-2">
               <span className="text-sm font-black text-gray-900">{copy.imagesLabel}</span>
-              <input name="images" type="file" accept="image/*" multiple onChange={handleProductImagesChange} className="w-full max-w-full rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-4 text-sm" />
+              <input name="images" type="file" accept="image/*" multiple suppressHydrationWarning onChange={handleProductImagesChange} className="w-full max-w-full rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-4 text-sm" />
               <span className="text-xs font-bold text-gray-500">
                 {selectedImageCount > 0 ? copy.imageCount(selectedImageCount) : copy.imageHelper}
               </span>
@@ -337,7 +340,7 @@ export default function SellPage() {
 
             <label className="grid min-w-0 gap-2 md:col-span-2">
               <span className="text-sm font-black text-gray-900">{t("sell.descriptionLabel")}</span>
-              <textarea name="description" required rows={5} placeholder={t("sell.descriptionPlaceholder")} className="w-full max-w-full resize-y rounded-2xl border border-gray-200 px-4 py-3 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100" />
+              <textarea name="description" required rows={5} suppressHydrationWarning placeholder={t("sell.descriptionPlaceholder")} className="w-full max-w-full resize-y rounded-2xl border border-gray-200 px-4 py-3 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100" />
             </label>
           </div>
 

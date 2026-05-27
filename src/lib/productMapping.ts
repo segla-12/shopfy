@@ -1,6 +1,7 @@
 import type { Product, SupabaseProductRow } from "@/types/marketplace";
+import { toEnglishOptionalText, toEnglishText } from "@/lib/englishText";
 import { getPhoneCountryByDialCode } from "@/lib/phoneCountries";
-import { extractWholesaleMetadata, getProductImages } from "@/lib/productWholesale";
+import { extractWholesaleMetadata, getProductImages, toEnglishWholesaleDescription } from "@/lib/productWholesale";
 
 export const PRODUCT_SELECT_FIELDS = "id,title,price,image,description,category,phone,location,is_certified,created_at";
 export const PRODUCT_SELECT_FIELDS_WITH_FEATURES = [
@@ -25,7 +26,7 @@ export const PRODUCT_SELECT_FIELDS_WITH_FEATURES = [
 ].join(",");
 
 export function mapSupabaseProduct(row: SupabaseProductRow): Product {
-  const { description, metadata } = extractWholesaleMetadata(row.description);
+  const { description, metadata } = extractWholesaleMetadata(toEnglishWholesaleDescription(row.description));
   const certificationExpiresAt = row.certification_expires_at || undefined;
   const isCertificationActive = Boolean(row.is_certified) && isFutureOrMissingDate(certificationExpiresAt);
   const phoneCountry = getPhoneCountryByDialCode(row.phone);
@@ -34,24 +35,24 @@ export function mapSupabaseProduct(row: SupabaseProductRow): Product {
 
   return {
     id: String(row.id ?? row.created_at),
-    title: row.title,
+    title: toEnglishText(row.title),
     price: Number(row.price),
     image: row.image,
     images: getProductImages(row.image, metadata.images),
     description,
     category: row.category,
-    location: row.location || metadata.geo?.city || undefined,
+    location: toEnglishOptionalText(row.location || metadata.geo?.city),
     country,
-    city,
+    city: toEnglishOptionalText(city),
     latitude: metadata.geo?.latitude,
     longitude: metadata.geo?.longitude,
-    minimumOrderQuantity: metadata.minimumOrderQuantity,
+    minimumOrderQuantity: toEnglishOptionalText(metadata.minimumOrderQuantity),
     wholesalePrice: Number(row.price),
-    deliveryMethod: metadata.delivery?.method,
-    deliveryServiceName: metadata.delivery?.serviceName,
+    deliveryMethod: toEnglishOptionalText(metadata.delivery?.method),
+    deliveryServiceName: toEnglishOptionalText(metadata.delivery?.serviceName),
     deliveryContact: metadata.delivery?.contact,
     sellerPhone: row.phone,
-    sellerName: row.seller_name || "Vendeur Shopfy",
+    sellerName: toEnglishText(row.seller_name || "Shopfy Seller", "Shopfy Seller"),
     sellerPhoto: row.seller_photo || undefined,
     isCertified: isCertificationActive,
     certificationStartedAt: row.certification_started_at || undefined,

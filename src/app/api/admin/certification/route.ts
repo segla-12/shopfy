@@ -18,7 +18,7 @@ export async function POST(request: Request) {
 
   if (!adminSecret || body.adminSecret !== adminSecret) {
     return NextResponse.json(
-      { success: false, message: "Acces admin refuse." },
+      { success: false, message: "Admin access denied." },
       { status: 401 },
     );
   }
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(
-      { success: false, message: "Requete incomplete." },
+      { success: false, message: "Incomplete request." },
       { status: 400 },
     );
   }
@@ -79,14 +79,14 @@ export async function POST(request: Request) {
     }
   } catch {
     return NextResponse.json(
-      { success: false, message: "Configuration serveur manquante." },
+      { success: false, message: "Missing server configuration." },
       { status: 500 },
     );
   }
 
   if (error) {
     return NextResponse.json(
-      { success: false, message: "Certification impossible." },
+      { success: false, message: "Certification failed." },
       { status: 500 },
     );
   }
@@ -102,7 +102,7 @@ export async function POST(request: Request) {
         }
       : null,
     message: usedFallback
-      ? "Certification mise a jour, mais les colonnes de dates manquent dans Supabase."
+      ? "Certification updated, but the date columns are missing in Supabase."
       : undefined,
   });
 }

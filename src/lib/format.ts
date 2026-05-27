@@ -1,3 +1,3 @@
 export function formatPrice(price: number) {
-  return new Intl.NumberFormat("fr-FR").format(price);
+  return new Intl.NumberFormat("en-US").format(price);
 }

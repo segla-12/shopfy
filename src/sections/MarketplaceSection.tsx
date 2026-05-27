@@ -72,12 +72,14 @@ export function MarketplaceSection() {
 
         <div id="categories" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <input
+            suppressHydrationWarning
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder={copy.searchPlaceholder}
             className="min-h-11 rounded-full border border-gray-200 bg-white px-4 text-sm text-gray-950 outline-none transition focus:border-orange-300 focus:ring-4 focus:ring-orange-100 dark:border-white/10 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-400"
           />
           <select
+            suppressHydrationWarning
             value={category}
             onChange={(event) => setCategory(event.target.value)}
             className="min-h-11 rounded-full border border-gray-200 bg-white px-4 text-sm font-semibold outline-none transition focus:border-orange-300 focus:ring-4 focus:ring-orange-100 dark:border-white/10 dark:bg-gray-900 dark:text-white"
@@ -87,6 +89,7 @@ export function MarketplaceSection() {
             ))}
           </select>
           <select
+            suppressHydrationWarning
             value={country}
             onChange={(event) => {
               setCountry(event.target.value);
@@ -100,6 +103,7 @@ export function MarketplaceSection() {
             ))}
           </select>
           <select
+            suppressHydrationWarning
             value={city}
             onChange={(event) => setCity(event.target.value)}
             className="min-h-11 rounded-full border border-gray-200 bg-white px-4 text-sm font-semibold outline-none transition focus:border-orange-300 focus:ring-4 focus:ring-orange-100 dark:border-white/10 dark:bg-gray-900 dark:text-white"
