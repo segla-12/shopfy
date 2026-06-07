@@ -13,13 +13,11 @@ import {
 import {
   formatTranslation,
   Language,
-  languages,
   TranslationKey,
   translateCategory,
   translateCountry,
 } from "@/lib/i18n";
-
-const LANGUAGE_STORAGE_KEY = "shopfy-language";
+import { DEFAULT_LANGUAGE, LANGUAGE_COOKIE_KEY } from "@/lib/languageConfig";
 
 type LanguageContextValue = {
   language: Language;
@@ -32,33 +30,20 @@ type LanguageContextValue = {
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
-export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<Language>("en");
-  const [isReady, setIsReady] = useState(false);
+type LanguageProviderProps = {
+  children: ReactNode;
+  initialLanguage?: Language;
+};
+
+export function LanguageProvider({ children, initialLanguage = DEFAULT_LANGUAGE }: LanguageProviderProps) {
+  const [language, setLanguageState] = useState<Language>(initialLanguage);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
-    const frameId = window.requestAnimationFrame(() => {
-      const savedLanguage = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
-
-      if (isLanguage(savedLanguage)) {
-        setLanguageState(savedLanguage);
-      }
-
-      setIsReady(true);
-    });
-
-    return () => window.cancelAnimationFrame(frameId);
-  }, []);
-
-  useEffect(() => {
-    if (!isReady) {
-      return;
-    }
-
     document.documentElement.lang = language;
-    window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
-  }, [isReady, language]);
+    document.cookie = `${LANGUAGE_COOKIE_KEY}=${language}; path=/; max-age=31536000; samesite=lax`;
+    window.localStorage.setItem(LANGUAGE_COOKIE_KEY, language);
+  }, [language]);
 
   const setLanguage = useCallback((nextLanguage: Language) => {
     startTransition(() => {
@@ -112,6 +97,3 @@ export function useLanguage() {
   return context;
 }
 
-function isLanguage(value: string | null): value is Language {
-  return languages.includes(value as Language);
-}

@@ -11,7 +11,7 @@ export function cleanPrice(value: unknown) {
 }
 
 export function cleanImage(value: unknown) {
-  const image = cleanText(value);
+  const image = String(value ?? "").trim();
 
   if (image.length > MAX_IMAGE_LENGTH) {
     return "";

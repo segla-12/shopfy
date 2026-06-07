@@ -1,16 +1,36 @@
 "use client";
 
+import Link from "next/link";
 import { useLanguage } from "@/lib/language";
+import { BrandLogo } from "./BrandLogo";
 
 export function Footer() {
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
+  const privacyLabel = language === "fr" ? "Politique de confidentialite" : "Privacy Policy";
+  const termsLabel = language === "fr" ? "Conditions d'utilisation" : "Terms of Service";
 
   return (
     <footer className="border-t border-gray-100 bg-white transition-colors dark:border-white/10 dark:bg-gray-950">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-center gap-5 px-4 py-8 text-center text-sm text-gray-500 md:flex-row md:justify-between md:text-left">
         <div className="grid gap-1">
-          <p className="text-lg font-black tracking-tight text-orange-500">Shopfy</p>
+          <Link href="/" className="inline-flex w-[146px] justify-self-center transition hover:opacity-80 md:justify-self-start" aria-label="Shopfy">
+            <BrandLogo sizes="146px" className="h-12 w-auto" />
+          </Link>
           <p className="font-semibold text-gray-600">{t("footer.rights")}</p>
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 md:justify-start">
+            <Link
+              href="/privacy"
+              className="font-black text-gray-700 underline decoration-orange-300 underline-offset-4 transition hover:text-orange-500 dark:text-gray-200"
+            >
+              {privacyLabel}
+            </Link>
+            <Link
+              href="/terms"
+              className="font-black text-gray-700 underline decoration-orange-300 underline-offset-4 transition hover:text-orange-500 dark:text-gray-200"
+            >
+              {termsLabel}
+            </Link>
+          </div>
         </div>
 
         <div className="flex items-center justify-center gap-3">

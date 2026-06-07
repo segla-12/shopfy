@@ -5,6 +5,7 @@ import { cleanText } from "@/lib/validation";
 type CertificationRequest = {
   adminSecret?: string;
   productId?: string;
+  storeSlug?: string;
   isCertified?: boolean;
   certificationStartDate?: string;
   durationMonths?: number;
@@ -24,12 +25,20 @@ export async function POST(request: Request) {
   }
 
   const productId = cleanText(body.productId);
+  const storeSlug = cleanText(body.storeSlug);
 
-  if (!productId || typeof body.isCertified !== "boolean") {
-    if (!productId && typeof body.isCertified === "undefined") {
+  if ((!productId && !storeSlug) || typeof body.isCertified !== "boolean") {
+    if (!productId && !storeSlug && typeof body.isCertified === "undefined") {
       return NextResponse.json({ success: true });
     }
 
+    return NextResponse.json(
+      { success: false, message: "Incomplete request." },
+      { status: 400 },
+    );
+  }
+
+  if (productId && storeSlug) {
     return NextResponse.json(
       { success: false, message: "Incomplete request." },
       { status: 400 },
@@ -61,18 +70,21 @@ export async function POST(request: Request) {
 
   try {
     const supabaseAdmin = createSupabaseAdminClient();
+    const tableName = storeSlug ? "shopfy_stores" : "products";
+    const columnName = storeSlug ? "slug" : "id";
+    const entityId = storeSlug || productId;
     let result = await supabaseAdmin
-      .from("products")
+      .from(tableName)
       .update(certificationUpdate)
-      .eq("id", productId);
+      .eq(columnName, entityId);
 
     error = result.error;
 
     if (error) {
       result = await supabaseAdmin
-        .from("products")
+        .from(tableName)
         .update({ is_certified: body.isCertified })
-        .eq("id", productId);
+        .eq(columnName, entityId);
 
       error = result.error;
       usedFallback = !error;

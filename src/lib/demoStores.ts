@@ -1,0 +1,222 @@
+import type { ShopfyStore, StoreProduct, SupplierSourceProduct } from "@/types/storefront";
+
+export const demoStoreSlug = "boutique-demo";
+
+export const demoStores: ShopfyStore[] = [
+  {
+    slug: demoStoreSlug,
+    name: "Boutique Demo Shopfy",
+    tagline: "Boutique neutre pour tester la vente, le panier et les commandes WhatsApp.",
+    description: "Une boutique vendeur simple avec produits varies, prix en XOF et commande possible par WhatsApp.",
+    logoUrl: "https://images.unsplash.com/photo-1521566652839-697aa473761a?auto=format&fit=crop&w=400&q=80",
+    bannerUrl: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1400&q=80",
+    ownerName: "Vendeur Shopfy",
+    city: "Cotonou",
+    country: "Benin",
+    currency: "XOF",
+    whatsappPhone: "+2290149341219",
+    theme: {
+      primary: "#111827",
+      accent: "#f97316",
+    },
+    stats: {
+      products: 4,
+      orders: 18,
+      revenue: 246000,
+      conversionRate: 3.8,
+    },
+    products: [
+      {
+        id: "demo-bag",
+        slug: "sac-polyvalent",
+        title: "Sac polyvalent",
+        description: "Sac pratique pour usage quotidien, pret pour une boutique vendeur neutre.",
+        category: "General",
+        image: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=900&q=80",
+        price: 15000,
+        compareAtPrice: 19000,
+        currency: "XOF",
+        inventoryQuantity: 24,
+        sourceSupplierName: "Global Apparel Supply",
+        sourceSupplierSlug: "global-apparel-supply",
+      },
+      {
+        id: "demo-beauty-kit",
+        slug: "kit-beaute-voyage",
+        title: "Kit beaute voyage",
+        description: "Kit compact pour revendeurs, avec accessoires essentiels et packaging simple.",
+        category: "General",
+        image: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=900&q=80",
+        price: 12500,
+        currency: "XOF",
+        inventoryQuantity: 31,
+        sourceSupplierName: "Urban Bags Wholesale",
+        sourceSupplierSlug: "urban-bags-wholesale",
+      },
+    ],
+  },
+  {
+    slug: "dakar-cosmetics",
+    name: "Dakar Cosmetics",
+    tagline: "Beauty essentials sourced for fast-moving online sellers.",
+    description: "Skincare, makeup accessories, and private-label beauty products for daily routines.",
+    logoUrl: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=400&q=80",
+    bannerUrl: "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1400&q=80",
+    ownerName: "Aminata Diop",
+    city: "Dakar",
+    country: "Senegal",
+    currency: "XOF",
+    whatsappPhone: "+221770000000",
+    theme: {
+      primary: "#7c2d12",
+      accent: "#ec4899",
+    },
+    stats: {
+      products: 3,
+      orders: 12,
+      revenue: 128500,
+      conversionRate: 3.1,
+    },
+    products: [
+      {
+        id: "cosmetics-brush-set",
+        slug: "pro-makeup-brush-set",
+        title: "Pro makeup brush set",
+        description: "Twelve-piece soft fiber brush set packed for boutique resale.",
+        category: "Beauty",
+        image: "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=900&q=80",
+        price: 12000,
+        currency: "XOF",
+        inventoryQuantity: 40,
+        sourceSupplierName: "Beauty Trade House",
+        sourceSupplierSlug: "beauty-trade-house",
+      },
+    ],
+  },
+  {
+    slug: "africa-shoes",
+    name: "Africa Shoes",
+    tagline: "Comfort footwear for resellers and local delivery boutiques.",
+    description: "Sneakers, sandals, and daily footwear products with practical margins.",
+    logoUrl: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=400&q=80",
+    bannerUrl: "https://images.unsplash.com/photo-1491553895911-0055eca6402d?auto=format&fit=crop&w=1400&q=80",
+    ownerName: "Daniel Kone",
+    city: "Abidjan",
+    country: "Cote d'Ivoire",
+    currency: "XOF",
+    whatsappPhone: "+2250700000000",
+    theme: {
+      primary: "#064e3b",
+      accent: "#22c55e",
+    },
+    stats: {
+      products: 5,
+      orders: 25,
+      revenue: 318000,
+      conversionRate: 4.4,
+    },
+    products: [
+      {
+        id: "africa-runner",
+        slug: "daily-runner-sneakers",
+        title: "Daily runner sneakers",
+        description: "Light foam sneakers with breathable mesh and neutral colorway.",
+        category: "Shoes",
+        image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=900&q=80",
+        price: 22000,
+        currency: "XOF",
+        inventoryQuantity: 36,
+        sourceSupplierName: "Continental Footwear",
+        sourceSupplierSlug: "continental-footwear",
+      },
+    ],
+  },
+];
+
+export const supplierSourceProducts: SupplierSourceProduct[] = [
+  {
+    id: "source-denim-jacket",
+    slug: "oversized-denim-jacket",
+    title: "Oversized denim jacket",
+    description: "Heavy cotton denim jacket with wide fit, metal buttons, and resale-ready packaging.",
+    category: "Fashion",
+    image: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=900&q=80",
+    wholesalePrice: 8500,
+    recommendedRetailPrice: 18500,
+    currency: "XOF",
+    minimumOrderQuantity: 12,
+    supplierName: "Global Apparel Supply",
+    supplierSlug: "global-apparel-supply",
+  },
+  {
+    id: "source-crossbody-bag",
+    slug: "minimal-crossbody-bag",
+    title: "Minimal crossbody bag",
+    description: "Small vegan leather crossbody bag with zip closure and adjustable strap.",
+    category: "Accessories",
+    image: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=900&q=80",
+    wholesalePrice: 6000,
+    recommendedRetailPrice: 14000,
+    currency: "XOF",
+    minimumOrderQuantity: 20,
+    supplierName: "Urban Bags Wholesale",
+    supplierSlug: "urban-bags-wholesale",
+  },
+  {
+    id: "source-beauty-kit",
+    slug: "travel-beauty-kit",
+    title: "Travel beauty kit",
+    description: "Compact travel kit with cosmetic pouch, applicators, mirror, and refill bottles.",
+    category: "Beauty",
+    image: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=900&q=80",
+    wholesalePrice: 4500,
+    recommendedRetailPrice: 12000,
+    currency: "XOF",
+    minimumOrderQuantity: 30,
+    supplierName: "Beauty Trade House",
+    supplierSlug: "beauty-trade-house",
+  },
+  {
+    id: "source-white-sneakers",
+    slug: "clean-white-sneakers",
+    title: "Clean white sneakers",
+    description: "Low-top everyday sneakers with padded collar and durable rubber sole.",
+    category: "Shoes",
+    image: "https://images.unsplash.com/photo-1491553895911-0055eca6402d?auto=format&fit=crop&w=900&q=80",
+    wholesalePrice: 9000,
+    recommendedRetailPrice: 22000,
+    currency: "XOF",
+    minimumOrderQuantity: 18,
+    supplierName: "Continental Footwear",
+    supplierSlug: "continental-footwear",
+  },
+];
+
+export function getDemoStore(slug: string) {
+  return demoStores.find((store) => store.slug === slug) || null;
+}
+
+export function createImportedStoreProduct(sourceProduct: SupplierSourceProduct): StoreProduct {
+  return {
+    id: `imported-${sourceProduct.id}`,
+    slug: sourceProduct.slug,
+    title: sourceProduct.title,
+    description: sourceProduct.description,
+    category: sourceProduct.category,
+    image: sourceProduct.image,
+    price: sourceProduct.recommendedRetailPrice,
+    compareAtPrice: Math.round(sourceProduct.recommendedRetailPrice * 1.18),
+    currency: sourceProduct.currency,
+    inventoryQuantity: 20,
+    sourceSupplierName: sourceProduct.supplierName,
+    sourceSupplierSlug: sourceProduct.supplierSlug,
+  };
+}
+
+export function formatStoreMoney(amount: number, currency: string) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(amount);
+}

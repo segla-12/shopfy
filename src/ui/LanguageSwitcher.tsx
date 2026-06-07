@@ -15,7 +15,7 @@ export function LanguageSwitcher() {
       <span
         aria-hidden="true"
         className={`absolute left-1 top-1 h-7 w-[32px] rounded-full bg-gray-950 shadow-sm transition-transform duration-300 ease-out dark:bg-white ${
-          language === "en" ? "translate-x-[34px]" : "translate-x-0"
+          language === "fr" ? "translate-x-[34px]" : "translate-x-0"
         }`}
       />
 

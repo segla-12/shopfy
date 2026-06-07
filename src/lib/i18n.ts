@@ -1,6 +1,6 @@
 import { getPhoneCountry } from "@/lib/phoneCountries";
 
-export const languages = ["fr", "en"] as const;
+export const languages = ["en", "fr"] as const;
 
 export type Language = (typeof languages)[number];
 
@@ -21,6 +21,7 @@ export const translations = {
     "safety.marketplaceRole": "Shopfy est un repertoire grossiste qui met en relation acheteurs et fournisseurs grossistes. La plateforme ne participe pas directement aux paiements, livraisons ou accords conclus entre utilisateurs.",
     "safety.disclaimer": "En cas d'escroquerie, fraude, arnaque ou litige entre utilisateurs, Shopfy se désengage de toute responsabilité liée à la transaction concernée.",
     "safety.checkbox": "J'ai lu et compris les consignes de sécurité.",
+    "safety.banner": "⚠️ Shopfy met les grossistes en contact avec le reste du monde.\n\nNous invitons tous les acheteurs à faire preuve de vigilance et de prudence. Vérifiez toujours les marchandises et les informations du fournisseur avant tout paiement.\n\nLe paiement à la livraison est fortement recommandé.\n\nEn cas de litige, fraude ou escroquerie entre vendeur et acheteur, Shopfy se désengage de toute responsabilité.\n\n   L’équipe Shopfy",
     "safety.continue": "Continuer vers la marketplace",
     "nav.home": "Accueil",
     "nav.sell": "Espace grossiste",
@@ -128,8 +129,8 @@ export const translations = {
     "manage.saving": "Enregistrement...",
     "manage.save": "Enregistrer les modifications",
     "admin.kicker": "Administration",
-    "admin.title": "Certification fournisseurs",
-    "admin.description": "Gere la certification des grossistes, la duree payee et la date d'expiration. Tarif: 1500 FCFA par mois.",
+    "admin.title": "Certification fournisseurs et boutiques",
+    "admin.description": "Gere la certification des grossistes et des boutiques, la duree payee et la date d'expiration. Tarif: 1500 FCFA par mois.",
     "admin.codeLabel": "Code admin",
     "admin.codePlaceholder": "Entrez le code admin",
     "admin.verifying": "Verification...",
@@ -143,6 +144,8 @@ export const translations = {
     "admin.updatedMissingColumns": "Certification mise a jour, mais les colonnes de dates manquent dans Supabase.",
     "admin.certifiedForOneMonth": "Fournisseur certifie pour 1 mois.",
     "admin.certifiedForMonths": "Fournisseur certifie pour {count} mois.",
+    "admin.storeCertifiedForOneMonth": "Boutique certifiee pour 1 mois.",
+    "admin.storeCertifiedForMonths": "Boutique certifiee pour {count} mois.",
     "admin.certificationRemoved": "Certification retiree.",
     "admin.certificationLabel": "Certification",
     "admin.expirationLabel": "Expiration",
@@ -158,6 +161,8 @@ export const translations = {
     "admin.statusActive": "Grossiste certifie",
     "admin.statusExpired": "Certification expiree",
     "admin.statusUncertified": "Grossiste non certifie",
+    "admin.storeStatusActive": "Boutique certifiee",
+    "admin.storeStatusUncertified": "Boutique non certifiee",
   },
   en: {
     "language.french": "French",
@@ -175,6 +180,7 @@ export const translations = {
     "safety.marketplaceRole": "Shopfy is a wholesale directory that connects buyers with wholesale suppliers. The platform does not directly participate in payments, deliveries, or agreements made between users.",
     "safety.disclaimer": "In the event of a scam, fraud, deception, or dispute between users, Shopfy disclaims responsibility for the transaction concerned.",
     "safety.checkbox": "I have read and understood the safety guidelines.",
+    "safety.banner": "⚠️ Shopfy connects wholesalers with the rest of the world.\n\nWe invite all buyers to remain vigilant and careful. Always verify the goods and supplier information before making any payment.\n\nPayment on delivery is strongly recommended.\n\nIn the event of a dispute, fraud, or scam between seller and buyer, Shopfy disclaims all responsibility.\n\n   The Shopfy team",
     "safety.continue": "Continue to the marketplace",
     "nav.home": "Home",
     "nav.sell": "Supplier space",
@@ -282,8 +288,8 @@ export const translations = {
     "manage.saving": "Saving...",
     "manage.save": "Save changes",
     "admin.kicker": "Administration",
-    "admin.title": "Supplier certification",
-    "admin.description": "Manage supplier certification, paid duration, and expiration date. Price: 1500 FCFA per month.",
+    "admin.title": "Supplier and store certification",
+    "admin.description": "Manage supplier and store certification, paid duration, and expiration date. Price: 1500 FCFA per month.",
     "admin.codeLabel": "Admin code",
     "admin.codePlaceholder": "Enter admin code",
     "admin.verifying": "Verifying...",
@@ -297,6 +303,8 @@ export const translations = {
     "admin.updatedMissingColumns": "Certification updated, but the date columns are missing in Supabase.",
     "admin.certifiedForOneMonth": "Supplier certified for 1 month.",
     "admin.certifiedForMonths": "Supplier certified for {count} months.",
+    "admin.storeCertifiedForOneMonth": "Store certified for 1 month.",
+    "admin.storeCertifiedForMonths": "Store certified for {count} months.",
     "admin.certificationRemoved": "Certification removed.",
     "admin.certificationLabel": "Certification",
     "admin.expirationLabel": "Expiration",
@@ -312,6 +320,8 @@ export const translations = {
     "admin.statusActive": "Certified supplier",
     "admin.statusExpired": "Certification expired",
     "admin.statusUncertified": "Supplier not certified",
+    "admin.storeStatusActive": "Certified store",
+    "admin.storeStatusUncertified": "Uncertified store",
   },
 } as const;
 

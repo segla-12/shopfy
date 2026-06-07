@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { formatPrice } from "@/lib/format";
 import { useLanguage } from "@/lib/language";
+import { showSafetyNotice } from "@/lib/safetyNotice";
 import { getSellerProfileHref } from "@/lib/seller";
 import { createWhatsappUrl } from "@/lib/whatsapp";
 import type { Product } from "@/types/marketplace";
@@ -97,6 +98,10 @@ export function ProductCard({ product, action = "supplier" }: ProductCardProps) 
               href={orderHref}
               target="_blank"
               rel="noreferrer"
+              onClick={(event) => {
+                event.preventDefault();
+                showSafetyNotice(orderHref);
+              }}
               className="inline-flex min-h-9 items-center justify-center rounded-md bg-green-500 px-3 text-sm font-black text-white shadow-sm transition hover:bg-green-600 focus:outline-none focus:ring-4 focus:ring-green-100 sm:min-h-10 sm:min-w-40 sm:px-4 dark:bg-green-500 dark:hover:bg-green-600 dark:focus:ring-green-400/20"
             >
               {copy.order}
