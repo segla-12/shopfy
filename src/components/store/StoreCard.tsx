@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useLanguage } from "@/lib/language";
 import type { ShopfyStore } from "@/types/storefront";
 import { CertifiedBadge } from "@/ui/CertifiedBadge";
@@ -11,8 +12,33 @@ type StoreCardProps = {
 };
 
 export function StoreCard({ store }: StoreCardProps) {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
+  const [copied, setCopied] = useState(false);
   const copy = getStoreCardCopy(language);
+
+  useEffect(() => {
+    if (!copied) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => setCopied(false), 1800);
+    return () => window.clearTimeout(timeout);
+  }, [copied]);
+
+  async function copyLink() {
+    if (!navigator.clipboard) {
+      return;
+    }
+
+    const url = `${window.location.origin}/store/${store.slug}`;
+
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  }
 
   return (
     <article className="grid overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:border-orange-300 hover:shadow-md dark:border-white/10 dark:bg-gray-900 md:grid-cols-[220px_minmax(0,1fr)]">
@@ -54,6 +80,13 @@ export function StoreCard({ store }: StoreCardProps) {
           >
             {copy.openStore}
           </Link>
+          <button
+            type="button"
+            onClick={copyLink}
+            className="inline-flex min-h-10 items-center justify-center rounded-md border border-gray-200 bg-white px-4 text-sm font-black text-gray-700 transition hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-orange-100 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10 dark:focus:ring-orange-400/20"
+          >
+            {copied ? t("share.linkCopied") : t("share.copyStoreLink")}
+          </button>
         </div>
       </div>
     </article>
@@ -73,7 +106,7 @@ function getStoreCardCopy(language: string) {
   if (language === "fr") {
     return {
       badge: "Boutique vendeur",
-      certifiedBadge: "Boutique certifiee",
+      certifiedBadge: "Boutique certifiée",
       products: "Produits",
       openStore: "Ouvrir la boutique",
     };

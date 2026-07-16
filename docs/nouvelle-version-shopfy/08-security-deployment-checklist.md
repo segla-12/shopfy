@@ -29,8 +29,11 @@ URLs a autoriser:
 
 - Site URL: `https://shopfy.site`;
 - `http://127.0.0.1:3000/auth/callback`;
+- `http://127.0.0.1:3000/auth/confirm`;
 - `http://localhost:3000/auth/callback`;
+- `http://localhost:3000/auth/confirm`;
 - `https://shopfy.site/auth/callback`;
+- `https://shopfy.site/auth/confirm`;
 - `https://*-romho.vercel.app/**` ou le domaine de preview Vercel reel si utilise.
 
 Dans Google Cloud OAuth:

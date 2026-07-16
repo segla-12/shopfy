@@ -5,8 +5,15 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { createStoreSlug } from "@/lib/createdStores";
 import { useLanguage } from "@/lib/language";
 import { supabase } from "@/lib/supabase";
+import { getStorePublicUrl } from "@/lib/storeLinks";
+import {
+  getInternationalWhatsappPhoneError,
+  isValidInternationalWhatsappPhoneInput,
+  normalizeWhatsappPhone,
+} from "@/lib/whatsapp";
 import { createSupabaseStore } from "@/services/storeService";
 import type { ShopfyStore } from "@/types/storefront";
+import { StoreQrCode } from "./StoreQrCode";
 
 type WizardValues = {
   name: string;
@@ -75,6 +82,11 @@ export function CreateStoreWizard() {
     event.preventDefault();
     setErrorMessage("");
 
+    if (step === 1 && !isValidInternationalWhatsappPhoneInput(values.whatsappPhone)) {
+      setErrorMessage(getInternationalWhatsappPhoneError());
+      return;
+    }
+
     if (step < 3) {
       setStep((currentStep) => currentStep + 1);
       return;
@@ -83,7 +95,10 @@ export function CreateStoreWizard() {
     setIsSaving(true);
 
     try {
-      const store = await createSupabaseStore(values);
+      const store = await createSupabaseStore({
+        ...values,
+        whatsappPhone: normalizeWhatsappPhone(values.whatsappPhone),
+      });
       setCreatedStore(store);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : copy.saveError);
@@ -93,13 +108,15 @@ export function CreateStoreWizard() {
   }
 
   if (createdStore) {
+    const storeUrl = getStorePublicUrl(createdStore.slug);
+
     return (
       <section className="mx-auto grid max-w-4xl gap-5 px-4 py-10">
         <div className="rounded-lg border border-green-100 bg-white p-5 shadow-sm dark:border-green-400/20 dark:bg-gray-900">
           <p className="text-sm font-black uppercase tracking-wide text-green-600 dark:text-green-300">{copy.successKicker}</p>
           <h1 className="mt-2 text-3xl font-black text-gray-950 dark:text-white">{copy.successTitle}</h1>
           <p className="mt-3 break-words text-base leading-7 text-gray-600 dark:text-gray-300">
-            {copy.successText} <span className="font-black text-gray-950 dark:text-white">https://shopfy.site/store/{createdStore.slug}</span>
+            {copy.successText} <span className="font-black text-gray-950 dark:text-white">{storeUrl}</span>
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             <Link
@@ -116,6 +133,12 @@ export function CreateStoreWizard() {
             </Link>
           </div>
         </div>
+        <StoreQrCode
+          url={storeUrl}
+          title={copy.qrTitle}
+          downloadLabel={copy.downloadQr}
+          fileName={`shopfy-${createdStore.slug}-qr.png`}
+        />
       </section>
     );
   }
@@ -138,7 +161,7 @@ export function CreateStoreWizard() {
           <h1 className="mt-2 text-3xl font-black text-gray-950 dark:text-white">{copy.authTitle}</h1>
           <p className="mt-3 text-base leading-7 text-gray-600 dark:text-gray-300">{copy.authText}</p>
           <Link
-            href="/auth?next=/create-store"
+            href="/auth?next=/dashboard"
             className="mt-5 inline-flex min-h-11 items-center justify-center rounded-md bg-orange-500 px-5 text-sm font-black text-white transition hover:bg-orange-600"
           >
             {copy.authAction}
@@ -218,7 +241,7 @@ export function CreateStoreWizard() {
               <h2 className="mt-2 break-words text-2xl font-black text-gray-950 dark:text-white">{values.name || copy.untitledStore}</h2>
               <p className="mt-2 break-words text-sm leading-6 text-gray-600 dark:text-gray-300">{values.tagline || copy.defaultTagline}</p>
               <div className="mt-4 grid gap-2 text-sm font-bold text-gray-600 dark:text-gray-300">
-                <p>{copy.publicUrl}: <span className="text-gray-950 dark:text-white">https://shopfy.site/store/{slug}</span></p>
+                <p>{copy.publicUrl}: <span className="text-gray-950 dark:text-white">{getStorePublicUrl(slug)}</span></p>
                 <p>{copy.location}: <span className="text-gray-950 dark:text-white">{values.city}, {values.country}</span></p>
                 <p>{copy.currency}: <span className="text-gray-950 dark:text-white">{values.currency}</span></p>
                 <p>{copy.whatsappPhone}: <span className="text-gray-950 dark:text-white">{values.whatsappPhone}</span></p>
@@ -350,6 +373,8 @@ function getCreateStoreCopy(language: string) {
       successText: "Votre lien public est",
       openStore: "Ouvrir ma boutique",
       dashboard: "Aller au dashboard",
+      qrTitle: "Code QR de la boutique",
+      downloadQr: "Telecharger le code QR",
       saving: "Creation...",
       saveError: "Impossible de creer la boutique dans Supabase.",
       authChecking: "Verification du compte vendeur...",
@@ -396,6 +421,8 @@ function getCreateStoreCopy(language: string) {
     successText: "Your public link is",
     openStore: "Open my store",
     dashboard: "Go to dashboard",
+    qrTitle: "Store QR code",
+    downloadQr: "Download QR code",
     saving: "Creating...",
     saveError: "Unable to create the store in Supabase.",
     authChecking: "Checking seller account...",

@@ -399,7 +399,7 @@ function getAdminStoreCopy(language: "fr" | "en") {
   return {
     title: "Boutiques",
     description: "Certifie ou retire la certification des boutiques vendeur.",
-    certifiedBadge: "Boutique certifiee",
+    certifiedBadge: "Boutique certifiée",
     noStores: "Aucune boutique creee pour le moment.",
   };
 }

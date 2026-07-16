@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/lib/language";
-import { supabase } from "@/lib/supabase";
+import { clearServerAuthSession, supabase, syncServerAuthSession } from "@/lib/supabase";
 
 type AuthMode = "signin" | "signup" | "reset";
 
@@ -27,19 +27,29 @@ export function SellerAuth() {
   const [isOAuthSubmitting, setIsOAuthSubmitting] = useState(false);
 
   useEffect(() => {
-    const frameId = window.requestAnimationFrame(() => {
+    let isActive = true;
+
+    async function loadSession() {
       const isRecoveryRequest = window.location.search.includes("reset=1");
       setIsPasswordRecovery(isRecoveryRequest);
-      supabase.auth.getSession().then(({ data }) => {
-        setUserEmail(data.session?.user.email || "");
-        setIsLoading(false);
 
-        if (data.session && !isRecoveryRequest && hasRequestedNextPath()) {
-          router.replace(getRequestedNextPath("/dashboard"));
-          router.refresh();
-        }
-      });
-    });
+      const { data } = await supabase.auth.getSession();
+
+      if (!isActive) {
+        return;
+      }
+
+      setUserEmail(data.session?.user.email || "");
+      setIsLoading(false);
+
+      if (data.session && !isRecoveryRequest) {
+        await syncServerAuthSession(data.session.access_token);
+        router.replace(getRequestedNextPath("/dashboard"));
+        router.refresh();
+      }
+    }
+
+    loadSession();
 
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "PASSWORD_RECOVERY") {
@@ -48,12 +58,16 @@ export function SellerAuth() {
         setErrorMessage("");
       }
 
+      if (!isActive) {
+        return;
+      }
+
       setUserEmail(session?.user.email || "");
       setIsLoading(false);
     });
 
     return () => {
-      window.cancelAnimationFrame(frameId);
+      isActive = false;
       data.subscription.unsubscribe();
     };
   }, [router]);
@@ -99,6 +113,7 @@ export function SellerAuth() {
       setPassword("");
 
       if (authResponse.data.session) {
+        await syncServerAuthSession(authResponse.data.session.access_token);
         router.replace(nextPath);
         router.refresh();
         return;
@@ -106,7 +121,8 @@ export function SellerAuth() {
 
       setMessage(mode === "signup" ? copy.signupSuccess : copy.signinSuccess);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : copy.genericError);
+      console.error("Seller auth failed", error);
+      setErrorMessage(getFriendlyAuthError(error, copy));
     } finally {
       setIsSubmitting(false);
     }
@@ -142,7 +158,8 @@ export function SellerAuth() {
       setMessage(copy.passwordUpdated);
       window.history.replaceState({}, "", "/auth");
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : copy.genericError);
+      console.error("Password update failed", error);
+      setErrorMessage(getFriendlyAuthError(error, copy));
     } finally {
       setIsSubmitting(false);
     }
@@ -166,7 +183,8 @@ export function SellerAuth() {
       }
     } catch (error) {
       setIsOAuthSubmitting(false);
-      setErrorMessage(error instanceof Error ? error.message : copy.genericError);
+      console.error("OAuth sign-in failed", error);
+      setErrorMessage(getFriendlyAuthError(error, copy));
     }
   }
 
@@ -174,6 +192,7 @@ export function SellerAuth() {
     setMessage("");
     setErrorMessage("");
     const { error } = await supabase.auth.signOut();
+    await clearServerAuthSession();
 
     if (error) {
       setErrorMessage(error.message);
@@ -432,6 +451,7 @@ function getAuthCopy(language: string) {
       signupSuccess: "Compte cree. Verifiez votre boite mail pour confirmer le compte.",
       signinSuccess: "Connexion reussie.",
       genericError: "Impossible de terminer l'authentification.",
+      unexpectedAuthError: "Supabase n'a pas pu creer le compte. Verifiez dans Supabase Authentication que Email + Password est active, que les URLs de redirection sont autorisees, et que l'envoi d'emails/SMTP fonctionne.",
     };
   }
 
@@ -477,7 +497,40 @@ function getAuthCopy(language: string) {
     signupSuccess: "Account created. Check your inbox to confirm the account.",
     signinSuccess: "Signed in.",
     genericError: "Unable to complete authentication.",
+    unexpectedAuthError: "Supabase could not create the account. Check Supabase Authentication: Email + Password must be enabled, redirect URLs must be allowed, and email/SMTP sending must work.",
   };
+}
+
+function getFriendlyAuthError(error: unknown, copy: ReturnType<typeof getAuthCopy>) {
+  const message = error instanceof Error ? error.message : "";
+  const parsedMessage = parseAuthErrorMessage(message);
+  const normalizedMessage = parsedMessage.toLowerCase();
+
+  if (
+    normalizedMessage.includes("unexpected_failure")
+    || normalizedMessage.includes("unexpected failure")
+    || normalizedMessage.includes("server logs")
+  ) {
+    return copy.unexpectedAuthError;
+  }
+
+  return parsedMessage || copy.genericError;
+}
+
+function parseAuthErrorMessage(message: string) {
+  const trimmedMessage = message.trim();
+
+  if (!trimmedMessage.startsWith("{")) {
+    return trimmedMessage;
+  }
+
+  try {
+    const parsed = JSON.parse(trimmedMessage) as { msg?: unknown; message?: unknown; error_description?: unknown };
+    const parsedMessage = parsed.msg || parsed.message || parsed.error_description;
+    return typeof parsedMessage === "string" ? parsedMessage : trimmedMessage;
+  } catch {
+    return trimmedMessage;
+  }
 }
 
 function getAuthCallbackUrl(nextPath: string) {

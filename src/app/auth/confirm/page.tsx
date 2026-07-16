@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useMemo, useState } from "react";
 import { useLanguage } from "@/lib/language";
-import { supabase } from "@/lib/supabase";
+import { supabase, syncServerAuthSession } from "@/lib/supabase";
 
 type SupportedOtpType = "signup" | "recovery" | "email_change" | "email" | "magiclink" | "invite";
 
@@ -72,6 +72,7 @@ function AuthConfirmContent() {
         throw new Error(copy.missingSession);
       }
 
+      await syncServerAuthSession(data.session.access_token);
       router.replace(nextPath);
       router.refresh();
     } catch (error) {

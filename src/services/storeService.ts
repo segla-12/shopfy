@@ -19,12 +19,11 @@ type ProductResponse = {
 
 type OrderResponse = {
   order?: StoreOrder;
-  paymentUrl?: string;
+  amount?: number;
   message?: string;
 };
 
 type CertificationPaymentResponse = {
-  paymentUrl?: string;
   message?: string;
 };
 
@@ -42,6 +41,21 @@ type StoreOrderCustomerInput = {
   name: string;
   phone: string;
   email: string;
+};
+
+export type StoreUpdateInput = {
+  name: string;
+  tagline: string;
+  description: string;
+  logoUrl: string;
+  bannerUrl: string;
+  ownerName: string;
+  city: string;
+  country: string;
+  currency: string;
+  whatsappPhone: string;
+  primaryColor: string;
+  accentColor: string;
 };
 
 const authRequiredMessage = "Connectez-vous avec votre compte vendeur pour continuer.";
@@ -112,6 +126,23 @@ export async function createSupabaseStore(input: CreateStoreInput): Promise<Shop
   return result.store;
 }
 
+export async function updateSupabaseStore(storeSlug: string, store: StoreUpdateInput): Promise<ShopfyStore> {
+  const headers = await getAuthenticatedHeaders();
+  const response = await fetch(`/api/stores/${encodeURIComponent(storeSlug)}`, {
+    method: "PATCH",
+    headers,
+    body: JSON.stringify({ store }),
+  });
+
+  const result = (await response.json()) as StoreResponse;
+
+  if (!response.ok || !result.store) {
+    throw new Error(result.message || "Store update failed.");
+  }
+
+  return result.store;
+}
+
 export async function importSupabaseStoreProduct(storeSlug: string, product: StoreProduct): Promise<StoreProduct> {
   const headers = await getAuthenticatedHeaders();
   const response = await fetch(`/api/stores/${encodeURIComponent(storeSlug)}/products`, {
@@ -159,18 +190,40 @@ export async function deleteSupabaseStoreProduct(storeSlug: string, productId: s
   }
 }
 
+export async function updateSupabaseStoreProduct(
+  storeSlug: string,
+  productId: string,
+  product: Partial<StoreProduct>,
+): Promise<StoreProduct> {
+  const headers = await getAuthenticatedHeaders();
+  const response = await fetch(
+    `/api/stores/${encodeURIComponent(storeSlug)}/products/${encodeURIComponent(productId)}`,
+    {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({ product }),
+    },
+  );
+
+  const result = (await response.json()) as ProductResponse;
+
+  if (!response.ok || !result.product) {
+    throw new Error(result.message || "Product update failed.");
+  }
+
+  return result.product;
+}
+
 export async function createPendingStoreOrder(
   storeSlug: string,
   items: PendingOrderItemInput[],
   customer?: Partial<StoreOrderCustomerInput>,
-  paymentProvider: "moneroo" | "manual" = "manual",
 ): Promise<StoreOrder> {
   const response = await fetch(`/api/stores/${encodeURIComponent(storeSlug)}/orders`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       items,
-      paymentProvider,
       customerName: customer?.name,
       customerPhone: customer?.phone,
       customerEmail: customer?.email,
@@ -186,39 +239,11 @@ export async function createPendingStoreOrder(
   return result.order;
 }
 
-export async function createPaidStoreOrder(
-  storeSlug: string,
-  items: PendingOrderItemInput[],
-  customer: StoreOrderCustomerInput,
-): Promise<{ order: StoreOrder; paymentUrl: string }> {
-  const response = await fetch(`/api/stores/${encodeURIComponent(storeSlug)}/orders`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      items,
-      customerName: customer.name,
-      customerPhone: customer.phone,
-      customerEmail: customer.email,
-      paymentProvider: "moneroo",
-    }),
-  });
-
-  const result = (await response.json()) as OrderResponse;
-
-  if (!response.ok || !result.order || !result.paymentUrl) {
-    throw new Error(result.message || "Payment creation failed.");
-  }
-
-  return {
-    order: result.order,
-    paymentUrl: result.paymentUrl,
-  };
-}
-
 export async function createStoreCertificationPayment(
   storeSlug: string,
   durationMonths: number,
-): Promise<{ paymentUrl: string }> {
+): Promise<{ message?: string }>
+{
   const headers = await getAuthenticatedHeaders();
   const response = await fetch(`/api/stores/${encodeURIComponent(storeSlug)}/certification`, {
     method: "POST",
@@ -228,11 +253,11 @@ export async function createStoreCertificationPayment(
 
   const result = (await response.json()) as CertificationPaymentResponse;
 
-  if (!response.ok || !result.paymentUrl) {
-    throw new Error(result.message || "Certification payment creation failed.");
+  if (!response.ok) {
+    throw new Error(result.message || "Certification request failed.");
   }
 
-  return { paymentUrl: result.paymentUrl };
+  return { message: result.message };
 }
 
 export async function getMySupabaseStoreOrders(storeSlug: string): Promise<StoreOrder[]> {

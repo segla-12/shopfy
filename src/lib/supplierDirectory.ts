@@ -61,10 +61,12 @@ function buildWholesaleSupplier(supplierKey: string, products: Product[]): Whole
     .filter((time) => Number.isFinite(time));
   const firstJoinedAt = joinedDates.length > 0 ? new Date(Math.min(...joinedDates)).toISOString() : undefined;
 
+  const supplierPhone = profileProduct?.sellerPhone?.trim() || "";
+
   return {
     id: supplierKey,
-    name: profileProduct?.sellerName || "Wholesale supplier",
-    phone: profileProduct?.sellerPhone || supplierKey,
+    name: profileProduct?.sellerName || supplierPhone || "Wholesale supplier",
+    phone: supplierPhone,
     photo: profileProduct?.sellerPhoto,
     country: profileProduct?.country || firstDefined(products.map((product) => product.country)),
     city: profileProduct?.city || firstDefined(products.map((product) => product.city)),

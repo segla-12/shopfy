@@ -14,6 +14,7 @@ import {
   PRODUCT_SELECT_FIELDS,
   PRODUCT_SELECT_FIELDS_WITH_FEATURES,
 } from "@/lib/productMapping";
+import { isValidWhatsappPhone, normalizeWhatsappPhone } from "@/lib/whatsapp";
 
 export async function getProducts(): Promise<Product[]> {
   const result = await supabase
@@ -56,8 +57,15 @@ export async function getProductById(id: string): Promise<Product | null> {
 }
 
 export async function createProduct(product: ProductCreateInput): Promise<Product | null> {
+  const sellerPhone = normalizeWhatsappPhone(product.sellerPhone);
+
+  if (!isValidWhatsappPhone(sellerPhone)) {
+    return null;
+  }
+
   const englishProduct = {
     ...product,
+    sellerPhone,
     title: toEnglishText(product.title),
     description: toEnglishWholesaleDescription(product.description),
     location: toEnglishOptionalText(product.location) || "",
@@ -123,20 +131,37 @@ export async function createProduct(product: ProductCreateInput): Promise<Produc
 }
 
 export async function getProductsByPhone(phone: string): Promise<Product[]> {
+  const cleanPhone = String(phone || "").trim();
+  const normalizedPhone = normalizeWhatsappPhone(cleanPhone);
+  const phoneMatches = Array.from(new Set([cleanPhone, normalizedPhone].filter(Boolean)));
   const result = await supabase
     .from("products")
     .select(PRODUCT_SELECT_FIELDS_WITH_FEATURES)
-    .eq("phone", phone)
+    .in("phone", phoneMatches)
     .order("created_at", { ascending: false });
 
   if (result.error) {
+    console.error("[seller] Supabase product lookup with feature fields failed.", {
+      phone: cleanPhone,
+      error: result.error.message,
+    });
+
     const fallback = await supabase
       .from("products")
       .select(PRODUCT_SELECT_FIELDS)
-      .eq("phone", phone)
+      .in("phone", phoneMatches)
       .order("created_at", { ascending: false });
 
-    return fallback.error ? [] : mapProductRows(fallback.data);
+    if (fallback.error) {
+      console.error("[seller] Supabase product lookup fallback failed.", {
+        phone: cleanPhone,
+        error: fallback.error.message,
+      });
+
+      return [];
+    }
+
+    return mapProductRows(fallback.data);
   }
 
   return mapProductRows(result.data);

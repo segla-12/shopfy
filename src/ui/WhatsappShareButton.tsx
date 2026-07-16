@@ -2,6 +2,7 @@
 
 import type { Product } from "@/types/marketplace";
 import { useLanguage } from "@/lib/language";
+import { buildWhatsAppShareLink } from "@/lib/whatsapp";
 
 type WhatsappShareButtonProps = {
   product: Product;
@@ -15,7 +16,7 @@ export function WhatsappShareButton({ product, className = "", compact = false }
   function shareProduct() {
     const productUrl = `${window.location.origin}/product/${encodeURIComponent(product.id)}`;
     const message = `${product.title} - ${productUrl}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
+    window.open(buildWhatsAppShareLink(message), "_blank", "noopener,noreferrer");
   }
 
   return (

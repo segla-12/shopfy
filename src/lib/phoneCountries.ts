@@ -287,11 +287,14 @@ export function getPhoneCountry(code: string) {
 }
 
 export function getPhoneCountryByDialCode(phone: string) {
-  const normalizedPhone = phone.replace(/\s/g, "");
+  const normalizedPhone = phone.replace(/[^\d+]/g, "");
 
   return [...phoneCountries]
     .sort((firstCountry, secondCountry) => secondCountry.dialCode.length - firstCountry.dialCode.length)
-    .find((country) => normalizedPhone.startsWith(country.dialCode)) || null;
+    .find((country) => {
+      const dialCode = country.dialCode.replace(/\D/g, "");
+      return normalizedPhone.startsWith(country.dialCode) || normalizedPhone.startsWith(dialCode);
+    }) || null;
 }
 
 export function getNationalNumberBounds(country: PhoneCountry) {

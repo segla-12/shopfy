@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { mapOrderRow, ORDER_SELECT_FIELDS, type OrderRow } from "@/lib/orderRows";
 import { createSupabaseRequestClient } from "@/lib/supabaseAdmin";
-import { cleanText } from "@/lib/validation";
+import { cleanText, hasUnsafeObjectKeys } from "@/lib/validation";
 import type { StoreOrderStatus } from "@/types/storefront";
 
 type StoreOrderRouteContext = {
@@ -19,7 +19,12 @@ export async function PATCH(request: Request, context: StoreOrderRouteContext) {
   const { slug, orderId } = await context.params;
   const cleanSlug = cleanText(slug);
   const cleanOrderId = cleanText(orderId);
-  const body = (await request.json()) as UpdateOrderRequest;
+  const body = (await request.json().catch(() => ({}))) as UpdateOrderRequest;
+
+  if (hasUnsafeObjectKeys(body)) {
+    return NextResponse.json({ message: "Invalid request payload." }, { status: 400 });
+  }
+
   const nextStatus = body.status === "cancelled" ? "cancelled" : "confirmed";
 
   if (!cleanSlug || !cleanOrderId) {
@@ -51,7 +56,7 @@ export async function PATCH(request: Request, context: StoreOrderRouteContext) {
     if (nextStatus === "confirmed") {
       const { data: currentOrder, error: currentOrderError } = await supabase
         .from("shopfy_store_orders")
-        .select("payment_provider, payment_status")
+        .select("payment_status")
         .eq("id", cleanOrderId)
         .eq("store_id", storeData.id)
         .single();
@@ -60,9 +65,7 @@ export async function PATCH(request: Request, context: StoreOrderRouteContext) {
         return NextResponse.json({ message: "Order not found." }, { status: 404 });
       }
 
-      if (currentOrder.payment_provider === "moneroo" && currentOrder.payment_status !== "paid") {
-        return NextResponse.json({ message: "Le paiement Moneroo doit etre confirme avant la vente." }, { status: 409 });
-      }
+      // No external online payment providers are used; proceed to confirm the order.
     }
 
     const { data, error } = await supabase

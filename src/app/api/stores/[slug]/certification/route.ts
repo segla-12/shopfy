@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { createMonerooStoreCertificationPayment, isMonerooConfigured } from "@/lib/moneroo";
 import { createSupabaseAdminClient, createSupabaseRequestClient } from "@/lib/supabaseAdmin";
 import { cleanText } from "@/lib/validation";
 
@@ -39,9 +38,7 @@ export async function POST(request: Request, context: StoreCertificationRouteCon
     return NextResponse.json({ message: "Boutique manquante." }, { status: 400 });
   }
 
-  if (!isMonerooConfigured()) {
-    return NextResponse.json({ message: "Moneroo n'est pas encore configure." }, { status: 500 });
-  }
+  // Online certification payments removed. Use manual process via Shopfy.
 
   try {
     const requestSupabase = createSupabaseRequestClient(request);
@@ -69,11 +66,12 @@ export async function POST(request: Request, context: StoreCertificationRouteCon
     }
 
     const now = new Date().toISOString();
+    // Create a manual certification request record so Shopfy team can follow up.
     const { data: paymentRow, error: paymentInsertError } = await supabase
       .from("shopfy_store_certification_payments")
       .insert({
         store_id: store.id,
-        provider: "moneroo",
+        provider: "manual",
         status: "pending",
         amount,
         currency: CERTIFICATION_CURRENCY,
@@ -86,60 +84,15 @@ export async function POST(request: Request, context: StoreCertificationRouteCon
 
     if (paymentInsertError || !paymentRow) {
       return NextResponse.json(
-        { message: paymentInsertError?.message || "Impossible de preparer le paiement." },
+        { message: paymentInsertError?.message || "Impossible de preparer la demande d'activation." },
         { status: 500 },
       );
     }
 
-    const certificationPaymentId = String(paymentRow.id);
-
-    try {
-      const payment = await createMonerooStoreCertificationPayment({
-        certificationPaymentId,
-        storeSlug: store.slug,
-        storeName: cleanText(store.name, store.slug),
-        ownerName: cleanText(store.owner_name, authData.user.email?.split("@")[0] || "Vendeur Shopfy"),
-        ownerEmail: authData.user.email || "",
-        ownerPhone: cleanText(store.whatsapp_phone),
-        amount,
-        currency: CERTIFICATION_CURRENCY,
-        durationMonths,
-      });
-
-      const { error: paymentUpdateError } = await supabase
-        .from("shopfy_store_certification_payments")
-        .update({
-          provider_payment_id: payment.transactionId,
-          provider_reference: payment.reference,
-          checkout_url: payment.paymentUrl,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", certificationPaymentId);
-
-      if (paymentUpdateError) {
-        return NextResponse.json({ message: paymentUpdateError.message }, { status: 500 });
-      }
-
-      return NextResponse.json({
-        paymentUrl: payment.paymentUrl,
-        payment: {
-          amount,
-          currency: CERTIFICATION_CURRENCY,
-          durationMonths,
-        },
-      });
-    } catch (error) {
-      await supabase
-        .from("shopfy_store_certification_payments")
-        .update({
-          status: "failed",
-          error_message: error instanceof Error ? error.message : "Moneroo payment creation failed.",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", certificationPaymentId);
-
-      return NextResponse.json({ message: "Impossible de creer le paiement Moneroo." }, { status: 500 });
-    }
+    // Respond with instruction: Shopfy team will contact the owner to arrange manual payment.
+    return NextResponse.json({
+      message: "Demande d'activation enregistree. Lequipe Shopfy contactera le vendeur pour finaliser la procedure.",
+    });
   } catch {
     return NextResponse.json({ message: "Configuration Supabase manquante." }, { status: 500 });
   }

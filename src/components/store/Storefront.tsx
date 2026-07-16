@@ -5,11 +5,14 @@ import Link from "next/link";
 import { useState } from "react";
 import { formatStoreMoney } from "@/lib/demoStores";
 import { useLanguage } from "@/lib/language";
-import { createWhatsappUrl } from "@/lib/whatsapp";
-import { createPaidStoreOrder, createPendingStoreOrder } from "@/services/storeService";
+import { buildWhatsAppLink, isValidWhatsappPhone } from "@/lib/whatsapp";
+import { useNavbarMode } from "@/lib/navbarMode";
+import { getStorePublicUrl } from "@/lib/storeLinks";
+import { createPendingStoreOrder } from "@/services/storeService";
 import type { ShopfyStore, StoreProduct } from "@/types/storefront";
 import { CertifiedBadge } from "@/ui/CertifiedBadge";
 import { StoreProductImage } from "./StoreProductImage";
+import { StoreQrCode } from "./StoreQrCode";
 
 type StorefrontProps = {
   store: ShopfyStore;
@@ -20,10 +23,11 @@ type CartLine = {
   quantity: number;
 };
 
-const isOnlinePaymentEnabled = process.env.NEXT_PUBLIC_ENABLE_MONEROO_PAYMENTS === "true";
+// Online payments removed; use WhatsApp-first ordering.
 
 export function Storefront({ store }: StorefrontProps) {
   const { language } = useLanguage();
+  const { mode } = useNavbarMode();
   const copy = getStorefrontCopy(language);
   const [cartLines, setCartLines] = useState<CartLine[]>([]);
   const [cartMessage, setCartMessage] = useState("");
@@ -35,6 +39,7 @@ export function Storefront({ store }: StorefrontProps) {
   const allProducts = store.products;
   const cartTotal = cartLines.reduce((total, line) => total + line.product.price * line.quantity, 0);
   const cartCount = cartLines.reduce((total, line) => total + line.quantity, 0);
+  const storeUrl = getStorePublicUrl(store.slug);
 
   function addToCart(product: StoreProduct) {
     setCartMessage("");
@@ -94,7 +99,9 @@ export function Storefront({ store }: StorefrontProps) {
       return;
     }
 
-    if (!store.whatsappPhone) {
+    const whatsappPhone = store.whatsappPhone;
+
+    if (!isValidWhatsappPhone(whatsappPhone)) {
       setCartErrorMessage(copy.whatsappMissing);
       return;
     }
@@ -116,10 +123,15 @@ export function Storefront({ store }: StorefrontProps) {
           email: customerEmail,
         },
       );
-      const whatsappOrderUrl = createWhatsappUrl(
-        store.whatsappPhone,
-        buildWhatsappOrderMessage(store, cartLines, cartTotal, copy, order.id),
+
+      const whatsappOrderUrl = buildWhatsAppLink(
+        whatsappPhone,
+        buildWhatsappOrderMessage(store, cartLines, copy, order.id, mode),
       );
+
+      if (!whatsappOrderUrl) {
+        throw new Error(copy.whatsappMissing);
+      }
 
       if (whatsappWindow) {
         whatsappWindow.location.href = whatsappOrderUrl;
@@ -132,53 +144,6 @@ export function Storefront({ store }: StorefrontProps) {
     } catch (error) {
       whatsappWindow?.close();
       setCartErrorMessage(error instanceof Error ? error.message : copy.pendingOrderError);
-    } finally {
-      setIsCreatingOrder(false);
-    }
-  }
-
-  async function handleOnlinePayment() {
-    setCartMessage("");
-    setCartErrorMessage("");
-
-    if (cartLines.length === 0) {
-      return;
-    }
-
-    if (!customerName.trim() || !customerPhone.trim() || !customerEmail.trim()) {
-      setCartErrorMessage(copy.customerRequired);
-      return;
-    }
-
-    setIsCreatingOrder(true);
-
-    const paymentWindow = window.open("about:blank", "_blank");
-
-    try {
-      const { paymentUrl } = await createPaidStoreOrder(
-        store.slug,
-        cartLines.map((line) => ({
-          productSlug: line.product.slug,
-          quantity: line.quantity,
-        })),
-        {
-          name: customerName,
-          phone: customerPhone,
-          email: customerEmail,
-        },
-      );
-
-      if (paymentWindow) {
-        paymentWindow.location.href = paymentUrl;
-      } else {
-        window.open(paymentUrl, "_blank", "noopener,noreferrer");
-      }
-
-      setCartLines([]);
-      setCartMessage(copy.paymentStarted);
-    } catch (error) {
-      paymentWindow?.close();
-      setCartErrorMessage(error instanceof Error ? error.message : copy.paymentError);
     } finally {
       setIsCreatingOrder(false);
     }
@@ -257,11 +222,20 @@ export function Storefront({ store }: StorefrontProps) {
             <StoreMetric label={copy.cart} value={`${cartCount} ${copy.items}`} />
           </div>
 
+          <StoreQrCode
+            url={storeUrl}
+            title={copy.qrTitle}
+            downloadLabel={copy.downloadQr}
+            fileName={`shopfy-${store.slug}-qr.png`}
+          />
+
           {!store.isCertified && store.isTrialActive ? (
             <div className="rounded-lg border border-orange-100 bg-orange-50 p-4 text-sm font-bold text-orange-800 dark:border-orange-400/20 dark:bg-orange-400/10 dark:text-orange-100">
               {copy.trialBanner} {store.trialDaysRemaining || 0} {copy.daysRemaining}.
             </div>
           ) : null}
+
+          {mode === "detail" ? <RetailPaymentNotice copy={copy} /> : null}
         </div>
       </section>
 
@@ -339,69 +313,14 @@ export function Storefront({ store }: StorefrontProps) {
                 <span>{copy.total}</span>
                 <span>{formatStoreMoney(cartTotal, store.currency)}</span>
               </div>
-              {isOnlinePaymentEnabled ? (
-                <>
-                  <div className="grid gap-3 rounded-md border border-gray-100 bg-gray-50 p-3 dark:border-white/10 dark:bg-white/5">
-                    <p className="text-xs font-black uppercase tracking-wide text-gray-500 dark:text-gray-300">
-                      {copy.customerInfo}
-                    </p>
-                    <label className="grid gap-1">
-                      <span className="text-xs font-black text-gray-600 dark:text-gray-300">{copy.customerName}</span>
-                      <input
-                        value={customerName}
-                        onChange={(event) => setCustomerName(event.target.value)}
-                        suppressHydrationWarning
-                        className="min-h-10 rounded-md border border-gray-200 bg-white px-3 text-sm text-gray-950 outline-none transition focus:border-orange-300 focus:ring-4 focus:ring-orange-100 dark:border-white/10 dark:bg-gray-950 dark:text-white"
-                      />
-                    </label>
-                    <label className="grid gap-1">
-                      <span className="text-xs font-black text-gray-600 dark:text-gray-300">{copy.customerPhone}</span>
-                      <input
-                        value={customerPhone}
-                        onChange={(event) => setCustomerPhone(event.target.value)}
-                        suppressHydrationWarning
-                        inputMode="tel"
-                        className="min-h-10 rounded-md border border-gray-200 bg-white px-3 text-sm text-gray-950 outline-none transition focus:border-orange-300 focus:ring-4 focus:ring-orange-100 dark:border-white/10 dark:bg-gray-950 dark:text-white"
-                      />
-                    </label>
-                    <label className="grid gap-1">
-                      <span className="text-xs font-black text-gray-600 dark:text-gray-300">{copy.customerEmail}</span>
-                      <input
-                        value={customerEmail}
-                        onChange={(event) => setCustomerEmail(event.target.value)}
-                        suppressHydrationWarning
-                        inputMode="email"
-                        className="min-h-10 rounded-md border border-gray-200 bg-white px-3 text-sm text-gray-950 outline-none transition focus:border-orange-300 focus:ring-4 focus:ring-orange-100 dark:border-white/10 dark:bg-gray-950 dark:text-white"
-                      />
-                    </label>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleOnlinePayment}
-                    disabled={isCreatingOrder}
-                    className="inline-flex min-h-11 items-center justify-center rounded-md bg-orange-500 px-4 text-sm font-black text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {isCreatingOrder ? copy.creatingPendingOrder : copy.payOnline}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleWhatsappOrder}
-                    disabled={isCreatingOrder}
-                    className="inline-flex min-h-11 items-center justify-center rounded-md border border-gray-200 px-4 text-sm font-black text-gray-900 transition hover:border-green-200 hover:text-green-600 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:text-gray-100"
-                  >
-                    {copy.whatsappOrder}
-                  </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleWhatsappOrder}
-                  disabled={isCreatingOrder}
-                  className="inline-flex min-h-11 items-center justify-center rounded-md bg-green-500 px-4 text-sm font-black text-white transition hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isCreatingOrder ? copy.creatingPendingOrder : copy.whatsappOrder}
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={handleWhatsappOrder}
+                disabled={isCreatingOrder}
+                className="inline-flex min-h-11 items-center justify-center rounded-md bg-green-500 px-4 text-sm font-black text-white transition hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isCreatingOrder ? copy.creatingPendingOrder : copy.whatsappOrder}
+              </button>
               {cartMessage ? (
                 <p className="rounded-md border border-green-100 bg-green-50 p-3 text-sm font-bold text-green-700 dark:border-green-400/20 dark:bg-green-400/10 dark:text-green-200">
                   {cartMessage}
@@ -417,6 +336,17 @@ export function Storefront({ store }: StorefrontProps) {
         </aside>
       </section>
     </div>
+  );
+}
+
+function RetailPaymentNotice({ copy }: { copy: ReturnType<typeof getStorefrontCopy> }) {
+  return (
+    <section className="rounded-lg border-2 border-green-200 bg-green-50 p-4 text-sm leading-6 text-green-950 dark:border-green-400/30 dark:bg-green-400/10 dark:text-green-100">
+      <h2 className="text-base font-black">{copy.retailPaymentTitle}</h2>
+      <p className="mt-2 font-bold">{copy.retailPaymentLine1}</p>
+      <p className="mt-1 font-bold">{copy.retailPaymentLine2}</p>
+      <p className="mt-1 font-bold">{copy.retailPaymentLine3}</p>
+    </section>
   );
 }
 
@@ -477,23 +407,46 @@ function StoreMetric({ label, value }: { label: string; value: string }) {
 function buildWhatsappOrderMessage(
   store: ShopfyStore,
   cartLines: CartLine[],
-  total: number,
   copy: ReturnType<typeof getStorefrontCopy>,
   orderId?: string,
+  mode: "gros" | "detail" = "detail",
 ) {
-  const items = cartLines
-    .map((line) => `- ${line.product.title} x${line.quantity}: ${formatStoreMoney(line.product.price * line.quantity, line.product.currency)}`)
-    .join("\n");
+  const totalItems = cartLines.reduce((total, line) => total + line.quantity, 0);
+  const totalAmount = cartLines.reduce((total, line) => total + line.product.price * line.quantity, 0);
   const orderReference = orderId ? `\n${copy.orderReference}: ${orderId.slice(0, 8)}` : "";
+  const storeName = mode === "gros" ? copy.grossisteShopfy : store.name;
 
-  return `${copy.whatsappMessageIntro} ${store.name}${orderReference}\n\n${items}\n\n${copy.total}: ${formatStoreMoney(total, store.currency)}`;
+  const items = cartLines
+    .map((line) => {
+      const unitPrice = formatStoreMoney(line.product.price, line.product.currency);
+      const lineTotal = formatStoreMoney(line.product.price * line.quantity, line.product.currency);
+
+      return [
+        `${copy.productBullet} ${copy.productLabel}: ${line.product.title}`,
+        `${copy.unitPriceLabel}: ${unitPrice}`,
+        `${copy.quantityLabel}: ${line.quantity}`,
+        `${copy.totalLabel}: ${lineTotal}`,
+      ].join("\n");
+    })
+    .join("\n\n");
+
+  return [
+    copy.whatsappOrderGreeting,
+    "",
+    copy.whatsappOrderIntro,
+    orderReference ? `${copy.storeLabel}: ${storeName}${orderReference}` : `${copy.storeLabel}: ${storeName}`,
+    "",
+    items,
+    "",
+    copy.whatsappOrderConfirmationRequest,
+  ].join("\n");
 }
 
 function getStorefrontCopy(language: string) {
   if (language === "fr") {
     return {
       products: "Produits",
-      certifiedBadge: "Boutique certifiee",
+      certifiedBadge: "Boutique certifiée",
       inactiveKicker: "Activation requise",
       inactiveDescription: "Cette boutique a termine ses 7 jours gratuits. Le proprietaire doit l'activer/certifier pour rouvrir le catalogue.",
       ownerDashboard: "Acceder au dashboard",
@@ -501,6 +454,8 @@ function getStorefrontCopy(language: string) {
       daysRemaining: "jour(s)",
       cart: "Panier",
       items: "article(s)",
+      qrTitle: "Code QR de la boutique",
+      downloadQr: "Telecharger le code QR",
       catalogKicker: "Boutique",
       catalogTitle: "Catalogue",
       addToCart: "Ajouter",
@@ -516,16 +471,29 @@ function getStorefrontCopy(language: string) {
       customerPhone: "Telephone",
       customerEmail: "Email",
       customerRequired: "Entrez votre nom, telephone et email avant de payer.",
-      payOnline: "Payer en ligne",
-      paymentStarted: "Lien de paiement ouvert. La commande sera marquee payee apres confirmation Moneroo.",
-      paymentError: "Impossible de demarrer le paiement en ligne.",
       whatsappOrder: "Commander sur WhatsApp",
       creatingPendingOrder: "Creation commande...",
       pendingOrderCreated: "Commande en attente creee. Le vendeur devra la confirmer dans son dashboard.",
       pendingOrderError: "Impossible de creer la commande en attente.",
       whatsappMissing: "Cette boutique n'a pas encore de numero WhatsApp.",
       whatsappMessageIntro: "Bonjour, je veux commander dans la boutique",
+      whatsappWholesaleMessageIntro: "Bonjour, je veux commander en gros chez",
+      grossisteShopfy: "grossiste Shopfy",
       orderReference: "Commande",
+      whatsappOrderGreeting: "Bonjour,",
+      whatsappOrderIntro: "Je souhaite passer la commande suivante :",
+      storeLabel: "Boutique",
+      productBullet: "-",
+      productLabel: "Produit",
+      photoLabel: "Photo",
+      unitPriceLabel: "Prix unitaire",
+      quantityLabel: "Quantite",
+      totalLabel: "Total",
+      whatsappOrderConfirmationRequest: "Merci de confirmer la disponibilite de cette commande.",
+      retailPaymentTitle: "Paiement a la livraison uniquement",
+      retailPaymentLine1: "Pour votre securite, n'effectuez jamais de paiement anticipe directement au vendeur.",
+      retailPaymentLine2: "Verifiez toujours le produit lors de la livraison avant de proceder au reglement.",
+      retailPaymentLine3: "Restez vigilant face aux offres inhabituelles ou aux demandes de paiement en dehors des procedures recommandees.",
     };
   }
 
@@ -539,6 +507,8 @@ function getStorefrontCopy(language: string) {
     daysRemaining: "day(s)",
     cart: "Cart",
     items: "item(s)",
+    qrTitle: "Store QR code",
+    downloadQr: "Download QR code",
     catalogKicker: "Store",
     catalogTitle: "Catalog",
     addToCart: "Add",
@@ -554,15 +524,28 @@ function getStorefrontCopy(language: string) {
     customerPhone: "Phone",
     customerEmail: "Email",
     customerRequired: "Enter your name, phone, and email before paying.",
-    payOnline: "Pay online",
-    paymentStarted: "Payment link opened. The order will be marked paid after Moneroo confirmation.",
-    paymentError: "Unable to start online payment.",
     whatsappOrder: "Order on WhatsApp",
     creatingPendingOrder: "Creating order...",
     pendingOrderCreated: "Pending order created. The seller must confirm it in their dashboard.",
     pendingOrderError: "Unable to create the pending order.",
     whatsappMissing: "This store does not have a WhatsApp number yet.",
     whatsappMessageIntro: "Hello, I want to order from",
+    whatsappWholesaleMessageIntro: "Hello, I want to order wholesale from",
+    grossisteShopfy: "Shopfy wholesaler",
     orderReference: "Order",
+    whatsappOrderGreeting: "Hello,",
+    whatsappOrderIntro: "I would like to place the following order:",
+    storeLabel: "Store",
+    productBullet: "-",
+    productLabel: "Product",
+    photoLabel: "Photo",
+    unitPriceLabel: "Unit price",
+    quantityLabel: "Quantity",
+    totalLabel: "Total",
+    whatsappOrderConfirmationRequest: "Please confirm the availability of this order.",
+    retailPaymentTitle: "Payment on delivery only",
+    retailPaymentLine1: "For your safety, never make an advance payment directly to the seller.",
+    retailPaymentLine2: "Always inspect the product on delivery before paying.",
+    retailPaymentLine3: "Stay alert for unusual offers or payment requests outside recommended procedures.",
   };
 }

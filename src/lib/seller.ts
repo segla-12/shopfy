@@ -1,11 +1,16 @@
 import type { Product } from "@/types/marketplace";
 
+function normalizeSupplierIdentifier(value: string) {
+  return String(value || "").replace(/\s+/gu, " ").trim();
+}
+
 export function getSellerProfileHref(product: Product) {
-  return `/seller/${encodeURIComponent(product.sellerPhone)}`;
+  return getSupplierProfileHref(product.sellerPhone);
 }
 
 export function getSupplierProfileHref(phone: string) {
-  return `/seller/${encodeURIComponent(phone)}`;
+  const supplierIdentifier = normalizeSupplierIdentifier(phone);
+  return supplierIdentifier ? `/seller/${encodeURIComponent(supplierIdentifier)}` : "/stores";
 }
 
 export function getSellerDisplayName(product?: Product | null) {

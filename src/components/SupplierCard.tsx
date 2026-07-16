@@ -17,6 +17,7 @@ export function SupplierCard({ supplier }: SupplierCardProps) {
   const { language } = useLanguage();
   const copy = getSupplierCardCopy(language);
   const profileHref = getSupplierProfileHref(supplier.phone);
+  const supplierName = supplier.name || supplier.phone || copy.nameFallback;
   const featuredProduct = supplier.products[0];
   const supplierImage = supplier.photo || supplier.firstProductImage;
   const description = featuredProduct?.description || copy.descriptionFallback;
@@ -25,11 +26,14 @@ export function SupplierCard({ supplier }: SupplierCardProps) {
 
   return (
     <article className="grid grid-cols-[132px_minmax(0,1fr)] items-start overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:border-orange-300 hover:shadow-md dark:border-white/10 dark:bg-gray-900 sm:grid-cols-[190px_minmax(0,1fr)] lg:grid-cols-[220px_minmax(0,1fr)]">
-      <Link href={profileHref} className="relative h-[clamp(204px,58vw,232px)] overflow-hidden border-r border-gray-100 bg-gray-50 sm:h-[clamp(196px,24vw,224px)] dark:border-white/10 dark:bg-gray-950">
+      <Link
+        href={profileHref}
+        className="relative h-[clamp(204px,58vw,232px)] overflow-hidden border-r border-gray-100 bg-gray-50 sm:h-[clamp(196px,24vw,224px)] dark:border-white/10 dark:bg-gray-950"
+      >
         {supplierImage ? (
           <Image
             src={supplierImage}
-            alt={supplier.name}
+            alt={supplierName}
             fill
             unoptimized={supplierImage.startsWith("data:")}
             sizes="(min-width: 1024px) 220px, (min-width: 640px) 190px, 132px"
@@ -37,7 +41,7 @@ export function SupplierCard({ supplier }: SupplierCardProps) {
           />
         ) : (
           <div className="flex h-full items-center justify-center p-3">
-            <SellerAvatar name={supplier.name} className="h-16 w-16 text-lg sm:h-20 sm:w-20" />
+            <SellerAvatar name={supplierName} className="h-16 w-16 text-lg sm:h-20 sm:w-20" />
           </div>
         )}
       </Link>
@@ -52,7 +56,7 @@ export function SupplierCard({ supplier }: SupplierCardProps) {
           </div>
 
           <h3 className="line-clamp-2 text-lg font-black leading-tight text-gray-950 dark:text-white">
-            {supplier.name}
+            {supplierName}
           </h3>
           <p className="mt-1 line-clamp-1 max-w-2xl text-xs font-bold leading-5 text-gray-600 dark:text-gray-300">
             {description}
@@ -70,7 +74,7 @@ export function SupplierCard({ supplier }: SupplierCardProps) {
           </div>
         </div>
 
-        <div className="mt-auto flex justify-start overflow-hidden">
+        <div className="mt-auto overflow-hidden">
           <Link
             href={profileHref}
             className="inline-flex min-h-9 w-full items-center justify-center rounded-md bg-orange-500 px-3 text-sm font-black text-white shadow-sm transition hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-100 sm:min-h-10 sm:w-auto sm:min-w-44 sm:px-4 dark:bg-orange-500 dark:hover:bg-orange-400 dark:focus:ring-orange-400/20"
@@ -94,7 +98,9 @@ function getSupplierCardCopy(language: string) {
       unitLabel: "units",
       descriptionFallback: "Wholesale supplier with a professional product catalog.",
       viewProfile: "View supplier",
+      nameFallback: "Wholesale supplier",
     };
+
   }
 
   return {
@@ -106,6 +112,7 @@ function getSupplierCardCopy(language: string) {
     unitLabel: "unités minimum",
     descriptionFallback: "Fournisseur grossiste avec un catalogue professionnel.",
     viewProfile: "Voir le fournisseur",
+    nameFallback: "Fournisseur grossiste",
   };
 }
 

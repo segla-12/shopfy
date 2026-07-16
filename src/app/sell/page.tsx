@@ -11,7 +11,13 @@ import { TranslationKey } from "@/lib/i18n";
 import { useLanguage } from "@/lib/language";
 import { buildEnglishWholesaleDescription, MAX_PRODUCT_IMAGES } from "@/lib/productWholesale";
 import { getSupplierProfileHref } from "@/lib/seller";
+import {
+  getInternationalWhatsappPhoneError,
+  isValidInternationalWhatsappPhoneInput,
+  normalizeWhatsappPhone,
+} from "@/lib/whatsapp";
 import { createProduct } from "@/services/productService";
+import { uploadImageFile } from "@/services/imageService";
 import type { ProductCategory } from "@/types/marketplace";
 import { PhoneInput } from "@/ui/PhoneInput";
 
@@ -121,8 +127,15 @@ export default function SellPage() {
     const sellerPhotoFile = formData.get("sellerPhoto");
     const city = String(formData.get("city") || "").trim();
     const country = String(formData.get("sellerCountry") || "");
+    const sellerPhone = String(formData.get("sellerPhone") || "");
     const latitude = parseOptionalNumber(formData.get("latitude"));
     const longitude = parseOptionalNumber(formData.get("longitude"));
+
+    if (!isValidInternationalWhatsappPhoneInput(sellerPhone)) {
+      setIsSaving(false);
+      setFormError(getInternationalWhatsappPhoneError());
+      return;
+    }
 
     if (!(sellerPhotoFile instanceof File) || sellerPhotoFile.size === 0) {
       setFormError(copy.supplierImageRequired);
@@ -143,11 +156,11 @@ export default function SellPage() {
     }
 
     const uploadedImages = imageFiles.length > 0
-      ? await Promise.all(imageFiles.map((file) => fileToDataUrl(file)))
+      ? await Promise.all(imageFiles.map((file) => uploadImageFile(file)))
       : [];
     const productImages = uploadedImages.length > 0 ? uploadedImages : [fallbackImage];
     const image = productImages[0];
-    const sellerPhoto = await fileToDataUrl(sellerPhotoFile, 640);
+    const sellerPhoto = await uploadImageFile(sellerPhotoFile);
     const description = buildEnglishWholesaleDescription(String(formData.get("description") || ""), {
       version: 1,
       minimumOrderQuantity: String(formData.get("minimumOrderQuantity") || ""),
@@ -181,7 +194,7 @@ export default function SellPage() {
       deliveryMethod: String(formData.get("deliveryMethod") || ""),
       deliveryServiceName: toEnglishText(formData.get("deliveryServiceName")),
       deliveryContact: String(formData.get("deliveryContact") || ""),
-      sellerPhone: String(formData.get("sellerPhone") || ""),
+      sellerPhone: normalizeWhatsappPhone(sellerPhone),
       sellerName: toEnglishText(formData.get("sellerName") || "Shopfy Seller", "Shopfy Seller"),
       sellerPhoto,
     });

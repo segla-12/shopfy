@@ -6,7 +6,7 @@ import { formatPrice } from "@/lib/format";
 import { useLanguage } from "@/lib/language";
 import { showSafetyNotice } from "@/lib/safetyNotice";
 import { getSellerProfileHref } from "@/lib/seller";
-import { createWhatsappUrl } from "@/lib/whatsapp";
+import { buildWhatsAppLink } from "@/lib/whatsapp";
 import type { Product } from "@/types/marketplace";
 import { CertifiedBadge } from "@/ui/CertifiedBadge";
 import { FavoriteButton } from "@/ui/FavoriteButton";
@@ -23,7 +23,7 @@ export function ProductCard({ product, action = "supplier" }: ProductCardProps) 
   const copy = getProductCardCopy(language);
   const moq = formatMoq(product, copy);
   const wholesalePrice = formatWholesalePrice(product, copy);
-  const orderHref = createWhatsappUrl(product.sellerPhone, t("whatsapp.message"));
+  const orderHref = buildWhatsAppLink(product.sellerPhone, t("whatsapp.message"));
   const imageContent = (
     <>
       <Image
@@ -46,7 +46,14 @@ export function ProductCard({ product, action = "supplier" }: ProductCardProps) 
     <article className="group relative grid grid-cols-[132px_minmax(0,1fr)] items-start overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition duration-200 hover:border-orange-300 hover:shadow-md dark:border-white/10 dark:bg-gray-900 sm:grid-cols-[192px_minmax(0,1fr)]">
       <div className="relative h-[clamp(204px,58vw,232px)] overflow-hidden border-r border-gray-100 bg-white sm:h-[clamp(196px,24vw,224px)] dark:border-white/10 dark:bg-gray-950">
         {action === "supplier" ? (
-          <Link href={supplierHref} className="relative block h-full">
+          <Link
+            href={supplierHref}
+            onClick={(event) => {
+              event.preventDefault();
+              showSafetyNotice(supplierHref);
+            }}
+            className="relative block h-full"
+          >
             {imageContent}
           </Link>
         ) : (
@@ -88,6 +95,10 @@ export function ProductCard({ product, action = "supplier" }: ProductCardProps) 
           {action === "supplier" ? (
             <Link
               href={supplierHref}
+              onClick={(event) => {
+                event.preventDefault();
+                showSafetyNotice(supplierHref);
+              }}
               className="inline-flex min-h-9 items-center justify-center rounded-md bg-orange-500 px-3 text-sm font-black text-white shadow-sm transition hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-100 sm:min-h-10 sm:min-w-40 sm:px-4 dark:bg-orange-500 dark:hover:bg-orange-400 dark:focus:ring-orange-400/20"
             >
               {copy.viewSupplier}
@@ -107,6 +118,7 @@ export function ProductCard({ product, action = "supplier" }: ProductCardProps) 
               {copy.order}
             </a>
           ) : null}
+          {/* Online payments removed — direct WhatsApp contact only. */}
         </div>
       </div>
     </article>

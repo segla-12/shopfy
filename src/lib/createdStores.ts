@@ -1,4 +1,5 @@
 import type { ShopfyStore } from "@/types/storefront";
+import { normalizeWhatsappPhone } from "@/lib/whatsapp";
 
 export type CreateStoreInput = {
   name: string;
@@ -38,7 +39,7 @@ export function buildCreatedStore(input: CreateStoreInput): ShopfyStore {
     city: input.city.trim(),
     country: input.country.trim() || "Benin",
     currency: input.currency,
-    whatsappPhone: input.whatsappPhone.trim(),
+    whatsappPhone: normalizeWhatsappPhone(input.whatsappPhone),
     theme: {
       primary: "#111827",
       accent: "#f97316",

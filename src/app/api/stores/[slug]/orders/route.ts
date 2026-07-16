@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient, createSupabaseRequestClient } from "@/lib/supabaseAdmin";
-import { createMonerooOrderPayment, isMonerooConfigured } from "@/lib/moneroo";
+// Online payment providers removed. Orders are created as manual by default.
 import { mapOrderRow, ORDER_SELECT_FIELDS, type OrderRow } from "@/lib/orderRows";
 import { doesStoreRequireCertification } from "@/lib/storeRows";
-import { cleanText } from "@/lib/validation";
+import { cleanText, hasUnsafeObjectKeys, isValidEmail } from "@/lib/validation";
 
 type StoreOrdersRouteContext = {
   params: Promise<{
@@ -20,7 +20,6 @@ type CreateOrderRequest = {
   customerName?: string;
   customerPhone?: string;
   customerEmail?: string;
-  paymentProvider?: "moneroo" | "manual";
   items?: OrderItemInput[];
 };
 
@@ -46,17 +45,36 @@ type StoreForOrderRow = {
 export async function POST(request: Request, context: StoreOrdersRouteContext) {
   const { slug } = await context.params;
   const cleanSlug = cleanText(slug);
-  const body = (await request.json()) as CreateOrderRequest;
+  const body = (await request.json().catch(() => ({}))) as CreateOrderRequest;
+
+  if (hasUnsafeObjectKeys(body)) {
+    return NextResponse.json({ message: "Invalid request payload." }, { status: 400 });
+  }
+
+  // Payments are handled outside the platform for this version.
+  const customerName = cleanText(body.customerName);
+  const customerPhone = cleanText(body.customerPhone);
+  const customerEmail = cleanText(body.customerEmail).toLowerCase();
   const requestedItems = (body.items || [])
-    .map((item) => ({
-      productSlug: cleanText(item.productSlug),
-      quantity: Number.isFinite(item.quantity) ? Math.max(1, Math.trunc(Number(item.quantity))) : 1,
-    }))
+    .map((item) => {
+      const quantity = Number(item.quantity);
+
+      return {
+        productSlug: cleanText(item.productSlug),
+        quantity: Number.isFinite(quantity) ? Math.max(1, Math.min(999, Math.trunc(quantity))) : 1,
+      };
+    })
     .filter((item) => item.productSlug);
 
   if (!cleanSlug || requestedItems.length === 0) {
     return NextResponse.json({ message: "Store and cart items are required." }, { status: 400 });
   }
+
+  if (customerEmail && !isValidEmail(customerEmail)) {
+    return NextResponse.json({ message: "Customer email is invalid." }, { status: 400 });
+  }
+
+  // No online payment validation: all orders are treated as manual contact requests.
 
   try {
     const supabase = createSupabaseAdminClient();
@@ -115,13 +133,12 @@ export async function POST(request: Request, context: StoreOrdersRouteContext) {
       .insert({
         store_id: store.id,
         status: "pending",
-        customer_name: cleanText(body.customerName),
-        customer_phone: cleanText(body.customerPhone),
-        customer_email: cleanText(body.customerEmail).toLowerCase(),
+        customer_name: customerName,
+        customer_phone: customerPhone,
+        customer_email: customerEmail,
         total_amount: totalAmount,
         currency: store.currency || validOrderItems[0]?.currency || "XOF",
-        payment_status: body.paymentProvider === "moneroo" ? "pending" : "unpaid",
-        payment_provider: body.paymentProvider === "moneroo" ? "moneroo" : "manual",
+        payment_status: "unpaid",
       })
       .select("id")
       .single();
@@ -148,77 +165,20 @@ export async function POST(request: Request, context: StoreOrdersRouteContext) {
       return NextResponse.json({ message: itemsError.message }, { status: 500 });
     }
 
-    let paymentUrl = "";
-
-    if (body.paymentProvider === "moneroo") {
-      if (!isMonerooConfigured()) {
-        await supabase
-          .from("shopfy_store_orders")
-          .update({
-            payment_status: "failed",
-            payment_error: "Moneroo is not configured.",
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", orderId);
-
-        return NextResponse.json({ message: "Le paiement en ligne n'est pas encore configure." }, { status: 500 });
-      }
-
-      try {
-        const payment = await createMonerooOrderPayment({
-          orderId,
-          storeSlug: cleanSlug,
-          storeName: cleanText(store.name, cleanSlug),
-          amount: totalAmount,
-          currency: store.currency || validOrderItems[0]?.currency || "XOF",
-          customer: {
-            name: cleanText(body.customerName, "Client Shopfy"),
-            email: cleanText(body.customerEmail),
-            phone: cleanText(body.customerPhone),
-          },
-        });
-
-        paymentUrl = payment.paymentUrl;
-
-        const { error: paymentUpdateError } = await supabase
-          .from("shopfy_store_orders")
-          .update({
-            payment_status: "pending",
-            payment_provider: "moneroo",
-            payment_reference: payment.reference,
-            provider_transaction_id: payment.transactionId,
-            payment_url: payment.paymentUrl,
-            payment_requested_at: new Date().toISOString(),
-            payment_error: null,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", orderId);
-
-        if (paymentUpdateError) {
-          return NextResponse.json({ message: paymentUpdateError.message }, { status: 500 });
-        }
-      } catch (error) {
-        await supabase
-          .from("shopfy_store_orders")
-          .update({
-            payment_status: "failed",
-            payment_error: error instanceof Error ? error.message : "Moneroo payment creation failed.",
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", orderId);
-
-        return NextResponse.json({ message: "Impossible de creer le paiement Moneroo." }, { status: 500 });
-      }
-    }
-
+    // No external payment provider used. Orders are created and left in manual state.
     const { data: refreshedOrder } = await supabase
       .from("shopfy_store_orders")
       .select(ORDER_SELECT_FIELDS)
       .eq("id", orderId)
       .single();
 
-    return NextResponse.json({ order: mapOrderRow(refreshedOrder as OrderRow), paymentUrl });
-  } catch {
+    return NextResponse.json({ order: mapOrderRow(refreshedOrder as OrderRow), amount: totalAmount });
+  } catch (error) {
+    console.error("[orders] Store order creation failed.", {
+      slug: cleanSlug,
+      error: error instanceof Error ? error.message : String(error),
+    });
+
     return NextResponse.json({ message: "Missing Supabase service role configuration." }, { status: 500 });
   }
 }

@@ -2,7 +2,7 @@ import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { StorefrontResolver } from "@/components/store/StorefrontResolver";
 import { getDemoStore } from "@/lib/demoStores";
-import { createSupabaseServerClient } from "@/lib/supabaseAdmin";
+import { createSupabaseAnonClient } from "@/lib/supabaseAdmin";
 import { mapStoreRow, STORE_SELECT_FIELDS, type StoreRow } from "@/lib/storeRows";
 import { cleanText } from "@/lib/validation";
 import type { ShopfyStore } from "@/types/storefront";
@@ -53,7 +53,7 @@ async function getPublicStore(slug: string): Promise<ShopfyStore | null> {
   }
 
   try {
-    const supabase = createSupabaseServerClient();
+    const supabase = createSupabaseAnonClient();
     const { data, error } = await supabase
       .from("shopfy_stores")
       .select(STORE_SELECT_FIELDS)

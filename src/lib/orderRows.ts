@@ -14,10 +14,6 @@ export type OrderRow = {
   id: string;
   status: string | null;
   payment_status?: string | null;
-  payment_provider?: string | null;
-  payment_reference?: string | null;
-  payment_url?: string | null;
-  paid_at?: string | null;
   total_amount: number | string | null;
   currency: string | null;
   customer_name: string | null;
@@ -37,10 +33,6 @@ export const ORDER_SELECT_FIELDS = `
   id,
   status,
   payment_status,
-  payment_provider,
-  payment_reference,
-  payment_url,
-  paid_at,
   total_amount,
   currency,
   customer_name,
@@ -98,10 +90,6 @@ export function mapOrderRow(row: OrderRow): StoreOrder {
     storeSlug: storeRelation?.slug || "",
     status: mapOrderStatus(row.status),
     paymentStatus: mapPaymentStatus(row.payment_status),
-    paymentProvider: row.payment_provider || undefined,
-    paymentReference: row.payment_reference || undefined,
-    paymentUrl: row.payment_url || undefined,
-    paidAt: row.paid_at || undefined,
     totalAmount: Number(row.total_amount || 0),
     currency: row.currency || "XOF",
     customerName: row.customer_name || "",

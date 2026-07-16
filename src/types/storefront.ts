@@ -68,10 +68,6 @@ export type StoreOrder = {
   storeSlug: string;
   status: StoreOrderStatus;
   paymentStatus: StorePaymentStatus;
-  paymentProvider?: "manual" | "moneroo" | string;
-  paymentReference?: string;
-  paymentUrl?: string;
-  paidAt?: string;
   totalAmount: number;
   currency: string;
   customerName: string;

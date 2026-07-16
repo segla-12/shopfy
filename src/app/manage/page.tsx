@@ -14,6 +14,7 @@ import {
   getProductsByPhone,
   updateProductByPhone,
 } from "@/services/productService";
+import { uploadImageFile } from "@/services/imageService";
 import type { Product, ProductCategory } from "@/types/marketplace";
 import { PhoneInput } from "@/ui/PhoneInput";
 
@@ -64,7 +65,7 @@ export default function ManagePage() {
     const formData = new FormData(event.currentTarget);
     const imageFile = formData.get("image");
     const image = imageFile instanceof File && imageFile.size > 0
-      ? await fileToDataUrl(imageFile)
+      ? await uploadImageFile(imageFile)
       : selectedProduct.image;
 
     const updatedProduct = await updateProductByPhone(

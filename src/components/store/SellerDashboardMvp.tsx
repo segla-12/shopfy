@@ -6,16 +6,29 @@ import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "re
 import { createStoreSlug } from "@/lib/createdStores";
 import { formatStoreMoney } from "@/lib/demoStores";
 import { useLanguage } from "@/lib/language";
+import { getStorePublicUrl } from "@/lib/storeLinks";
+import {
+  getInternationalWhatsappPhoneError,
+  isValidWhatsappPhone,
+  normalizeWhatsappPhone,
+} from "@/lib/whatsapp";
 import {
   addManualSupabaseStoreProduct,
   createStoreCertificationPayment,
   deleteSupabaseStoreProduct,
   getMySupabaseStoreOrders,
   getMySupabaseStores,
+  updateSupabaseStore,
   updateSupabaseStoreOrderStatus,
+  updateSupabaseStoreProduct,
+  type StoreUpdateInput,
 } from "@/services/storeService";
+import { uploadImageFile } from "@/services/imageService";
 import type { ShopfyStore, StoreOrder, StoreProduct } from "@/types/storefront";
 import { StoreProductImage } from "./StoreProductImage";
+import { StoreQrCode } from "./StoreQrCode";
+import { Toast, type ToastType } from "@/ui/Toast";
+import { AdminWhatsappButton } from "./AdminWhatsappButton";
 
 type DashboardStatus = "checking" | "unauthenticated" | "missing-store" | "ready";
 
@@ -25,20 +38,59 @@ const certificationDurationOptions = [1, 2, 3, 6, 12];
 type ManualProductValues = {
   title: string;
   description: string;
-  category: string;
   price: string;
   compareAtPrice: string;
   inventoryQuantity: string;
 };
 
+type StoreEditValues = StoreUpdateInput;
+
+type ProductEditValues = {
+  title: string;
+  description: string;
+  category: string;
+  price: string;
+  compareAtPrice: string;
+  inventoryQuantity: string;
+  image: string;
+};
+
 const initialManualProductValues: ManualProductValues = {
   title: "",
   description: "",
-  category: "General",
   price: "",
   compareAtPrice: "",
   inventoryQuantity: "1",
 };
+
+function getStoreEditValues(store: ShopfyStore): StoreEditValues {
+  return {
+    name: store.name,
+    tagline: store.tagline,
+    description: store.description,
+    logoUrl: store.logoUrl,
+    bannerUrl: store.bannerUrl,
+    ownerName: store.ownerName,
+    city: store.city,
+    country: store.country,
+    currency: store.currency,
+    whatsappPhone: store.whatsappPhone || "",
+    primaryColor: store.theme.primary,
+    accentColor: store.theme.accent,
+  };
+}
+
+function getProductEditValues(product: StoreProduct): ProductEditValues {
+  return {
+    title: product.title,
+    description: product.description,
+    category: product.category,
+    price: String(product.price || ""),
+    compareAtPrice: product.compareAtPrice ? String(product.compareAtPrice) : "",
+    inventoryQuantity: String(product.inventoryQuantity ?? 0),
+    image: product.image,
+  };
+}
 
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -83,24 +135,57 @@ async function fileToDataUrl(file: File, maxSize = 1000): Promise<string> {
   });
 }
 
+function EditTextField({
+  label,
+  value,
+  onChange,
+  required,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  required?: boolean;
+}) {
+  return (
+    <label className="grid gap-2">
+      <span className="text-sm font-black text-gray-950 dark:text-white">{label}</span>
+      <input
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        required={required}
+        className="min-h-11 rounded-md border border-gray-200 bg-white px-4 text-sm text-gray-950 outline-none transition focus:border-orange-300 focus:ring-4 focus:ring-orange-100 dark:border-white/10 dark:bg-gray-950 dark:text-white"
+      />
+    </label>
+  );
+}
+
 export function SellerDashboardMvp() {
   const { language } = useLanguage();
   const copy = getDashboardCopy(language);
   const [activeStore, setActiveStore] = useState<ShopfyStore | null>(null);
+  const [isEditingStore, setIsEditingStore] = useState(false);
+  const [storeEditValues, setStoreEditValues] = useState<StoreEditValues | null>(null);
+  const [isSavingStoreEdit, setIsSavingStoreEdit] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState<ToastType>("success");
+  const [editingProductId, setEditingProductId] = useState("");
+  const [productEditValues, setProductEditValues] = useState<ProductEditValues | null>(null);
+  const [isSavingProductEdit, setIsSavingProductEdit] = useState(false);
+  const [productEditMessage, setProductEditMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [sellerStoreMessage, setSellerStoreMessage] = useState("");
   const [hasSellerStore, setHasSellerStore] = useState(false);
   const [dashboardStatus, setDashboardStatus] = useState<DashboardStatus>("checking");
   const [manualProductImage, setManualProductImage] = useState("");
+  const [manualProductFile, setManualProductFile] = useState<File | null>(null);
   const [manualProductValues, setManualProductValues] = useState<ManualProductValues>(initialManualProductValues);
   const [manualProductMessage, setManualProductMessage] = useState("");
+  const [manualProductStatus, setManualProductStatus] = useState<"idle" | "saving" | "success" | "error">("idle");
   const [isSavingManualProduct, setIsSavingManualProduct] = useState(false);
   const [storeOrders, setStoreOrders] = useState<StoreOrder[]>([]);
   const [orderMessage, setOrderMessage] = useState("");
   const [updatingOrderId, setUpdatingOrderId] = useState("");
   const [certificationDurationMonths, setCertificationDurationMonths] = useState(1);
-  const [certificationMessage, setCertificationMessage] = useState("");
-  const [isStartingCertification, setIsStartingCertification] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const allProducts = activeStore?.products || [];
   const pendingOrders = useMemo(
@@ -122,6 +207,7 @@ export function SellerDashboardMvp() {
 
           setHasSellerStore(Boolean(sellerStore));
           setActiveStore(sellerStore || null);
+          setStoreEditValues(sellerStore ? getStoreEditValues(sellerStore) : null);
           setSellerStoreMessage(sellerStore ? "" : getDashboardCopy(language).noStore);
           setDashboardStatus(sellerStore ? "ready" : "missing-store");
 
@@ -146,9 +232,169 @@ export function SellerDashboardMvp() {
     return () => window.cancelAnimationFrame(frameId);
   }, [language]);
 
+  function startStoreEdit() {
+    if (!activeStore) {
+      return;
+    }
+
+    setErrorMessage("");
+    setToastMessage("");
+    setStoreEditValues(getStoreEditValues(activeStore));
+    setIsEditingStore(true);
+  }
+
+  function cancelStoreEdit() {
+    setIsEditingStore(false);
+    setToastMessage("");
+    setStoreEditValues(activeStore ? getStoreEditValues(activeStore) : null);
+  }
+
+  function updateStoreEditValue(field: keyof StoreEditValues, value: string) {
+    setStoreEditValues((currentValues) => currentValues ? { ...currentValues, [field]: value } : currentValues);
+  }
+
+  async function updateStoreEditImage(field: "logoUrl" | "bannerUrl", file: File | undefined) {
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setErrorMessage(copy.imageRequired);
+      return;
+    }
+
+    try {
+      const imageUrl = await uploadImageFile(file);
+      updateStoreEditValue(field, imageUrl);
+    } catch {
+      setErrorMessage(copy.imageRequired);
+    }
+  }
+
+  async function saveStoreEdit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!activeStore || !storeEditValues) {
+      setErrorMessage(copy.noStore);
+      return;
+    }
+
+    const whatsappPhone = normalizeWhatsappPhone(storeEditValues.whatsappPhone);
+
+    if (!isValidWhatsappPhone(whatsappPhone)) {
+      setToastMessage(getInternationalWhatsappPhoneError());
+      setToastType("error");
+      return;
+    }
+
+    setIsSavingStoreEdit(true);
+    setErrorMessage("");
+    setToastMessage("");
+    
+    try {
+      const updatedStore = await updateSupabaseStore(activeStore.slug, {
+        ...storeEditValues,
+        whatsappPhone,
+      });
+
+      setActiveStore(updatedStore);
+      setStoreEditValues(getStoreEditValues(updatedStore));
+      setToastMessage(copy.storeSaved);
+      setToastType("success");
+      setIsEditingStore(false);
+    } catch (error) {
+      setToastMessage(error instanceof Error ? error.message : copy.storeSaveError);
+      setToastType("error");
+    } finally {
+      setIsSavingStoreEdit(false);
+    }
+  }
+
+  function startProductEdit(product: StoreProduct) {
+    setErrorMessage("");
+    setProductEditMessage("");
+    setEditingProductId(product.id);
+    setProductEditValues(getProductEditValues(product));
+  }
+
+  function cancelProductEdit() {
+    setEditingProductId("");
+    setProductEditValues(null);
+    setProductEditMessage("");
+  }
+
+  function updateProductEditValue(field: keyof ProductEditValues, value: string) {
+    setProductEditValues((currentValues) => currentValues ? { ...currentValues, [field]: value } : currentValues);
+  }
+
+  async function updateProductEditImage(file: File | undefined) {
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setErrorMessage(copy.imageRequired);
+      return;
+    }
+
+    try {
+      const imageUrl = await uploadImageFile(file);
+      updateProductEditValue("image", imageUrl);
+    } catch {
+      setErrorMessage(copy.imageRequired);
+    }
+  }
+
+  async function saveProductEdit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!activeStore || !editingProductId || !productEditValues) {
+      setErrorMessage(copy.noStore);
+      return;
+    }
+
+    const price = Number(productEditValues.price);
+    const compareAtPrice = Number(productEditValues.compareAtPrice);
+    const inventoryQuantity = Number(productEditValues.inventoryQuantity);
+
+    if (!productEditValues.title.trim() || !Number.isFinite(price) || price <= 0) {
+      setProductEditMessage(copy.manualProductRequired);
+      return;
+    }
+
+    setIsSavingProductEdit(true);
+    setProductEditMessage(copy.savingProduct);
+
+    try {
+      const savedProduct = await updateSupabaseStoreProduct(activeStore.slug, editingProductId, {
+        title: productEditValues.title.trim(),
+        description: productEditValues.description.trim(),
+        category: productEditValues.category.trim() || "General",
+        image: productEditValues.image,
+        price,
+        compareAtPrice: Number.isFinite(compareAtPrice) && compareAtPrice > 0 ? compareAtPrice : undefined,
+        currency: activeStore.currency,
+        inventoryQuantity: Number.isFinite(inventoryQuantity) ? Math.max(0, Math.trunc(inventoryQuantity)) : 0,
+      });
+
+      setActiveStore({
+        ...activeStore,
+        products: activeStore.products.map((product) => product.id === savedProduct.id ? savedProduct : product),
+      });
+      setProductEditMessage(copy.productSaved);
+      setEditingProductId("");
+      setProductEditValues(null);
+    } catch (error) {
+      setProductEditMessage(error instanceof Error ? error.message : copy.productSaveError);
+    } finally {
+      setIsSavingProductEdit(false);
+    }
+  }
+
   function openProductGallery() {
     setErrorMessage("");
     setManualProductMessage("");
+    setManualProductStatus("idle");
 
     if (activeStore?.requiresCertification) {
       setErrorMessage(copy.certificationRequiredAction);
@@ -173,6 +419,7 @@ export function SellerDashboardMvp() {
 
     try {
       const image = await fileToDataUrl(file);
+      setManualProductFile(file);
       setManualProductImage(image);
     } catch {
       setErrorMessage(copy.imageRequired);
@@ -183,10 +430,16 @@ export function SellerDashboardMvp() {
     setManualProductValues((currentValues) => ({ ...currentValues, [field]: value }));
   }
 
-  function resetManualProductForm() {
+  function resetManualProductForm(preserveMessage = false) {
     setManualProductImage("");
+    setManualProductFile(null);
     setManualProductValues(initialManualProductValues);
     setIsSavingManualProduct(false);
+
+    if (!preserveMessage) {
+      setManualProductMessage("");
+      setManualProductStatus("idle");
+    }
   }
 
   async function saveManualProduct(event: FormEvent<HTMLFormElement>) {
@@ -204,7 +457,7 @@ export function SellerDashboardMvp() {
       return;
     }
 
-    if (!manualProductImage) {
+    if (!manualProductFile) {
       setErrorMessage(copy.imageRequired);
       return;
     }
@@ -219,29 +472,60 @@ export function SellerDashboardMvp() {
       return;
     }
 
-    const product: StoreProduct = {
-      id: `manual-${Date.now()}`,
-      slug,
-      title: manualProductValues.title.trim(),
-      description: manualProductValues.description.trim(),
-      category: manualProductValues.category.trim() || "General",
-      image: manualProductImage,
-      price,
-      compareAtPrice: Number.isFinite(compareAtPrice) && compareAtPrice > 0 ? compareAtPrice : undefined,
-      currency: activeStore.currency,
-      inventoryQuantity: Number.isFinite(inventoryQuantity) ? Math.max(0, Math.trunc(inventoryQuantity)) : 0,
-    };
-
     setIsSavingManualProduct(true);
+    setManualProductMessage(copy.savingProductStatus);
+    setManualProductStatus("saving");
 
     try {
-      await addManualSupabaseStoreProduct(activeStore.slug, product);
-      const stores = await getMySupabaseStores();
-      setActiveStore(stores.find((item) => item.slug === activeStore.slug) || stores[0] || activeStore);
+      console.info("[store-product-save] Starting manual product save.", {
+        storeSlug: activeStore.slug,
+        slug,
+        title: manualProductValues.title.trim(),
+      });
+      const imageUrl = await uploadImageFile(manualProductFile);
+      console.info("[store-product-save] Product image uploaded.", {
+        storeSlug: activeStore.slug,
+        slug,
+      });
+      const product: StoreProduct = {
+        id: `manual-${Date.now()}`,
+        slug,
+        title: manualProductValues.title.trim(),
+        description: manualProductValues.description.trim(),
+        category: "General",
+        image: imageUrl,
+        price,
+        compareAtPrice: Number.isFinite(compareAtPrice) && compareAtPrice > 0 ? compareAtPrice : undefined,
+        currency: activeStore.currency,
+        inventoryQuantity: Number.isFinite(inventoryQuantity) ? Math.max(0, Math.trunc(inventoryQuantity)) : 0,
+      };
+      const savedProduct = await addManualSupabaseStoreProduct(activeStore.slug, product);
+      console.info("[store-product-save] Product insert returned from API.", {
+        storeSlug: activeStore.slug,
+        productId: savedProduct.id,
+        slug: savedProduct.slug,
+      });
+      const updatedStore = {
+        ...activeStore,
+        products: [savedProduct, ...activeStore.products.filter((item) => item.id !== savedProduct.id)],
+        stats: {
+          ...activeStore.stats,
+          products: activeStore.products.some((item) => item.id === savedProduct.id)
+            ? activeStore.stats.products
+            : activeStore.stats.products + 1,
+        },
+      };
+
+      setActiveStore(updatedStore);
       setManualProductMessage(copy.manualProductSaved);
-      resetManualProductForm();
+      setManualProductStatus("success");
+      resetManualProductForm(true);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : copy.manualProductError);
+      console.error("[store-product-save] Product save failed.", error);
+      const errorText = error instanceof Error ? error.message : copy.manualProductError;
+      setManualProductMessage(errorText);
+      setManualProductStatus("error");
+      setErrorMessage(errorText);
       setIsSavingManualProduct(false);
     }
   }
@@ -286,36 +570,6 @@ export function SellerDashboardMvp() {
       setErrorMessage(error instanceof Error ? error.message : copy.orderUpdateError);
     } finally {
       setUpdatingOrderId("");
-    }
-  }
-
-  async function startCertificationPayment() {
-    if (!activeStore) {
-      setErrorMessage(copy.noStore);
-      return;
-    }
-
-    setErrorMessage("");
-    setCertificationMessage("");
-    setIsStartingCertification(true);
-
-    const paymentWindow = window.open("about:blank", "_blank");
-
-    try {
-      const { paymentUrl } = await createStoreCertificationPayment(activeStore.slug, certificationDurationMonths);
-
-      if (paymentWindow) {
-        paymentWindow.location.href = paymentUrl;
-      } else {
-        window.open(paymentUrl, "_blank", "noopener,noreferrer");
-      }
-
-      setCertificationMessage(copy.certificationPaymentStarted);
-    } catch (error) {
-      paymentWindow?.close();
-      setErrorMessage(error instanceof Error ? error.message : copy.certificationPaymentError);
-    } finally {
-      setIsStartingCertification(false);
     }
   }
 
@@ -367,7 +621,13 @@ export function SellerDashboardMvp() {
     );
   }
 
+  const activeStoreUrl = getStorePublicUrl(activeStore.slug);
+
   return (
+    <>
+      {toastMessage && (
+        <Toast message={toastMessage} type={toastType} onClose={() => setToastMessage("")} />
+      )}
     <section className="mx-auto grid max-w-6xl gap-6 px-4 py-10">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
@@ -376,7 +636,7 @@ export function SellerDashboardMvp() {
             {copy.title}
           </h1>
           <p className="mt-3 max-w-2xl text-base leading-7 text-gray-600 dark:text-gray-300">
-            {activeStore.name} - https://shopfy.site/store/{activeStore.slug}
+            {activeStore.name} - {activeStoreUrl}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -393,6 +653,13 @@ export function SellerDashboardMvp() {
           >
             {copy.addManualProduct}
           </button>
+          <button
+            type="button"
+            onClick={isEditingStore ? cancelStoreEdit : startStoreEdit}
+            className="inline-flex min-h-11 items-center justify-center rounded-md border border-gray-200 px-5 text-sm font-black text-gray-900 transition hover:border-orange-200 hover:text-orange-600 dark:border-white/10 dark:text-gray-100"
+          >
+            {isEditingStore ? copy.cancel : copy.edit}
+          </button>
           <input
             ref={fileInputRef}
             type="file"
@@ -408,11 +675,60 @@ export function SellerDashboardMvp() {
         copy={copy}
         language={language}
         durationMonths={certificationDurationMonths}
-        message={certificationMessage}
-        isStarting={isStartingCertification}
         onDurationChange={setCertificationDurationMonths}
-        onStartPayment={startCertificationPayment}
       />
+
+      <StoreQrCode
+        url={activeStoreUrl}
+        title={copy.qrTitle}
+        downloadLabel={copy.downloadQr}
+        fileName={`shopfy-${activeStore.slug}-qr.png`}
+      />
+
+      {isEditingStore && storeEditValues ? (
+        <form onSubmit={saveStoreEdit} className="grid gap-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-900">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-xl font-black text-gray-950 dark:text-white">{copy.editStore}</h2>
+            <button
+              type="submit"
+              disabled={isSavingStoreEdit}
+              className="inline-flex min-h-10 items-center justify-center rounded-md bg-orange-500 px-4 text-sm font-black text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSavingStoreEdit ? copy.savingStore : copy.save}
+            </button>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <EditTextField label={copy.storeName} value={storeEditValues.name} onChange={(value) => updateStoreEditValue("name", value)} required />
+            <EditTextField label={copy.ownerName} value={storeEditValues.ownerName} onChange={(value) => updateStoreEditValue("ownerName", value)} />
+            <EditTextField label={copy.storeTagline} value={storeEditValues.tagline} onChange={(value) => updateStoreEditValue("tagline", value)} />
+            <EditTextField label={copy.storeCategory} value={storeEditValues.currency} onChange={(value) => updateStoreEditValue("currency", value)} />
+            <EditTextField label={copy.storeCity} value={storeEditValues.city} onChange={(value) => updateStoreEditValue("city", value)} />
+            <EditTextField label={copy.storeCountry} value={storeEditValues.country} onChange={(value) => updateStoreEditValue("country", value)} />
+            <EditTextField label={copy.storeWhatsapp} value={storeEditValues.whatsappPhone} onChange={(value) => updateStoreEditValue("whatsappPhone", value)} required />
+            <div className="grid gap-2">
+              <span className="text-sm font-black text-gray-950 dark:text-white">{copy.storeLogo}</span>
+              <input type="file" accept="image/*" onChange={(event) => updateStoreEditImage("logoUrl", event.currentTarget.files?.[0])} className="rounded-md border border-dashed border-gray-300 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-gray-950" />
+            </div>
+            <div className="grid gap-2">
+              <span className="text-sm font-black text-gray-950 dark:text-white">{copy.storeBanner}</span>
+              <input type="file" accept="image/*" onChange={(event) => updateStoreEditImage("bannerUrl", event.currentTarget.files?.[0])} className="rounded-md border border-dashed border-gray-300 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-gray-950" />
+            </div>
+            <EditTextField label={copy.primaryColor} value={storeEditValues.primaryColor} onChange={(value) => updateStoreEditValue("primaryColor", value)} />
+            <EditTextField label={copy.accentColor} value={storeEditValues.accentColor} onChange={(value) => updateStoreEditValue("accentColor", value)} />
+          </div>
+
+          <label className="grid gap-2">
+            <span className="text-sm font-black text-gray-950 dark:text-white">{copy.storeDescription}</span>
+            <textarea
+              value={storeEditValues.description}
+              onChange={(event) => updateStoreEditValue("description", event.target.value)}
+              rows={4}
+              className="rounded-md border border-gray-200 bg-white px-4 py-3 text-sm text-gray-950 outline-none transition focus:border-orange-300 focus:ring-4 focus:ring-orange-100 dark:border-white/10 dark:bg-gray-950 dark:text-white"
+            />
+          </label>
+        </form>
+      ) : null}
 
       {manualProductImage ? (
         <form onSubmit={saveManualProduct} className="grid gap-4 rounded-lg border border-orange-100 bg-white p-4 shadow-sm dark:border-orange-400/20 dark:bg-gray-900 md:grid-cols-[220px_minmax(0,1fr)]">
@@ -440,14 +756,6 @@ export function SellerDashboardMvp() {
                   value={manualProductValues.title}
                   onChange={(event) => updateManualProductValue("title", event.target.value)}
                   required
-                  className="min-h-11 rounded-md border border-gray-200 bg-white px-4 text-sm text-gray-950 outline-none transition focus:border-orange-300 focus:ring-4 focus:ring-orange-100 dark:border-white/10 dark:bg-gray-950 dark:text-white"
-                />
-              </label>
-              <label className="grid gap-2">
-                <span className="text-sm font-black text-gray-950 dark:text-white">{copy.productCategory}</span>
-                <input
-                  value={manualProductValues.category}
-                  onChange={(event) => updateManualProductValue("category", event.target.value)}
                   className="min-h-11 rounded-md border border-gray-200 bg-white px-4 text-sm text-gray-950 outline-none transition focus:border-orange-300 focus:ring-4 focus:ring-orange-100 dark:border-white/10 dark:bg-gray-950 dark:text-white"
                 />
               </label>
@@ -492,7 +800,7 @@ export function SellerDashboardMvp() {
               </button>
               <button
                 type="button"
-                onClick={resetManualProductForm}
+                onClick={() => resetManualProductForm()}
                 className="inline-flex min-h-10 items-center justify-center rounded-md border border-gray-200 px-4 text-sm font-black text-gray-900 transition hover:border-orange-200 hover:text-orange-600 dark:border-white/10 dark:text-gray-100"
               >
                 {copy.cancel}
@@ -503,7 +811,13 @@ export function SellerDashboardMvp() {
       ) : null}
 
       {manualProductMessage ? (
-        <p className="rounded-md border border-green-100 bg-green-50 p-3 text-sm font-bold text-green-700 dark:border-green-400/20 dark:bg-green-400/10 dark:text-green-200">
+        <p className={`rounded-md border p-3 text-sm font-bold ${
+          manualProductStatus === "error"
+            ? "border-red-100 bg-red-50 text-red-700 dark:border-red-400/20 dark:bg-red-400/10 dark:text-red-200"
+            : manualProductStatus === "saving"
+              ? "border-blue-100 bg-blue-50 text-blue-700 dark:border-blue-400/20 dark:bg-blue-400/10 dark:text-blue-200"
+              : "border-green-100 bg-green-50 text-green-700 dark:border-green-400/20 dark:bg-green-400/10 dark:text-green-200"
+        }`}>
           {manualProductMessage}
         </p>
       ) : null}
@@ -622,13 +936,13 @@ export function SellerDashboardMvp() {
         </div>
 
         <aside className="grid h-fit gap-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-900">
-          <h2 className="text-xl font-black text-gray-950 dark:text-white">{copy.payments}</h2>
-          <PaymentRow label="Moneroo" status={copy.onlinePayments} />
+          <h2 className="text-xl font-black text-gray-950 dark:text-white">{copy.orderChannels}</h2>
           <PaymentRow label="WhatsApp" status={copy.available} />
           <PaymentRow label={copy.manualPayments} status={copy.available} />
         </aside>
       </div>
     </section>
+    </>
   );
 }
 
@@ -646,19 +960,13 @@ function CertificationPanel({
   copy,
   language,
   durationMonths,
-  message,
-  isStarting,
   onDurationChange,
-  onStartPayment,
 }: {
   store: ShopfyStore;
   copy: ReturnType<typeof getDashboardCopy>;
   language: string;
   durationMonths: number;
-  message: string;
-  isStarting: boolean;
   onDurationChange: (durationMonths: number) => void;
-  onStartPayment: () => void;
 }) {
   const amount = durationMonths * CERTIFICATION_PRICE_PER_MONTH;
   const statusClass = store.requiresCertification
@@ -709,25 +1017,15 @@ function CertificationPanel({
           <p className="mt-1 text-xl font-black text-gray-950 dark:text-white">{formatStoreMoney(amount, "XOF")}</p>
         </div>
 
-        <button
-          type="button"
-          onClick={onStartPayment}
-          disabled={isStarting}
+        <AdminWhatsappButton
           className="inline-flex min-h-11 items-center justify-center rounded-md bg-gray-950 px-5 text-sm font-black text-white transition hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-gray-950 dark:hover:bg-orange-300"
         >
-          {isStarting
-            ? copy.startingCertification
-            : store.isCertified
+          {store.isCertified
               ? copy.renewCertification
               : copy.startCertification}
-        </button>
+        </AdminWhatsappButton>
       </div>
 
-      {message ? (
-        <p className="rounded-md border border-green-100 bg-white p-3 text-sm font-bold text-green-700 dark:border-green-400/20 dark:bg-gray-950 dark:text-green-200">
-          {message}
-        </p>
-      ) : null}
     </section>
   );
 }
@@ -741,8 +1039,9 @@ function PaymentRow({ label, status }: { label: string; status: string }) {
   );
 }
 
-function isWaitingForOnlinePayment(order: StoreOrder) {
-  return order.paymentProvider === "moneroo" && order.paymentStatus !== "paid";
+function isWaitingForOnlinePayment(_order: StoreOrder) {
+  // Online payments removed — never waiting for external payment provider.
+  return false;
 }
 
 function getPaymentStatusLabel(
@@ -830,8 +1129,9 @@ function getDashboardCopy(language: string) {
       noProducts: "Aucun produit pour le moment.",
       manualProduct: "Produit ajoute manuellement",
       remove: "Retirer",
-      payments: "Paiements",
-      onlinePayments: "Paiement en ligne",
+      orderChannels: "Canaux de commande",
+      qrTitle: "Code QR de la boutique",
+      downloadQr: "Telecharger le code QR",
       notConnected: "Non connecte",
       manualPayments: "Paiements manuels",
       available: "Disponible",
@@ -841,7 +1141,7 @@ function getDashboardCopy(language: string) {
       paymentCancelled: "Paiement annule",
       paymentManual: "Paiement manuel",
       certificationKicker: "Activation boutique",
-      certificationActiveTitle: "Boutique active et certifiee",
+      certificationActiveTitle: "Boutique active et certifiée",
       certificationActiveText: "Votre boutique est active.",
       trialActiveTitle: "Essai gratuit actif",
       trialActiveText: "Votre boutique est utilisable gratuitement.",
@@ -853,14 +1153,14 @@ function getDashboardCopy(language: string) {
       durationLabel: "Duree de certification",
       monthLabel: "mois",
       monthsLabel: "mois",
-      certificationAmount: "Montant a payer",
+      certificationAmount: "Montant de certification",
       startCertification: "Activer / certifier",
       renewCertification: "Prolonger",
-      startingCertification: "Ouverture paiement...",
-      certificationPaymentStarted: "Paiement Moneroo ouvert. La boutique sera activee apres confirmation du paiement.",
-      certificationPaymentError: "Impossible de demarrer le paiement de certification.",
+      startingCertification: "Enregistrement...",
+      certificationPaymentStarted: "Demande d'activation enregistree. Lequipe Shopfy contactera le vendeur pour finaliser la procedure.",
+      certificationPaymentError: "Impossible d'enregistrer la demande de certification.",
       certificationRequiredAction: "Essai gratuit termine. Activez/certifiez la boutique pour continuer.",
-      certifiedStatus: "Certifiee",
+      certifiedStatus: "Certifiée",
       trialStatus: "Essai gratuit",
       lockedStatus: "Bloquee",
       removeError: "Impossible de retirer le produit dans Supabase.",
@@ -882,11 +1182,32 @@ function getDashboardCopy(language: string) {
       productInventory: "Stock",
       productDescription: "Description",
       manualProductRequired: "Le nom du produit, la photo et un prix valide sont obligatoires.",
-      manualProductSaved: "Produit ajoute a votre boutique.",
-      manualProductError: "Impossible d'ajouter ce produit.",
+      manualProductSaved: "✅ Produit ajouté avec succès.",
+      manualProductError: "❌ Échec de l'enregistrement du produit.",
+      savingProductStatus: "Enregistrement du produit...",
       saveProduct: "Enregistrer le produit",
+      productSaved: "Produit enregistré.",
+      productSaveError: "Erreur enregistrement produit.",
       savingProduct: "Enregistrement...",
       cancel: "Annuler",
+      edit: "Modifier",
+      editStore: "Modifier la boutique",
+      save: "Enregistrer",
+      savingStore: "Enregistrement...",
+      storeSaved: "Boutique enregistrée.",
+      storeSaveError: "Erreur enregistrement.",
+      storeName: "Nom de la boutique",
+      ownerName: "Nom du propriétaire",
+      storeTagline: "Slogan",
+      storeCategory: "Devise",
+      storeCity: "Ville",
+      storeCountry: "Pays",
+      storeWhatsapp: "WhatsApp",
+      storeLogo: "Logo",
+      storeBanner: "Bannière",
+      primaryColor: "Couleur primaire",
+      accentColor: "Couleur d'accent",
+      storeDescription: "Description",
     };
   }
 
@@ -915,8 +1236,9 @@ function getDashboardCopy(language: string) {
     noProducts: "No product yet.",
     manualProduct: "Manually added product",
     remove: "Remove",
-    payments: "Payments",
-    onlinePayments: "Online payments",
+    orderChannels: "Order channels",
+    qrTitle: "Store QR code",
+    downloadQr: "Download QR code",
     notConnected: "Not connected",
     manualPayments: "Manual payments",
     available: "Available",
@@ -938,12 +1260,12 @@ function getDashboardCopy(language: string) {
     durationLabel: "Certification duration",
     monthLabel: "month",
     monthsLabel: "months",
-    certificationAmount: "Amount due",
+    certificationAmount: "Certification amount",
     startCertification: "Activate / certify",
     renewCertification: "Extend",
-    startingCertification: "Opening payment...",
-    certificationPaymentStarted: "Moneroo payment opened. The store will be activated after payment confirmation.",
-    certificationPaymentError: "Unable to start certification payment.",
+    startingCertification: "Recording...",
+    certificationPaymentStarted: "Certification request recorded. The Shopfy team will contact the seller to finalize the process.",
+    certificationPaymentError: "Unable to record the certification request.",
     certificationRequiredAction: "Free trial ended. Activate/certify the store to continue.",
     certifiedStatus: "Certified",
     trialStatus: "Free trial",
@@ -967,10 +1289,31 @@ function getDashboardCopy(language: string) {
     productInventory: "Stock",
     productDescription: "Description",
     manualProductRequired: "Product name, photo, and a valid price are required.",
-    manualProductSaved: "Product added to your store.",
-    manualProductError: "Unable to add this product.",
+    manualProductSaved: "✅ Product added to your store.",
+    manualProductError: "❌ Product save failed.",
+    savingProductStatus: "Saving product...",
     saveProduct: "Save product",
+    productSaved: "Product saved.",
+    productSaveError: "Product save error.",
     savingProduct: "Saving...",
     cancel: "Cancel",
+    edit: "Edit",
+    editStore: "Edit store",
+    save: "Save",
+    savingStore: "Saving store...",
+    storeSaved: "Store saved.",
+    storeSaveError: "Store save error.",
+    storeName: "Store Name",
+    ownerName: "Owner Name",
+    storeTagline: "Tagline",
+    storeCategory: "Currency",
+    storeCity: "City",
+    storeCountry: "Country",
+    storeWhatsapp: "WhatsApp",
+    storeLogo: "Logo",
+    storeBanner: "Banner",
+    primaryColor: "Primary Color",
+    accentColor: "Accent Color",
+    storeDescription: "Description",
   };
 }

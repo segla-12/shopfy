@@ -17,18 +17,38 @@ type SellerProfileProps = {
 
 export function SellerProfile({ sellerPhone }: SellerProfileProps) {
   const { language, categoryLabel, countryLabel } = useLanguage();
+  const normalizedSellerPhone = String(sellerPhone || "").trim();
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const copy = getSupplierProfileCopy(language);
 
   useEffect(() => {
     let isMounted = true;
 
     async function loadSellerProducts() {
-      const loadedProducts = await getProductsByPhone(sellerPhone);
+      setIsLoading(true);
+      setLoadError("");
+
+      try {
+        const loadedProducts = await getProductsByPhone(normalizedSellerPhone);
+
+        if (isMounted) {
+          setProducts(loadedProducts);
+        }
+      } catch (error) {
+        console.error("[seller] Unable to load supplier products.", {
+          sellerPhone: normalizedSellerPhone,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        if (isMounted) {
+          setProducts([]);
+          setLoadError(copy.loadError);
+        }
+      }
 
       if (isMounted) {
-        setProducts(loadedProducts);
         setIsLoading(false);
       }
     }
@@ -38,7 +58,7 @@ export function SellerProfile({ sellerPhone }: SellerProfileProps) {
     return () => {
       isMounted = false;
     };
-  }, [sellerPhone]);
+  }, [copy.loadError, normalizedSellerPhone]);
 
   const supplier = useMemo(() => buildWholesaleSuppliers(products)[0], [products]);
   const catalogProducts = useMemo(() => {
@@ -60,15 +80,16 @@ export function SellerProfile({ sellerPhone }: SellerProfileProps) {
   const categoriesText = supplier?.categories.map(categoryLabel).join(" / ") || copy.notSpecified;
   const deliveryMethodsText = supplier?.deliveryMethods.join(" / ") || copy.notSpecified;
   const deliveryServicesText = supplier?.deliveryServices.join(" / ") || copy.notSpecified;
-  const deliveryContact = supplier?.deliveryContacts[0] || sellerPhone;
+  const supplierOrderPhone = supplier?.phone || normalizedSellerPhone;
+  const deliveryContact = supplier?.deliveryContacts[0] || supplierOrderPhone;
   const coordinatesText = supplier ? formatCoordinates(supplier.latitude, supplier.longitude) : "";
 
-  if (!isLoading && !supplier) {
+  if (!isLoading && (loadError || !supplier)) {
     return (
       <section className="mx-auto max-w-5xl px-4 py-10">
         <div className="rounded-lg border border-dashed border-gray-300 bg-white p-10 text-center dark:border-white/10 dark:bg-gray-900">
-          <h1 className="text-2xl font-black text-gray-950 dark:text-white">{copy.emptyTitle}</h1>
-          <p className="mt-2 text-sm text-gray-500 dark:text-gray-300">{copy.emptyText}</p>
+          <h1 className="text-2xl font-black text-gray-950 dark:text-white">{loadError ? copy.loadErrorTitle : copy.emptyTitle}</h1>
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-300">{loadError || copy.emptyText}</p>
           <Link href="/#products" className="mt-4 inline-flex min-h-10 items-center justify-center rounded-md bg-orange-500 px-4 text-sm font-black text-white transition hover:bg-orange-600">
             {copy.back}
           </Link>
@@ -99,7 +120,7 @@ export function SellerProfile({ sellerPhone }: SellerProfileProps) {
             </div>
           </div>
 
-          <WhatsappButton phone={deliveryContact} label={copy.orderSupplier} className="min-h-12 rounded-md px-6 text-base" />
+          <WhatsappButton phone={supplierOrderPhone} label={copy.orderSupplier} className="min-h-12 rounded-md px-6 text-base" />
         </div>
 
         <div className="grid border-t border-gray-100 dark:border-white/10 sm:grid-cols-2 lg:grid-cols-4">
@@ -204,6 +225,8 @@ function getSupplierProfileCopy(language: string) {
       noProducts: "No product in this supplier catalog yet.",
       emptyTitle: "Supplier not found",
       emptyText: "This supplier profile has no active catalog.",
+      loadErrorTitle: "Unable to load supplier",
+      loadError: "The supplier catalog could not be loaded. Please try again.",
       back: "Back to suppliers",
       notSpecified: "To confirm",
       productCount: (count: number) => `${count} product${count > 1 ? "s" : ""}`,
@@ -233,6 +256,8 @@ function getSupplierProfileCopy(language: string) {
     noProducts: "Aucun produit dans ce catalogue fournisseur.",
     emptyTitle: "Fournisseur introuvable",
     emptyText: "Ce profil fournisseur n'a pas encore de catalogue actif.",
+    loadErrorTitle: "Chargement fournisseur impossible",
+    loadError: "Le catalogue du fournisseur n'a pas pu etre charge. Veuillez reessayer.",
     back: "Retour aux fournisseurs",
     notSpecified: "À confirmer",
     productCount: (count: number) => `${count} produit${count > 1 ? "s" : ""}`,

@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { useLanguage } from "@/lib/language";
+import { buildWhatsAppLink } from "@/lib/whatsapp";
 import { BrandLogo } from "./BrandLogo";
+
+const SHOPFY_SUPPORT_WHATSAPP = "+229 01 49 34 12 19";
 
 export function Footer() {
   const { language, t } = useLanguage();
@@ -35,7 +38,7 @@ export function Footer() {
 
         <div className="flex items-center justify-center gap-3">
           <a
-            href="https://wa.me/2290149341219"
+            href={buildWhatsAppLink(SHOPFY_SUPPORT_WHATSAPP)}
             target="_blank"
             rel="noopener noreferrer"
             aria-label="WhatsApp"

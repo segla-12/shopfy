@@ -20,6 +20,12 @@ export function MarketplaceSection() {
 
   useEffect(() => {
     let isMounted = true;
+    const params = new URLSearchParams(window.location.search);
+    const requestedQuery = params.get("q")?.trim() || "";
+
+    if (requestedQuery) {
+      setQuery(requestedQuery);
+    }
 
     async function loadProducts() {
       const products = await getProducts();

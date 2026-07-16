@@ -5,8 +5,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { formatPrice } from "@/lib/format";
 import { useLanguage } from "@/lib/language";
+import { showSafetyNotice } from "@/lib/safetyNotice";
 import { getSellerProfileHref } from "@/lib/seller";
-import { createWhatsappUrl, normalizeWhatsappPhone } from "@/lib/whatsapp";
+import { buildWhatsAppLink, isValidWhatsappPhone } from "@/lib/whatsapp";
 import { getProductById, getProductsByPhone } from "@/services/productService";
 import type { Product } from "@/types/marketplace";
 import { CertifiedBadge } from "@/ui/CertifiedBadge";
@@ -52,6 +53,12 @@ export function ProductDetail({ productId, initialProduct = null }: ProductDetai
   }, [initialProduct, productId]);
 
   const product = initialProduct || localProduct;
+
+  useEffect(() => {
+    if (product) {
+      showSafetyNotice();
+    }
+  }, [product]);
 
   useEffect(() => {
     if (!product?.sellerPhone) {
@@ -110,6 +117,7 @@ export function ProductDetail({ productId, initialProduct = null }: ProductDetai
   const sellerName = product.sellerName || t("product.seller");
   const deliveryContactHref = getDeliveryContactHref(product.deliveryContact, copy.deliveryMessage);
   const supplierIsCertified = Boolean(product.isCertified || supplierProducts.some((supplierProduct) => supplierProduct.isCertified));
+  const sellerProfileHref = getSellerProfileHref(product);
 
   return (
     <section className="mx-auto max-w-6xl px-4 py-8 sm:py-10">
@@ -194,7 +202,7 @@ export function ProductDetail({ productId, initialProduct = null }: ProductDetai
                     <a
                       href={deliveryContactHref}
                       target="_blank"
-                      rel="noreferrer"
+                      rel="noopener noreferrer"
                       className="mt-1 inline-flex min-h-10 items-center justify-center rounded-md bg-green-500 px-4 text-sm font-black text-white transition hover:bg-green-600"
                     >
                       {product.deliveryContact}
@@ -225,7 +233,11 @@ export function ProductDetail({ productId, initialProduct = null }: ProductDetai
                   </div>
                 </div>
                 <Link
-                  href={getSellerProfileHref(product)}
+                  href={sellerProfileHref}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    showSafetyNotice(sellerProfileHref);
+                  }}
                   className="inline-flex min-h-10 items-center justify-center rounded-md border border-gray-200 px-4 text-sm font-black text-gray-900 transition hover:border-orange-200 hover:text-orange-600 dark:border-white/10 dark:text-gray-100 dark:hover:border-orange-300/40 dark:hover:text-orange-300"
                 >
                   {t("product.sellerProfile")}
@@ -295,11 +307,11 @@ function DetailLine({ label, value }: { label: string; value: string }) {
 }
 
 function getDeliveryContactHref(contact: string | undefined, message: string) {
-  if (!contact || normalizeWhatsappPhone(contact).length < 6) {
+  if (!contact || !isValidWhatsappPhone(contact)) {
     return undefined;
   }
 
-  return createWhatsappUrl(contact, message);
+  return buildWhatsAppLink(contact, message);
 }
 
 function formatCoordinates(latitude: number | undefined, longitude: number | undefined) {

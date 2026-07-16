@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { useLanguage } from "@/lib/language";
-import { supabase } from "@/lib/supabase";
+import { supabase, syncServerAuthSession } from "@/lib/supabase";
 
 function getSafeNextPath(nextPath: string | null) {
   if (!nextPath || !nextPath.startsWith("/") || nextPath.startsWith("//") || nextPath.includes("\\")) {
@@ -53,6 +53,8 @@ function AuthCallbackContent() {
         if (!data.session) {
           throw new Error(copy.missingSession);
         }
+
+        await syncServerAuthSession(data.session.access_token);
       } else {
         const { data, error } = await supabase.auth.getSession();
 
@@ -63,6 +65,8 @@ function AuthCallbackContent() {
         if (!data.session) {
           throw new Error(copy.missingSession);
         }
+
+        await syncServerAuthSession(data.session.access_token);
       }
 
       if (!isActive) {

@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import { createStoreSlug, type CreateStoreInput } from "@/lib/createdStores";
 import { createSupabaseRequestClient, createSupabaseServerClient } from "@/lib/supabaseAdmin";
 import { mapStoreRow, STORE_SELECT_FIELDS, type StoreRow } from "@/lib/storeRows";
-import { cleanImage, cleanText } from "@/lib/validation";
+import { cleanImage, cleanText, hasUnsafeObjectKeys } from "@/lib/validation";
+import {
+  getInternationalWhatsappPhoneError,
+  isValidWhatsappPhone,
+  normalizeWhatsappPhone,
+} from "@/lib/whatsapp";
 
 const fallbackLogoUrl = "https://images.unsplash.com/photo-1521566652839-697aa473761a?auto=format&fit=crop&w=400&q=80";
 const fallbackBannerUrl = "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1400&q=80";
@@ -11,8 +16,7 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const onlyMine = url.searchParams.get("mine") === "true";
-    const supabase = onlyMine ? createSupabaseRequestClient(request) : createSupabaseServerClient();
-
+  const supabase = createSupabaseRequestClient(request);
     let ownerUserId = "";
 
     if (onlyMine) {
@@ -47,18 +51,32 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as Partial<CreateStoreInput>;
+  const body = (await request.json().catch(() => ({}))) as Partial<CreateStoreInput>;
+
+  if (hasUnsafeObjectKeys(body)) {
+    return NextResponse.json({ message: "Invalid request payload." }, { status: 400 });
+  }
+
   const name = cleanText(body.name);
   const ownerName = cleanText(body.ownerName);
   const city = cleanText(body.city);
   const country = cleanText(body.country, "Benin");
   const currency = cleanText(body.currency, "XOF").toUpperCase();
-  const whatsappPhone = cleanText(body.whatsappPhone);
+  const whatsappPhone = normalizeWhatsappPhone(cleanText(body.whatsappPhone));
   const category = cleanText(body.category, "General");
   const slug = createStoreSlug(name);
+  const allowedCurrencies = new Set(["XOF", "USD", "EUR", "GBP", "CAD"]);
 
   if (!name || !ownerName || !city || !country || !whatsappPhone) {
     return NextResponse.json({ message: "Store name, owner, city, country, and WhatsApp are required." }, { status: 400 });
+  }
+
+  if (!isValidWhatsappPhone(whatsappPhone)) {
+    return NextResponse.json({ message: getInternationalWhatsappPhoneError() }, { status: 400 });
+  }
+
+  if (!allowedCurrencies.has(currency)) {
+    return NextResponse.json({ message: "Unsupported currency." }, { status: 400 });
   }
 
   const payload = {
@@ -86,12 +104,17 @@ export async function POST(request: Request) {
 
     const { data, error } = await supabase
       .from("shopfy_stores")
-      .upsert({ ...payload, owner_user_id: authData.user.id }, { onConflict: "slug" })
+      .insert({ ...payload, owner_user_id: authData.user.id })
       .select(STORE_SELECT_FIELDS)
       .single();
 
     if (error || !data) {
-      return NextResponse.json({ message: error?.message || "Store creation failed." }, { status: error?.code === "42501" ? 403 : 500 });
+      const status = error?.code === "23505"
+        ? 409
+        : error?.code === "42501"
+        ? 403
+        : 500;
+      return NextResponse.json({ message: error?.message || "Store creation failed." }, { status });
     }
 
     return NextResponse.json({ store: mapStoreRow(data as StoreRow) });

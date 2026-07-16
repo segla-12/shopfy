@@ -3,7 +3,8 @@ import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import { mapSupabaseProduct, PRODUCT_SELECT_FIELDS } from "@/lib/productMapping";
 import { toEnglishText } from "@/lib/englishText";
 import { toEnglishWholesaleDescription } from "@/lib/productWholesale";
-import { cleanImage, cleanPrice, cleanText } from "@/lib/validation";
+import { cleanImage, cleanPrice, cleanText, hasUnsafeObjectKeys } from "@/lib/validation";
+import { normalizeWhatsappPhone } from "@/lib/whatsapp";
 
 type ManageRequest = {
   ownership?: {
@@ -21,9 +22,16 @@ type ManageRequest = {
 };
 
 export async function PATCH(request: Request) {
-  const body = await request.json() as ManageRequest;
+  const body = await request.json().catch(() => ({})) as ManageRequest;
+
+  if (hasUnsafeObjectKeys(body)) {
+    return NextResponse.json({ success: false, message: "Invalid request payload." }, { status: 400 });
+  }
+
   const productId = cleanText(body.ownership?.productId);
-  const sellerPhone = cleanText(body.ownership?.sellerPhone);
+  const cleanSellerPhone = cleanText(body.ownership?.sellerPhone);
+  const sellerPhone = normalizeWhatsappPhone(cleanSellerPhone);
+  const phoneMatches = Array.from(new Set([cleanSellerPhone, sellerPhone].filter(Boolean)));
 
   if (!productId || !sellerPhone) {
     return NextResponse.json({ success: false }, { status: 400 });
@@ -49,7 +57,7 @@ export async function PATCH(request: Request) {
       .from("products")
       .update(payload)
       .eq("id", productId)
-      .eq("phone", sellerPhone)
+      .in("phone", phoneMatches)
       .select(PRODUCT_SELECT_FIELDS)
       .single();
 
@@ -67,9 +75,16 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const body = await request.json() as ManageRequest;
+  const body = await request.json().catch(() => ({})) as ManageRequest;
+
+  if (hasUnsafeObjectKeys(body)) {
+    return NextResponse.json({ success: false, message: "Invalid request payload." }, { status: 400 });
+  }
+
   const productId = cleanText(body.ownership?.productId);
-  const sellerPhone = cleanText(body.ownership?.sellerPhone);
+  const cleanSellerPhone = cleanText(body.ownership?.sellerPhone);
+  const sellerPhone = normalizeWhatsappPhone(cleanSellerPhone);
+  const phoneMatches = Array.from(new Set([cleanSellerPhone, sellerPhone].filter(Boolean)));
 
   if (!productId || !sellerPhone) {
     return NextResponse.json({ success: false }, { status: 400 });
@@ -83,7 +98,7 @@ export async function DELETE(request: Request) {
       .from("products")
       .delete()
       .eq("id", productId)
-      .eq("phone", sellerPhone);
+      .in("phone", phoneMatches);
 
     error = result.error;
   } catch {

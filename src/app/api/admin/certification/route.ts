@@ -70,7 +70,7 @@ export async function POST(request: Request) {
 
   try {
     const supabaseAdmin = createSupabaseAdminClient();
-    const tableName = storeSlug ? "shopfy_stores" : "products";
+    const tableName = storeSlug ? "shopfy_stores" : "shopfy_store_products";
     const columnName = storeSlug ? "slug" : "id";
     const entityId = storeSlug || productId;
     let result = await supabaseAdmin
