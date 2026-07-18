@@ -69,7 +69,6 @@ export function mapStoreRow(row: StoreRow): ShopfyStore {
   const products = (row.shopfy_store_products || []).map(mapProductRow);
   const certificationExpiresAt = row.certification_expires_at || undefined;
   const isCertificationActive = Boolean(row.is_certified) && isFutureOrMissingDate(certificationExpiresAt);
-  const trialStatus = getStoreTrialStatus(row.created_at);
 
   return {
     slug: row.slug,
@@ -85,10 +84,10 @@ export function mapStoreRow(row: StoreRow): ShopfyStore {
     whatsappPhone: row.whatsapp_phone || "",
     isCertified: isCertificationActive,
     createdAt: row.created_at || undefined,
-    trialEndsAt: trialStatus.trialEndsAt,
-    trialDaysRemaining: trialStatus.trialDaysRemaining,
-    isTrialActive: trialStatus.isTrialActive,
-    requiresCertification: !isCertificationActive && !trialStatus.isTrialActive,
+    trialEndsAt: undefined, // Ne plus exposer par défaut
+    trialDaysRemaining: 0, // Ne plus exposer par défaut
+    isTrialActive: false, // Ne plus exposer par défaut
+    requiresCertification: doesStoreRequireCertification(row),
     certificationStartedAt: row.certification_started_at || undefined,
     certificationExpiresAt,
     certificationDurationMonths: row.certification_duration_months || undefined,

@@ -181,6 +181,10 @@ export const translations = {
     "admin.statusUncertified": "Grossiste non certifie",
     "admin.storeStatusActive": "Boutique certifiée",
     "certified.badge": "Certifié",
+    "dashboard.storeQrCode": "QR Code de la boutique",
+    "dashboard.downloadQrCode": "Télécharger le QR code",
+    "dashboard.trialActive": "Essai gratuit actif. Activation/certification requise dans {count} jour(s).",
+    "dashboard.activationRequired": "Activation/certification requise.",
     "admin.storeStatusUncertified": "Boutique non certifiee",
   },
   en: {
@@ -359,6 +363,10 @@ export const translations = {
     "admin.statusUncertified": "Supplier not certified",
     "admin.storeStatusActive": "Certified store",
     "certified.badge": "Certified",
+    "dashboard.storeQrCode": "Store QR code",
+    "dashboard.downloadQrCode": "Download QR code",
+    "dashboard.trialActive": "Free trial active. Activation/certification required in {count} day(s).",
+    "dashboard.activationRequired": "Activation/certification required.",
     "admin.storeStatusUncertified": "Uncertified store",
   },
 } as const;
