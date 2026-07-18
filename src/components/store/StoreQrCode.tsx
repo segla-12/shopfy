@@ -23,6 +23,7 @@ export function StoreQrCode({ url, title, downloadLabel, fileName = "shopfy-stor
   }, [url]);
 
   useEffect(() => {
+    let nextErrorMessage = "";
     const canvas = canvasRef.current;
 
     if (!canvas) {
@@ -61,10 +62,13 @@ export function StoreQrCode({ url, title, downloadLabel, fileName = "shopfy-stor
         });
       });
 
-      setErrorMessage("");
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Unable to generate QR code.");
+      nextErrorMessage = error instanceof Error ? error.message : "Unable to generate QR code.";
     }
+
+    const frameId = window.requestAnimationFrame(() => setErrorMessage(nextErrorMessage));
+
+    return () => window.cancelAnimationFrame(frameId);
   }, [absoluteUrl]);
 
   function downloadQrCode() {

@@ -1,101 +1,76 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useState } from "react";
 import { formatStoreMoney } from "@/lib/demoStores";
 import { useLanguage } from "@/lib/language";
+import { StoreCartProvider, useStoreCart, type StoreCartLine } from "@/lib/storeCart";
 import { buildWhatsAppLink, isValidWhatsappPhone } from "@/lib/whatsapp";
 import { useNavbarMode } from "@/lib/navbarMode";
-import { getStorePublicUrl } from "@/lib/storeLinks";
 import { createPendingStoreOrder } from "@/services/storeService";
 import type { ShopfyStore, StoreProduct } from "@/types/storefront";
-import { CertifiedBadge } from "@/ui/CertifiedBadge";
 import { StoreProductImage } from "./StoreProductImage";
-import { StoreQrCode } from "./StoreQrCode";
 
 type StorefrontProps = {
   store: ShopfyStore;
 };
 
-type CartLine = {
-  product: StoreProduct;
-  quantity: number;
-};
-
 // Online payments removed; use WhatsApp-first ordering.
 
 export function Storefront({ store }: StorefrontProps) {
+  return (
+    <StoreCartProvider storeSlug={store.slug}>
+      <StorefrontContent store={store} />
+    </StoreCartProvider>
+  );
+}
+
+function StorefrontContent({ store }: StorefrontProps) {
   const { language } = useLanguage();
   const { mode } = useNavbarMode();
   const copy = getStorefrontCopy(language);
-  const [cartLines, setCartLines] = useState<CartLine[]>([]);
+  const cart = useStoreCart();
+  const [isCartOpen, setIsCartOpen] = useState(false);
   const [cartMessage, setCartMessage] = useState("");
   const [cartErrorMessage, setCartErrorMessage] = useState("");
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
-  const [customerName, setCustomerName] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
-  const [customerEmail, setCustomerEmail] = useState("");
   const allProducts = store.products;
-  const cartTotal = cartLines.reduce((total, line) => total + line.product.price * line.quantity, 0);
-  const cartCount = cartLines.reduce((total, line) => total + line.quantity, 0);
-  const storeUrl = getStorePublicUrl(store.slug);
 
   function addToCart(product: StoreProduct) {
     setCartMessage("");
     setCartErrorMessage("");
-    setCartLines((currentLines) => {
-      const existingLine = currentLines.find((line) => line.product.id === product.id);
-
-      if (existingLine) {
-        return currentLines.map((line) => (
-          line.product.id === product.id ? { ...line, quantity: line.quantity + 1 } : line
-        ));
-      }
-
-      return [{ product, quantity: 1 }, ...currentLines];
-    });
+    cart.addProduct(product);
   }
 
   function increaseCartLine(productId: string) {
     setCartMessage("");
     setCartErrorMessage("");
-    setCartLines((currentLines) => (
-      currentLines.map((line) => (
-        line.product.id === productId ? { ...line, quantity: line.quantity + 1 } : line
-      ))
-    ));
+    cart.increaseLine(productId);
   }
 
   function decreaseCartLine(productId: string) {
     setCartMessage("");
     setCartErrorMessage("");
-    setCartLines((currentLines) => (
-      currentLines.flatMap((line) => {
-        if (line.product.id !== productId) {
-          return [line];
-        }
-
-        if (line.quantity <= 1) {
-          return [];
-        }
-
-        return [{ ...line, quantity: line.quantity - 1 }];
-      })
-    ));
+    cart.decreaseLine(productId);
   }
 
   function removeCartLine(productId: string) {
     setCartMessage("");
     setCartErrorMessage("");
-    setCartLines((currentLines) => currentLines.filter((line) => line.product.id !== productId));
+    cart.removeLine(productId);
+  }
+
+  function clearCart() {
+    setCartMessage("");
+    setCartErrorMessage("");
+    cart.clearCart();
   }
 
   async function handleWhatsappOrder() {
     setCartMessage("");
     setCartErrorMessage("");
 
-    if (cartLines.length === 0) {
+    if (cart.lines.length === 0) {
       return;
     }
 
@@ -113,20 +88,20 @@ export function Storefront({ store }: StorefrontProps) {
     try {
       const order = await createPendingStoreOrder(
         store.slug,
-        cartLines.map((line) => ({
+        cart.lines.map((line) => ({
           productSlug: line.product.slug,
           quantity: line.quantity,
         })),
         {
-          name: customerName,
-          phone: customerPhone,
-          email: customerEmail,
+          name: "",
+          phone: "",
+          email: "",
         },
       );
 
       const whatsappOrderUrl = buildWhatsAppLink(
         whatsappPhone,
-        buildWhatsappOrderMessage(store, cartLines, copy, order.id, mode),
+        buildWhatsappOrderMessage(store, cart.lines, copy, order.id, mode),
       );
 
       if (!whatsappOrderUrl) {
@@ -139,7 +114,7 @@ export function Storefront({ store }: StorefrontProps) {
         window.open(whatsappOrderUrl, "_blank", "noopener,noreferrer");
       }
 
-      setCartLines([]);
+      cart.clearCart();
       setCartMessage(copy.pendingOrderCreated);
     } catch (error) {
       whatsappWindow?.close();
@@ -169,16 +144,25 @@ export function Storefront({ store }: StorefrontProps) {
                 <p className="max-w-2xl text-base font-semibold leading-7 text-white/90 sm:text-lg">
                   {copy.inactiveDescription}
                 </p>
-                <Link
-                  href="/dashboard"
-                  className="mt-2 inline-flex min-h-11 w-fit items-center justify-center rounded-md bg-orange-500 px-5 text-sm font-black text-white transition hover:bg-orange-600"
-                >
-                  {copy.ownerDashboard}
-                </Link>
               </div>
             </div>
           </div>
         </section>
+        <FloatingStoreCart
+          copy={copy}
+          currency={store.currency}
+          isOpen={isCartOpen}
+          isCreatingOrder={isCreatingOrder}
+          cartMessage={cartMessage}
+          cartErrorMessage={cartErrorMessage}
+          onOpen={() => setIsCartOpen(true)}
+          onClose={() => setIsCartOpen(false)}
+          onIncrease={increaseCartLine}
+          onDecrease={decreaseCartLine}
+          onRemove={removeCartLine}
+          onClear={clearCart}
+          onWhatsappOrder={handleWhatsappOrder}
+        />
       </div>
     );
   }
@@ -206,9 +190,6 @@ export function Storefront({ store }: StorefrontProps) {
                     <p className="text-xs font-black uppercase tracking-wide text-orange-200">{store.city}, {store.country}</p>
                     <div className="mt-1 flex flex-wrap items-center gap-2">
                       <h1 className="text-3xl font-black tracking-tight text-white sm:text-5xl">{store.name}</h1>
-                      {store.isCertified ? (
-                        <CertifiedBadge label={copy.certifiedBadge} className="border-white/30 bg-white/95 text-gray-950" />
-                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -219,27 +200,14 @@ export function Storefront({ store }: StorefrontProps) {
 
           <div className="grid gap-3 md:grid-cols-2">
             <StoreMetric label={copy.products} value={String(allProducts.length)} />
-            <StoreMetric label={copy.cart} value={`${cartCount} ${copy.items}`} />
+            <StoreMetric label={copy.cart} value={`${cart.count} ${copy.items}`} />
           </div>
-
-          <StoreQrCode
-            url={storeUrl}
-            title={copy.qrTitle}
-            downloadLabel={copy.downloadQr}
-            fileName={`shopfy-${store.slug}-qr.png`}
-          />
-
-          {!store.isCertified && store.isTrialActive ? (
-            <div className="rounded-lg border border-orange-100 bg-orange-50 p-4 text-sm font-bold text-orange-800 dark:border-orange-400/20 dark:bg-orange-400/10 dark:text-orange-100">
-              {copy.trialBanner} {store.trialDaysRemaining || 0} {copy.daysRemaining}.
-            </div>
-          ) : null}
 
           {mode === "detail" ? <RetailPaymentNotice copy={copy} /> : null}
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-6xl gap-5 px-4 py-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <section className="mx-auto grid max-w-6xl gap-5 px-4 py-8">
         <div className="grid gap-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -259,82 +227,22 @@ export function Storefront({ store }: StorefrontProps) {
             ))}
           </div>
         </div>
-
-        <aside className="h-fit rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-900 lg:sticky lg:top-20">
-          <h2 className="text-lg font-black text-gray-950 dark:text-white">{copy.cartTitle}</h2>
-          {cartLines.length === 0 ? (
-            <p className="mt-2 text-sm leading-6 text-gray-500 dark:text-gray-300">{copy.emptyCart}</p>
-          ) : (
-            <div className="mt-4 grid gap-3">
-              {cartLines.map((line) => (
-                <div key={line.product.id} className="grid gap-3 border-b border-gray-100 pb-3 text-sm dark:border-white/10">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="break-words font-black text-gray-950 dark:text-white">{line.product.title}</p>
-                      <p className="mt-1 text-gray-500 dark:text-gray-300">{formatStoreMoney(line.product.price, line.product.currency)}</p>
-                    </div>
-                    <p className="shrink-0 font-black text-gray-950 dark:text-white">
-                      {formatStoreMoney(line.product.price * line.quantity, line.product.currency)}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="inline-grid grid-cols-[36px_48px_36px] overflow-hidden rounded-md border border-gray-200 dark:border-white/10">
-                      <button
-                        type="button"
-                        onClick={() => decreaseCartLine(line.product.id)}
-                        aria-label={`${copy.decreaseQuantity} ${line.product.title}`}
-                        className="min-h-9 bg-white text-sm font-black text-gray-900 transition hover:bg-gray-50 dark:bg-gray-950 dark:text-white dark:hover:bg-white/10"
-                      >
-                        -
-                      </button>
-                      <span className="grid min-h-9 place-items-center border-x border-gray-200 text-sm font-black text-gray-950 dark:border-white/10 dark:text-white">
-                        {line.quantity}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => increaseCartLine(line.product.id)}
-                        aria-label={`${copy.increaseQuantity} ${line.product.title}`}
-                        className="min-h-9 bg-white text-sm font-black text-gray-900 transition hover:bg-gray-50 dark:bg-gray-950 dark:text-white dark:hover:bg-white/10"
-                      >
-                        +
-                      </button>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeCartLine(line.product.id)}
-                      className="inline-flex min-h-9 items-center justify-center rounded-md border border-gray-200 px-3 text-xs font-black text-gray-900 transition hover:border-red-200 hover:text-red-600 dark:border-white/10 dark:text-gray-100"
-                    >
-                      {copy.removeFromCart}
-                    </button>
-                  </div>
-                </div>
-              ))}
-              <div className="flex items-center justify-between text-base font-black text-gray-950 dark:text-white">
-                <span>{copy.total}</span>
-                <span>{formatStoreMoney(cartTotal, store.currency)}</span>
-              </div>
-              <button
-                type="button"
-                onClick={handleWhatsappOrder}
-                disabled={isCreatingOrder}
-                className="inline-flex min-h-11 items-center justify-center rounded-md bg-green-500 px-4 text-sm font-black text-white transition hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isCreatingOrder ? copy.creatingPendingOrder : copy.whatsappOrder}
-              </button>
-              {cartMessage ? (
-                <p className="rounded-md border border-green-100 bg-green-50 p-3 text-sm font-bold text-green-700 dark:border-green-400/20 dark:bg-green-400/10 dark:text-green-200">
-                  {cartMessage}
-                </p>
-              ) : null}
-              {cartErrorMessage ? (
-                <p className="rounded-md border border-red-100 bg-red-50 p-3 text-sm font-bold text-red-700 dark:border-red-400/20 dark:bg-red-400/10 dark:text-red-200">
-                  {cartErrorMessage}
-                </p>
-              ) : null}
-            </div>
-          )}
-        </aside>
       </section>
+      <FloatingStoreCart
+        copy={copy}
+        currency={store.currency}
+        isOpen={isCartOpen}
+        isCreatingOrder={isCreatingOrder}
+        cartMessage={cartMessage}
+        cartErrorMessage={cartErrorMessage}
+        onOpen={() => setIsCartOpen(true)}
+        onClose={() => setIsCartOpen(false)}
+        onIncrease={increaseCartLine}
+        onDecrease={decreaseCartLine}
+        onRemove={removeCartLine}
+        onClear={clearCart}
+        onWhatsappOrder={handleWhatsappOrder}
+      />
     </div>
   );
 }
@@ -395,6 +303,190 @@ function StoreProductCard({
   );
 }
 
+function FloatingStoreCart({
+  copy,
+  currency,
+  isOpen,
+  isCreatingOrder,
+  cartMessage,
+  cartErrorMessage,
+  onOpen,
+  onClose,
+  onIncrease,
+  onDecrease,
+  onRemove,
+  onClear,
+  onWhatsappOrder,
+}: {
+  copy: ReturnType<typeof getStorefrontCopy>;
+  currency: string;
+  isOpen: boolean;
+  isCreatingOrder: boolean;
+  cartMessage: string;
+  cartErrorMessage: string;
+  onOpen: () => void;
+  onClose: () => void;
+  onIncrease: (productId: string) => void;
+  onDecrease: (productId: string) => void;
+  onRemove: (productId: string) => void;
+  onClear: () => void;
+  onWhatsappOrder: () => void;
+}) {
+  const cart = useStoreCart();
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="fixed bottom-5 right-5 z-40 inline-flex min-h-14 min-w-14 items-center justify-center rounded-full bg-orange-500 px-4 text-white shadow-lg shadow-orange-500/30 transition hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-200 dark:focus:ring-orange-400/30"
+        aria-label={copy.openCart}
+      >
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          className="h-6 w-6"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="9" cy="20" r="1.5" />
+          <circle cx="18" cy="20" r="1.5" />
+          <path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 2-1.5L21 8H6.2" />
+        </svg>
+        <span className="absolute -right-1 -top-1 grid min-h-6 min-w-6 place-items-center rounded-full bg-gray-950 px-1.5 text-xs font-black text-white ring-2 ring-white dark:bg-white dark:text-gray-950 dark:ring-gray-950">
+          {cart.count}
+        </span>
+      </button>
+
+      {isOpen ? (
+        <div className="fixed inset-0 z-50">
+          <button
+            type="button"
+            aria-label={copy.closeCart}
+            onClick={onClose}
+            className="absolute inset-0 bg-gray-950/40"
+          />
+          <aside className="absolute bottom-0 right-0 grid max-h-[88vh] w-full gap-4 overflow-y-auto rounded-t-lg border border-gray-200 bg-white p-4 shadow-2xl dark:border-white/10 dark:bg-gray-900 sm:bottom-5 sm:right-5 sm:max-h-[calc(100vh-40px)] sm:w-[420px] sm:rounded-lg">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-xl font-black text-gray-950 dark:text-white">{copy.cartTitle}</h2>
+                <p className="mt-1 text-sm font-bold text-gray-500 dark:text-gray-300">
+                  {cart.count} {copy.items}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-gray-200 text-xl font-black text-gray-900 transition hover:bg-gray-50 dark:border-white/10 dark:text-white dark:hover:bg-white/10"
+                aria-label={copy.closeCart}
+              >
+                ×
+              </button>
+            </div>
+
+            {cart.lines.length === 0 ? (
+              <p className="rounded-md border border-dashed border-gray-200 p-4 text-sm leading-6 text-gray-500 dark:border-white/10 dark:text-gray-300">
+                {copy.emptyCart}
+              </p>
+            ) : (
+              <div className="grid gap-3">
+                {cart.lines.map((line) => (
+                  <div key={line.product.id} className="grid gap-3 border-b border-gray-100 pb-3 text-sm dark:border-white/10">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="break-words font-black text-gray-950 dark:text-white">{line.product.title}</p>
+                        <p className="mt-1 text-gray-500 dark:text-gray-300">
+                          {copy.unitPriceLabel}: {formatStoreMoney(line.product.price, line.product.currency)}
+                        </p>
+                      </div>
+                      <p className="shrink-0 font-black text-gray-950 dark:text-white">
+                        {formatStoreMoney(line.product.price * line.quantity, line.product.currency)}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="inline-grid grid-cols-[36px_48px_36px] overflow-hidden rounded-md border border-gray-200 dark:border-white/10">
+                        <button
+                          type="button"
+                          onClick={() => onDecrease(line.product.id)}
+                          aria-label={`${copy.decreaseQuantity} ${line.product.title}`}
+                          className="min-h-9 bg-white text-sm font-black text-gray-900 transition hover:bg-gray-50 dark:bg-gray-950 dark:text-white dark:hover:bg-white/10"
+                        >
+                          -
+                        </button>
+                        <span className="grid min-h-9 place-items-center border-x border-gray-200 text-sm font-black text-gray-950 dark:border-white/10 dark:text-white">
+                          {line.quantity}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => onIncrease(line.product.id)}
+                          aria-label={`${copy.increaseQuantity} ${line.product.title}`}
+                          className="min-h-9 bg-white text-sm font-black text-gray-900 transition hover:bg-gray-50 dark:bg-gray-950 dark:text-white dark:hover:bg-white/10"
+                        >
+                          +
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => onRemove(line.product.id)}
+                        className="inline-flex min-h-9 items-center justify-center rounded-md border border-gray-200 px-3 text-xs font-black text-gray-900 transition hover:border-red-200 hover:text-red-600 dark:border-white/10 dark:text-gray-100"
+                      >
+                        {copy.removeFromCart}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                <div className="grid gap-2 rounded-md bg-gray-50 p-3 text-sm dark:bg-gray-950">
+                  <div className="flex items-center justify-between font-bold text-gray-600 dark:text-gray-300">
+                    <span>{copy.subtotal}</span>
+                    <span>{formatStoreMoney(cart.total, currency)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-base font-black text-gray-950 dark:text-white">
+                    <span>{copy.total}</span>
+                    <span>{formatStoreMoney(cart.total, currency)}</span>
+                  </div>
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                  <button
+                    type="button"
+                    onClick={onWhatsappOrder}
+                    disabled={isCreatingOrder}
+                    className="inline-flex min-h-11 items-center justify-center rounded-md bg-green-500 px-4 text-sm font-black text-white transition hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isCreatingOrder ? copy.creatingPendingOrder : copy.whatsappOrder}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onClear}
+                    className="inline-flex min-h-11 items-center justify-center rounded-md border border-gray-200 px-4 text-sm font-black text-gray-900 transition hover:border-red-200 hover:text-red-600 dark:border-white/10 dark:text-gray-100"
+                  >
+                    {copy.clearCart}
+                  </button>
+                </div>
+
+                {cartMessage ? (
+                  <p className="rounded-md border border-green-100 bg-green-50 p-3 text-sm font-bold text-green-700 dark:border-green-400/20 dark:bg-green-400/10 dark:text-green-200">
+                    {cartMessage}
+                  </p>
+                ) : null}
+                {cartErrorMessage ? (
+                  <p className="rounded-md border border-red-100 bg-red-50 p-3 text-sm font-bold text-red-700 dark:border-red-400/20 dark:bg-red-400/10 dark:text-red-200">
+                    {cartErrorMessage}
+                  </p>
+                ) : null}
+              </div>
+            )}
+          </aside>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 function StoreMetric({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg border border-gray-100 bg-white p-4 dark:border-white/10 dark:bg-gray-900">
@@ -406,13 +498,11 @@ function StoreMetric({ label, value }: { label: string; value: string }) {
 
 function buildWhatsappOrderMessage(
   store: ShopfyStore,
-  cartLines: CartLine[],
+  cartLines: StoreCartLine[],
   copy: ReturnType<typeof getStorefrontCopy>,
   orderId?: string,
   mode: "gros" | "detail" = "detail",
 ) {
-  const totalItems = cartLines.reduce((total, line) => total + line.quantity, 0);
-  const totalAmount = cartLines.reduce((total, line) => total + line.product.price * line.quantity, 0);
   const orderReference = orderId ? `\n${copy.orderReference}: ${orderId.slice(0, 8)}` : "";
   const storeName = mode === "gros" ? copy.grossisteShopfy : store.name;
 
@@ -446,16 +536,10 @@ function getStorefrontCopy(language: string) {
   if (language === "fr") {
     return {
       products: "Produits",
-      certifiedBadge: "Boutique certifiée",
-      inactiveKicker: "Activation requise",
-      inactiveDescription: "Cette boutique a termine ses 7 jours gratuits. Le proprietaire doit l'activer/certifier pour rouvrir le catalogue.",
-      ownerDashboard: "Acceder au dashboard",
-      trialBanner: "Essai gratuit actif. Activation/certification requise dans",
-      daysRemaining: "jour(s)",
+      inactiveKicker: "Boutique indisponible",
+      inactiveDescription: "Cette boutique est momentanement indisponible.",
       cart: "Panier",
       items: "article(s)",
-      qrTitle: "Code QR de la boutique",
-      downloadQr: "Telecharger le code QR",
       catalogKicker: "Boutique",
       catalogTitle: "Catalogue",
       addToCart: "Ajouter",
@@ -464,16 +548,15 @@ function getStorefrontCopy(language: string) {
       removeFromCart: "Retirer",
       source: "Source",
       cartTitle: "Panier",
+      openCart: "Ouvrir le panier",
+      closeCart: "Fermer le panier",
       emptyCart: "Aucun article dans le panier.",
+      subtotal: "Sous-total",
       total: "Total",
-      customerInfo: "Informations client",
-      customerName: "Nom",
-      customerPhone: "Telephone",
-      customerEmail: "Email",
-      customerRequired: "Entrez votre nom, telephone et email avant de payer.",
+      clearCart: "Vider",
       whatsappOrder: "Commander sur WhatsApp",
       creatingPendingOrder: "Creation commande...",
-      pendingOrderCreated: "Commande en attente creee. Le vendeur devra la confirmer dans son dashboard.",
+      pendingOrderCreated: "Commande en attente creee. Le vendeur devra la confirmer.",
       pendingOrderError: "Impossible de creer la commande en attente.",
       whatsappMissing: "Cette boutique n'a pas encore de numero WhatsApp.",
       whatsappMessageIntro: "Bonjour, je veux commander dans la boutique",
@@ -499,16 +582,10 @@ function getStorefrontCopy(language: string) {
 
   return {
     products: "Products",
-    certifiedBadge: "Certified store",
-    inactiveKicker: "Activation required",
-    inactiveDescription: "This store has used its 7-day free trial. The owner must activate/certify it to reopen the catalog.",
-    ownerDashboard: "Go to dashboard",
-    trialBanner: "Free trial active. Activation/certification required in",
-    daysRemaining: "day(s)",
+    inactiveKicker: "Store unavailable",
+    inactiveDescription: "This store is temporarily unavailable.",
     cart: "Cart",
     items: "item(s)",
-    qrTitle: "Store QR code",
-    downloadQr: "Download QR code",
     catalogKicker: "Store",
     catalogTitle: "Catalog",
     addToCart: "Add",
@@ -517,16 +594,15 @@ function getStorefrontCopy(language: string) {
     removeFromCart: "Remove",
     source: "Source",
     cartTitle: "Cart",
+    openCart: "Open cart",
+    closeCart: "Close cart",
     emptyCart: "No item in the cart.",
+    subtotal: "Subtotal",
     total: "Total",
-    customerInfo: "Customer information",
-    customerName: "Name",
-    customerPhone: "Phone",
-    customerEmail: "Email",
-    customerRequired: "Enter your name, phone, and email before paying.",
+    clearCart: "Clear",
     whatsappOrder: "Order on WhatsApp",
     creatingPendingOrder: "Creating order...",
-    pendingOrderCreated: "Pending order created. The seller must confirm it in their dashboard.",
+    pendingOrderCreated: "Pending order created. The seller must confirm it.",
     pendingOrderError: "Unable to create the pending order.",
     whatsappMissing: "This store does not have a WhatsApp number yet.",
     whatsappMessageIntro: "Hello, I want to order from",

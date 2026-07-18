@@ -23,9 +23,9 @@ export function MarketplaceSection() {
     const params = new URLSearchParams(window.location.search);
     const requestedQuery = params.get("q")?.trim() || "";
 
-    if (requestedQuery) {
-      setQuery(requestedQuery);
-    }
+    const frameId = requestedQuery
+      ? window.requestAnimationFrame(() => setQuery(requestedQuery))
+      : undefined;
 
     async function loadProducts() {
       const products = await getProducts();
@@ -40,6 +40,9 @@ export function MarketplaceSection() {
 
     return () => {
       isMounted = false;
+      if (frameId) {
+        window.cancelAnimationFrame(frameId);
+      }
     };
   }, []);
 
