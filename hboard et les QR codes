@@ -1,0 +1,43 @@
+warning: in the working copy of 'package.json', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/package.json b/package.json[m
+[1mindex 7d40597..5c466c0 100644[m
+[1m--- a/package.json[m
+[1m+++ b/package.json[m
+[36m@@ -1,5 +1,5 @@[m
+ {[m
+[31m-  "$schema": "https://json.schemastore.org/package",[m
+[32m+[m[32m  "$schema": "https://json.schemastore.org/package.json",[m
+   "name": "shopfy",[m
+   "version": "0.1.0",[m
+   "private": true,[m
+[36m@@ -17,8 +17,8 @@[m
+   "devDependencies": {[m
+     "@tailwindcss/postcss": "^4.3.3",[m
+     "@types/node": "^20.19.43",[m
+[31m-    "@types/react": "^19.2.17",[m
+[31m-    "@types/react-dom": "^19.2.17",[m
+[32m+[m[32m    "@types/react": "^18.3.3",[m
+[32m+[m[32m    "@types/react-dom": "^18.3.0",[m
+     "eslint": "^9.39.5",[m
+     "eslint-config-next": "16.2.10",[m
+     "tailwindcss": "^4.3.3",[m
+[1mdiff --git a/src/lib/i18n.ts b/src/lib/i18n.ts[m
+[1mindex 37488da..2eb46de 100644[m
+[1m--- a/src/lib/i18n.ts[m
+[1m+++ b/src/lib/i18n.ts[m
+[36m@@ -70,7 +70,6 @@[m [mexport const translations = {[m
+     "product.notFoundText": "Ce produit n'existe pas ou a ete retire du catalogue.",[m
+     "product.location": "Localisation",[m
+     "product.descriptionHeading": "Description",[m
+[31m-    "certified.badge": "Grossiste certifié",[m
+     "whatsapp.message": "Je suis interesse par votre produit",[m
+     "whatsapp.noPhoneError": "Numero WhatsApp non disponible",[m
+     "footer.rights": "© 2025 - Tous droits réservés",[m
+[36m@@ -248,7 +247,6 @@[m [mexport const translations = {[m
+     "product.notFoundText": "This product does not exist or has been removed from the catalog.",[m
+     "product.location": "Location",[m
+     "product.descriptionHeading": "Description",[m
+[31m-    "certified.badge": "Certified supplier",[m
+     "whatsapp.message": "I am interested in your product",[m
+     "whatsapp.noPhoneError": "WhatsApp number unavailable",[m
+     "footer.rights": "© 2025 - All rights reserved",[m

@@ -1,5 +1,5 @@
 {
-  "$schema": "https://json.schemastore.org/package",
+  "$schema": "https://json.schemastore.org/package.json",
   "name": "shopfy",
   "version": "0.1.0",
   "private": true,
@@ -17,8 +17,8 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^20.19.43",
-    "@types/react": "^19.2.17",
-    "@types/react-dom": "^19.2.17",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
     "eslint": "^9.39.5",
     "eslint-config-next": "16.2.10",
     "tailwindcss": "^4.3.3",
