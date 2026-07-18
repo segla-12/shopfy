@@ -177,6 +177,7 @@ export const translations = {
     "admin.removeCertification": "Retirer certification",
     "admin.notDefined": "Non definie",
     "admin.storeStatusActive": "Boutique certifiée",
+    "certified.badge": "Certifié",
     "admin.storeStatusUncertified": "Boutique non certifiee",
   },
   en: {
@@ -351,6 +352,7 @@ export const translations = {
     "admin.removeCertification": "Remove certification",
     "admin.notDefined": "Not defined",
     "admin.storeStatusActive": "Certified store",
+    "certified.badge": "Certified",
     "admin.storeStatusUncertified": "Uncertified store",
   },
 } as const;
