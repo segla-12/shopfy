@@ -269,8 +269,8 @@ function StoreProductCard({
 }) {
   return (
     <article className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-gray-900">
-      <div className="relative aspect-[4/3] bg-gray-100 dark:bg-gray-950">
-        <StoreProductImage src={product.image} alt={product.title} sizes="(min-width: 640px) 50vw, 100vw" className="object-cover" />
+      <div className="relative aspect-video bg-gray-100 dark:bg-gray-950">
+        <StoreProductImage src={product.image} alt={product.title} sizes="(min-width: 1024px) 520px, (min-width: 640px) 50vw, 100vw" className="object-cover" />
       </div>
       <div className="grid gap-3 p-4">
         <div>
@@ -339,7 +339,7 @@ function FloatingStoreCart({
       <button
         type="button"
         onClick={onOpen}
-        className="fixed bottom-5 right-5 z-40 inline-flex min-h-14 min-w-14 items-center justify-center rounded-full bg-orange-500 px-4 text-white shadow-lg shadow-orange-500/30 transition hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-200 dark:focus:ring-orange-400/30"
+        className="fixed right-[calc(env(safe-area-inset-right)+1rem)] top-[calc(env(safe-area-inset-top)+5rem)] z-40 inline-flex min-h-14 min-w-14 items-center justify-center rounded-full bg-orange-500 px-4 text-white shadow-lg shadow-orange-500/30 transition hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-200 dark:focus:ring-orange-400/30 sm:right-[calc(env(safe-area-inset-right)+1.25rem)] sm:top-[calc(env(safe-area-inset-top)+5.5rem)]"
         aria-label={copy.openCart}
       >
         <svg
