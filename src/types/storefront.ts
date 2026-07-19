@@ -78,6 +78,8 @@ export type StoreOrder = {
   sellerComment?: string;
   createdAt: string;
   confirmedAt?: string;
+  cancelledAt?: string;
+  actionUserId?: string;
   items: StoreOrderItem[];
 };
 

@@ -239,6 +239,7 @@ export function SellerDashboardMvp() {
   );
   const productSalesStats = useMemo(() => getProductSalesStats(storeOrders), [storeOrders]);
   const confirmedRevenue = confirmedOrders.reduce((total, order) => total + order.totalAmount, 0);
+  const totalStock = allProducts.reduce((total, product) => total + Number(product.inventoryQuantity || 0), 0);
   const selectedManualSaleProduct = useMemo(
     () => allProducts.find((product) => product.id === manualSaleValues.productId),
     [allProducts, manualSaleValues.productId],
@@ -715,6 +716,10 @@ export function SellerDashboardMvp() {
       return;
     }
 
+    if (!window.confirm(copy.confirmDeleteOrder)) {
+      return;
+    }
+
     setErrorMessage("");
     setOrderMessage("");
     setUpdatingOrderId(orderId);
@@ -1139,8 +1144,10 @@ export function SellerDashboardMvp() {
         </form>
       ) : null}
 
-      <div className="grid gap-3 md:grid-cols-5">
-        <DashboardMetric label={copy.products} value={String(allProducts.length)} />
+      <div className="grid gap-3 md:grid-cols-7">
+        <DashboardMetric label={copy.totalProductsMetric} value={String(allProducts.length)} />
+        <DashboardMetric label={copy.totalStockMetric} value={String(totalStock)} />
+        <DashboardMetric label={copy.totalOrdersMetric} value={String(storeOrders.length)} />
         <DashboardMetric label={copy.pendingOrdersMetric} value={String(pendingOrders.length)} />
         <DashboardMetric label={copy.confirmedOrdersMetric} value={String(confirmedOrders.length)} />
         <DashboardMetric label={copy.cancelledOrdersMetric} value={String(cancelledOrders.length)} />
@@ -1313,6 +1320,7 @@ export function SellerDashboardMvp() {
                     </p>
                     <ProductStatsSummary
                       stats={productSalesStats[product.id]}
+                      stock={product.inventoryQuantity}
                       currency={activeStore.currency}
                       copy={copy}
                     />
@@ -1356,32 +1364,37 @@ type ProductSalesStats = {
   revenue: number;
   confirmedSales: number;
   cancelledSales: number;
+  lastSaleAt?: string;
 };
 
 function ProductStatsSummary({
   stats,
+  stock,
   currency,
   copy,
 }: {
   stats?: ProductSalesStats;
+  stock: number;
   currency: string;
   copy: ReturnType<typeof getDashboardCopy>;
 }) {
   if (!stats || stats.totalOrders === 0) {
     return (
       <p className="mt-2 text-xs font-bold text-gray-400 dark:text-gray-500">
-        {copy.noProductSales}
+        {copy.productStock}: {stock} - {copy.noProductSales}
       </p>
     );
   }
 
   return (
     <div className="mt-2 grid gap-1 text-xs font-bold text-gray-500 dark:text-gray-300 sm:grid-cols-2">
+      <p>{copy.productStock}: {stock}</p>
       <p>{copy.productTotalOrders}: {stats.totalOrders}</p>
       <p>{copy.productQuantitySold}: {stats.totalQuantitySold}</p>
       <p>{copy.productRevenue}: {formatStoreMoney(stats.revenue, currency)}</p>
       <p>{copy.productConfirmedSales}: {stats.confirmedSales}</p>
       <p>{copy.productCancelledSales}: {stats.cancelledSales}</p>
+      <p>{copy.productLastSale}: {stats.lastSaleAt ? new Date(stats.lastSaleAt).toLocaleDateString() : copy.none}</p>
     </div>
   );
 }
@@ -1395,6 +1408,7 @@ function getProductSalesStats(orders: StoreOrder[]) {
         revenue: 0,
         confirmedSales: 0,
         cancelledSales: 0,
+        lastSaleAt: undefined,
       };
 
       currentStats.totalOrders += 1;
@@ -1403,6 +1417,9 @@ function getProductSalesStats(orders: StoreOrder[]) {
         currentStats.totalQuantitySold += item.quantity;
         currentStats.revenue += item.totalPrice;
         currentStats.confirmedSales += 1;
+        if (!currentStats.lastSaleAt || new Date(order.confirmedAt || order.createdAt) > new Date(currentStats.lastSaleAt)) {
+          currentStats.lastSaleAt = order.confirmedAt || order.createdAt;
+        }
       }
 
       if (order.status === "cancelled") {
@@ -1588,6 +1605,9 @@ function getDashboardCopy(language: string) {
       products: "Produits",
       imported: "Importes",
       orders: "Commandes",
+      totalProductsMetric: "Produits",
+      totalStockMetric: "Stock total",
+      totalOrdersMetric: "Commandes",
       pendingOrdersMetric: "En attente",
       confirmedOrdersMetric: "Confirmees",
       cancelledOrdersMetric: "Annulees",
@@ -1610,6 +1630,7 @@ function getDashboardCopy(language: string) {
       orderUpdateError: "Impossible de confirmer cette commande.",
       orderDeleteError: "Impossible de supprimer cette vente.",
       deleteOrder: "Supprimer",
+      confirmDeleteOrder: "Supprimer definitivement cette commande non confirmee ?",
       deletingOrder: "Suppression...",
       storeProducts: "Produits de la boutique",
       noProducts: "Aucun produit pour le moment.",
@@ -1658,11 +1679,14 @@ function getDashboardCopy(language: string) {
       lockedStatus: "Bloquee",
       removeError: "Impossible de retirer le produit dans Supabase.",
       noProductSales: "Aucune vente pour ce produit.",
+      productStock: "Stock actuel",
       productTotalOrders: "Commandes",
       productQuantitySold: "Quantite vendue",
       productRevenue: "CA",
       productConfirmedSales: "Confirmees",
       productCancelledSales: "Annulees",
+      productLastSale: "Derniere vente",
+      none: "Aucune",
       authRequired: "Connectez-vous avec votre compte vendeur pour voir votre dashboard securise.",
       authChecking: "Verification du compte vendeur...",
       authKicker: "Acces securise",
@@ -1737,6 +1761,9 @@ function getDashboardCopy(language: string) {
     products: "Products",
     imported: "Imported",
     orders: "Orders",
+    totalProductsMetric: "Products",
+    totalStockMetric: "Total stock",
+    totalOrdersMetric: "Orders",
     pendingOrdersMetric: "Pending",
     confirmedOrdersMetric: "Confirmed",
     cancelledOrdersMetric: "Cancelled",
@@ -1759,6 +1786,7 @@ function getDashboardCopy(language: string) {
     orderUpdateError: "Unable to confirm this order.",
     orderDeleteError: "Unable to delete this sale.",
     deleteOrder: "Delete",
+    confirmDeleteOrder: "Permanently delete this unconfirmed order?",
     deletingOrder: "Deleting...",
     storeProducts: "Store products",
     noProducts: "No product yet.",
@@ -1807,11 +1835,14 @@ function getDashboardCopy(language: string) {
     lockedStatus: "Locked",
     removeError: "Unable to remove the product in Supabase.",
     noProductSales: "No sale yet for this product.",
+    productStock: "Current stock",
     productTotalOrders: "Orders",
     productQuantitySold: "Qty sold",
     productRevenue: "Revenue",
     productConfirmedSales: "Confirmed",
     productCancelledSales: "Cancelled",
+    productLastSale: "Last sale",
+    none: "None",
     authRequired: "Sign in with your seller account to view your secured dashboard.",
     authChecking: "Checking seller account...",
     authKicker: "Secured access",

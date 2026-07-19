@@ -22,6 +22,8 @@ export type OrderRow = {
   seller_comment?: string | null;
   created_at: string;
   confirmed_at: string | null;
+  cancelled_at?: string | null;
+  action_user_id?: string | null;
   shopfy_stores?: {
     slug: string;
   } | {
@@ -42,6 +44,8 @@ export const ORDER_SELECT_FIELDS = `
   seller_comment,
   created_at,
   confirmed_at,
+  cancelled_at,
+  action_user_id,
   shopfy_stores (
     slug
   ),
@@ -101,6 +105,8 @@ export function mapOrderRow(row: OrderRow): StoreOrder {
     sellerComment: row.seller_comment || undefined,
     createdAt: row.created_at,
     confirmedAt: row.confirmed_at || undefined,
+    cancelledAt: row.cancelled_at || undefined,
+    actionUserId: row.action_user_id || undefined,
     items: (row.shopfy_store_order_items || []).map(mapOrderItemRow),
   };
 }

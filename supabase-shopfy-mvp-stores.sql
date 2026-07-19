@@ -72,6 +72,8 @@ create table if not exists public.shopfy_store_orders (
   currency text not null default 'XOF',
   created_at timestamptz not null default now(),
   confirmed_at timestamptz,
+  cancelled_at timestamptz,
+  action_user_id uuid references auth.users(id) on delete set null,
   updated_at timestamptz not null default now()
 );
 
@@ -151,7 +153,9 @@ alter table public.shopfy_store_orders
   add column if not exists paid_at timestamptz,
   add column if not exists payment_error text,
   add column if not exists customer_email text not null default '',
-  add column if not exists seller_comment text not null default '';
+  add column if not exists seller_comment text not null default '',
+  add column if not exists cancelled_at timestamptz,
+  add column if not exists action_user_id uuid references auth.users(id) on delete set null;
 
 alter table public.shopfy_store_orders
   drop constraint if exists shopfy_store_orders_order_source_check,
