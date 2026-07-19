@@ -1382,6 +1382,18 @@ type ProductSalesStats = {
   lastSaleAt?: string;
 };
 
+function getStockTone(stock: number): "green" | "orange" | "red" {
+  if (stock <= 0) {
+    return "red";
+  }
+
+  if (stock <= 5) {
+    return "orange";
+  }
+
+  return "green";
+}
+
 function ProductStatsSummary({
   stats,
   stock,
@@ -1394,31 +1406,26 @@ function ProductStatsSummary({
   copy: ReturnType<typeof getDashboardCopy>;
 }) {
   const stockTone = getStockTone(stock);
-  const stockBase = Math.max(stock + (stats?.totalQuantitySold || 0), stock, 1);
+  const productStats = stats || {
+    totalOrders: 0,
+    totalQuantitySold: 0,
+    revenue: 0,
+    confirmedSales: 0,
+    cancelledSales: 0,
+    lastSaleAt: undefined,
+  };
+  const stockBase = Math.max(stock + productStats.totalQuantitySold, stock, 1);
   const stockPercent = Math.max(0, Math.min(100, Math.round((stock / stockBase) * 100)));
-
-  if (!stats || stats.totalOrders === 0) {
-    return (
-      <div className="mt-3 grid gap-2 text-xs font-bold text-gray-500 dark:text-gray-300">
-        <StockLevelBar stock={stock} percent={stockPercent} tone={stockTone} copy={copy} />
-        <p>{copy.productOrdersIcon} {copy.productTotalOrders}: 0</p>
-        <p>{copy.productConfirmedIcon} {copy.productConfirmedSales}: 0</p>
-        <p>{copy.productRevenueIcon} {copy.productRevenue}: {formatStoreMoney(0, currency)}</p>
-        <p>{copy.productDateIcon} {copy.productLastSale}: {copy.none}</p>
-      </div>
-    );
-  }
 
   return (
     <div className="mt-3 grid gap-2 text-xs font-bold text-gray-500 dark:text-gray-300 sm:grid-cols-2">
       <div className="sm:col-span-2">
         <StockLevelBar stock={stock} percent={stockPercent} tone={stockTone} copy={copy} />
       </div>
-      <p>{copy.productOrdersIcon} {copy.productTotalOrders}: {stats.totalOrders}</p>
-      <p>{copy.productConfirmedIcon} {copy.productConfirmedSales}: {stats.confirmedSales}</p>
-      <p>{copy.productQuantityIcon} {copy.productQuantitySold}: {stats.totalQuantitySold}</p>
-      <p>{copy.productRevenueIcon} {copy.productRevenue}: {formatStoreMoney(stats.revenue, currency)}</p>
-      <p>{copy.productDateIcon} {copy.productLastSale}: {stats.lastSaleAt ? new Date(stats.lastSaleAt).toLocaleDateString() : copy.none}</p>
+      <p>{copy.productOrdersIcon} {copy.productTotalOrders}: {productStats.totalOrders}</p>
+      <p>{copy.productConfirmedIcon} {copy.productConfirmedSales}: {productStats.confirmedSales}</p>
+      <p>{copy.productRevenueIcon} {copy.productRevenue}: {formatStoreMoney(productStats.revenue, currency)}</p>
+      <p>{copy.productDateIcon} {copy.productLastSale}: {productStats.lastSaleAt ? new Date(productStats.lastSaleAt).toLocaleDateString() : copy.none}</p>
     </div>
   );
 }
@@ -1435,21 +1442,21 @@ function StockLevelBar({
   copy: ReturnType<typeof getDashboardCopy>;
 }) {
   const toneClass = {
-    green: "bg-green-500 text-green-700 dark:text-green-300",
-    orange: "bg-orange-500 text-orange-700 dark:text-orange-300",
-    red: "bg-red-500 text-red-700 dark:text-red-300",
+    green: { bar: "bg-green-500", text: "text-green-700 dark:text-green-300" },
+    orange: { bar: "bg-orange-500", text: "text-orange-700 dark:text-orange-300" },
+    red: { bar: "bg-red-500", text: "text-red-700 dark:text-red-300" },
   }[tone];
 
   return (
     <div className="grid gap-1.5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span>{copy.productStockIcon} {copy.productStock}: {stock}</span>
-        <span className={toneClass.replace("bg-", "text-")}>
+        <span className={toneClass.text}>
           {tone === "red" ? copy.stockOut : tone === "orange" ? copy.stockLow : copy.stockGood}
         </span>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
-        <div className={`h-full rounded-full ${toneClass.split(" ")[0]}`} style={{ width: `${percent}%` }} />
+        <div className={`h-full rounded-full ${toneClass.bar}`} style={{ width: `${percent}%` }} />
       </div>
       <span className="text-[11px] text-gray-400 dark:text-gray-500">{percent}%</span>
     </div>
@@ -1736,13 +1743,20 @@ function getDashboardCopy(language: string) {
       lockedStatus: "Bloquee",
       removeError: "Impossible de retirer le produit dans Supabase.",
       noProductSales: "Aucune vente pour ce produit.",
+      productStockIcon: "📦",
+      productOrdersIcon: "🛒",
+      productConfirmedIcon: "✅",
+      productRevenueIcon: "💰",
+      productDateIcon: "📅",
       productStock: "Stock actuel",
-      productTotalOrders: "Commandes",
-      productQuantitySold: "Quantite vendue",
-      productRevenue: "CA",
-      productConfirmedSales: "Confirmees",
+      productTotalOrders: "Nombre de commandes",
+      productRevenue: "Chiffre d'affaires",
+      productConfirmedSales: "Ventes confirmees",
       productCancelledSales: "Annulees",
       productLastSale: "Derniere vente",
+      stockGood: "Stock suffisant",
+      stockLow: "Stock faible",
+      stockOut: "Rupture de stock",
       none: "Aucune",
       authRequired: "Connectez-vous avec votre compte vendeur pour voir votre dashboard securise.",
       authChecking: "Verification du compte vendeur...",
@@ -1788,6 +1802,7 @@ function getDashboardCopy(language: string) {
       savingProduct: "Enregistrement...",
       cancel: "Annuler",
       edit: "Modifier",
+      view: "Voir",
       editStore: "Modifier la boutique",
       save: "Enregistrer",
       savingStore: "Enregistrement...",
@@ -1892,13 +1907,20 @@ function getDashboardCopy(language: string) {
     lockedStatus: "Locked",
     removeError: "Unable to remove the product in Supabase.",
     noProductSales: "No sale yet for this product.",
+    productStockIcon: "📦",
+    productOrdersIcon: "🛒",
+    productConfirmedIcon: "✅",
+    productRevenueIcon: "💰",
+    productDateIcon: "📅",
     productStock: "Current stock",
-    productTotalOrders: "Orders",
-    productQuantitySold: "Qty sold",
+    productTotalOrders: "Order count",
     productRevenue: "Revenue",
-    productConfirmedSales: "Confirmed",
+    productConfirmedSales: "Confirmed sales",
     productCancelledSales: "Cancelled",
     productLastSale: "Last sale",
+    stockGood: "Stock sufficient",
+    stockLow: "Low stock",
+    stockOut: "Out of stock",
     none: "None",
     authRequired: "Sign in with your seller account to view your secured dashboard.",
     authChecking: "Checking seller account...",
@@ -1944,6 +1966,7 @@ function getDashboardCopy(language: string) {
     savingProduct: "Saving...",
     cancel: "Cancel",
     edit: "Edit",
+    view: "View",
     editStore: "Edit store",
     save: "Save",
     savingStore: "Saving store...",
