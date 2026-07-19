@@ -19,11 +19,8 @@ export type OrderRow = {
   customer_name: string | null;
   customer_phone: string | null;
   customer_email?: string | null;
-  seller_comment?: string | null;
   created_at: string;
   confirmed_at: string | null;
-  cancelled_at?: string | null;
-  action_user_id?: string | null;
   shopfy_stores?: {
     slug: string;
   } | {
@@ -41,11 +38,8 @@ export const ORDER_SELECT_FIELDS = `
   customer_name,
   customer_phone,
   customer_email,
-  seller_comment,
   created_at,
   confirmed_at,
-  cancelled_at,
-  action_user_id,
   shopfy_stores (
     slug
   ),
@@ -95,18 +89,15 @@ export function mapOrderRow(row: OrderRow): StoreOrder {
     id: row.id,
     storeSlug: storeRelation?.slug || "",
     status: mapOrderStatus(row.status),
-    source: row.status === "confirmed" && row.payment_status === "paid" ? "manual" : "platform",
+    source: "platform",
     paymentStatus: mapPaymentStatus(row.payment_status),
     totalAmount: Number(row.total_amount || 0),
     currency: row.currency || "XOF",
     customerName: row.customer_name || "",
     customerPhone: row.customer_phone || "",
     customerEmail: row.customer_email || undefined,
-    sellerComment: row.seller_comment || undefined,
     createdAt: row.created_at,
     confirmedAt: row.confirmed_at || undefined,
-    cancelledAt: row.cancelled_at || undefined,
-    actionUserId: row.action_user_id || undefined,
     items: (row.shopfy_store_order_items || []).map(mapOrderItemRow),
   };
 }
