@@ -70,7 +70,6 @@ export type StoreOrder = {
   status: StoreOrderStatus;
   source: StoreOrderSource;
   paymentStatus: StorePaymentStatus;
-  stockReserved?: boolean;
   totalAmount: number;
   currency: string;
   customerName: string;

@@ -14,7 +14,6 @@ export type OrderRow = {
   id: string;
   status: string | null;
   payment_status?: string | null;
-  stock_reserved?: boolean | null;
   total_amount: number | string | null;
   currency: string | null;
   customer_name: string | null;
@@ -35,7 +34,6 @@ export const ORDER_SELECT_FIELDS = `
   id,
   status,
   payment_status,
-  stock_reserved,
   total_amount,
   currency,
   customer_name,
@@ -95,7 +93,6 @@ export function mapOrderRow(row: OrderRow): StoreOrder {
     status: mapOrderStatus(row.status),
     source: row.status === "confirmed" && row.payment_status === "paid" ? "manual" : "platform",
     paymentStatus: mapPaymentStatus(row.payment_status),
-    stockReserved: Boolean(row.stock_reserved),
     totalAmount: Number(row.total_amount || 0),
     currency: row.currency || "XOF",
     customerName: row.customer_name || "",

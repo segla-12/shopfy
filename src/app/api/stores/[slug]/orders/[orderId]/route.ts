@@ -18,11 +18,6 @@ type UpdateOrderRequest = {
 type OrderForDeleteRow = {
   id: string;
   status: string | null;
-  stock_reserved?: boolean | null;
-  shopfy_store_order_items?: {
-    product_id: string | null;
-    quantity: number | null;
-  }[];
 };
 
 export async function PATCH(request: Request, context: StoreOrderRouteContext) {
@@ -136,7 +131,7 @@ export async function DELETE(request: Request, context: StoreOrderRouteContext) 
 
     const { data: orderData, error: orderError } = await supabase
       .from("shopfy_store_orders")
-      .select("id, status, stock_reserved, shopfy_store_order_items (product_id, quantity)")
+      .select("id, status")
       .eq("id", cleanOrderId)
       .eq("store_id", storeData.id)
       .single();
@@ -149,10 +144,6 @@ export async function DELETE(request: Request, context: StoreOrderRouteContext) 
 
     if (order.status === "confirmed") {
       return NextResponse.json({ message: "Les ventes confirmees ne peuvent pas etre supprimees." }, { status: 409 });
-    }
-
-    if (order.stock_reserved) {
-      await restoreReservedStock(supabase, storeData.id, order);
     }
 
     const { error: deleteError } = await supabase
@@ -171,34 +162,6 @@ export async function DELETE(request: Request, context: StoreOrderRouteContext) 
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ message: "Missing Supabase server configuration." }, { status: 500 });
-  }
-}
-
-async function restoreReservedStock(
-  supabase: ReturnType<typeof createSupabaseAdminClient>,
-  storeId: string,
-  order: OrderForDeleteRow,
-) {
-  for (const item of order.shopfy_store_order_items || []) {
-    if (!item.product_id || !item.quantity) {
-      continue;
-    }
-
-    const { data } = await supabase
-      .from("shopfy_store_products")
-      .select("inventory_quantity")
-      .eq("store_id", storeId)
-      .eq("id", item.product_id)
-      .single();
-
-    await supabase
-      .from("shopfy_store_products")
-      .update({
-        inventory_quantity: Number(data?.inventory_quantity || 0) + Number(item.quantity || 0),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("store_id", storeId)
-      .eq("id", item.product_id);
   }
 }
 

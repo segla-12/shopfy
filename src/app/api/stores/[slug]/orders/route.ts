@@ -144,7 +144,6 @@ export async function POST(request: Request, context: StoreOrdersRouteContext) {
       .insert({
         store_id: store.id,
         status: "pending",
-        stock_reserved: false,
         customer_name: customerName,
         customer_phone: customerPhone,
         customer_email: customerEmail,
@@ -284,7 +283,6 @@ async function createManualSale(request: Request, cleanSlug: string, body: Creat
       .insert({
         store_id: storeData.id,
         status: "confirmed",
-        stock_reserved: false,
         customer_name: customerName,
         customer_phone: customerPhone,
         customer_email: "",

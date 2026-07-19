@@ -341,13 +341,13 @@ function FloatingStoreCart({
       <button
         type="button"
         onClick={onOpen}
-        className="fixed right-[calc(env(safe-area-inset-right)+1rem)] top-[calc(env(safe-area-inset-top)+5rem)] z-50 inline-flex min-h-14 min-w-14 items-center justify-center rounded-full bg-orange-500 px-4 text-white shadow-lg shadow-orange-500/30 transition hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-200 dark:focus:ring-orange-400/30 sm:right-[calc(env(safe-area-inset-right)+1.25rem)] sm:top-[calc(env(safe-area-inset-top)+5.5rem)]"
+        className="fixed right-[calc(env(safe-area-inset-right)+0.5rem)] top-[calc(env(safe-area-inset-top)+4.25rem)] z-50 inline-flex min-h-10 min-w-10 items-center justify-center rounded-full bg-orange-500 px-2.5 text-white shadow-lg shadow-orange-500/30 transition hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-200 dark:focus:ring-orange-400/30 sm:right-[calc(env(safe-area-inset-right)+1.25rem)] sm:top-[calc(env(safe-area-inset-top)+5.5rem)] sm:min-h-14 sm:min-w-14 sm:px-4"
         aria-label={copy.openCart}
       >
         <svg
           aria-hidden="true"
           viewBox="0 0 24 24"
-          className="h-6 w-6"
+          className="h-5 w-5 sm:h-6 sm:w-6"
           fill="none"
           stroke="currentColor"
           strokeWidth="2.4"
@@ -358,7 +358,7 @@ function FloatingStoreCart({
           <circle cx="18" cy="20" r="1.5" />
           <path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 2-1.5L21 8H6.2" />
         </svg>
-        <span className="absolute -right-1 -top-1 grid min-h-6 min-w-6 place-items-center rounded-full bg-gray-950 px-1.5 text-xs font-black text-white ring-2 ring-white dark:bg-white dark:text-gray-950 dark:ring-gray-950">
+        <span className="absolute -right-1 -top-1 grid min-h-5 min-w-5 place-items-center rounded-full bg-gray-950 px-1 text-[10px] font-black text-white ring-2 ring-white dark:bg-white dark:text-gray-950 dark:ring-gray-950 sm:min-h-6 sm:min-w-6 sm:px-1.5 sm:text-xs">
           {cart.count}
         </span>
       </button>
