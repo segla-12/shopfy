@@ -52,6 +52,7 @@ export type ShopfyStore = {
 
 export type StoreOrderStatus = "pending" | "confirmed" | "cancelled";
 export type StorePaymentStatus = "unpaid" | "pending" | "paid" | "failed" | "cancelled";
+export type StoreOrderSource = "platform" | "manual";
 
 export type StoreOrderItem = {
   id: string;
@@ -67,12 +68,15 @@ export type StoreOrder = {
   id: string;
   storeSlug: string;
   status: StoreOrderStatus;
+  source: StoreOrderSource;
   paymentStatus: StorePaymentStatus;
+  stockReserved?: boolean;
   totalAmount: number;
   currency: string;
   customerName: string;
   customerPhone: string;
   customerEmail?: string;
+  sellerComment?: string;
   createdAt: string;
   confirmedAt?: string;
   items: StoreOrderItem[];

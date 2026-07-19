@@ -1,4 +1,4 @@
-import type { StoreOrder, StoreOrderItem, StoreOrderStatus, StorePaymentStatus } from "@/types/storefront";
+import type { StoreOrder, StoreOrderItem, StoreOrderSource, StoreOrderStatus, StorePaymentStatus } from "@/types/storefront";
 
 export type OrderItemRow = {
   id: string;
@@ -13,12 +13,15 @@ export type OrderItemRow = {
 export type OrderRow = {
   id: string;
   status: string | null;
+  order_source?: string | null;
   payment_status?: string | null;
+  stock_reserved?: boolean | null;
   total_amount: number | string | null;
   currency: string | null;
   customer_name: string | null;
   customer_phone: string | null;
   customer_email?: string | null;
+  seller_comment?: string | null;
   created_at: string;
   confirmed_at: string | null;
   shopfy_stores?: {
@@ -32,12 +35,15 @@ export type OrderRow = {
 export const ORDER_SELECT_FIELDS = `
   id,
   status,
+  order_source,
   payment_status,
+  stock_reserved,
   total_amount,
   currency,
   customer_name,
   customer_phone,
   customer_email,
+  seller_comment,
   created_at,
   confirmed_at,
   shopfy_stores (
@@ -70,6 +76,10 @@ function mapPaymentStatus(status: string | null | undefined): StorePaymentStatus
   return "unpaid";
 }
 
+function mapOrderSource(source: string | null | undefined): StoreOrderSource {
+  return source === "manual" ? "manual" : "platform";
+}
+
 function mapOrderItemRow(row: OrderItemRow): StoreOrderItem {
   return {
     id: row.id,
@@ -89,12 +99,15 @@ export function mapOrderRow(row: OrderRow): StoreOrder {
     id: row.id,
     storeSlug: storeRelation?.slug || "",
     status: mapOrderStatus(row.status),
+    source: mapOrderSource(row.order_source),
     paymentStatus: mapPaymentStatus(row.payment_status),
+    stockReserved: Boolean(row.stock_reserved),
     totalAmount: Number(row.total_amount || 0),
     currency: row.currency || "XOF",
     customerName: row.customer_name || "",
     customerPhone: row.customer_phone || "",
     customerEmail: row.customer_email || undefined,
+    sellerComment: row.seller_comment || undefined,
     createdAt: row.created_at,
     confirmedAt: row.confirmed_at || undefined,
     items: (row.shopfy_store_order_items || []).map(mapOrderItemRow),

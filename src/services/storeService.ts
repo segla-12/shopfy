@@ -37,6 +37,17 @@ type PendingOrderItemInput = {
   quantity: number;
 };
 
+export type ManualStoreSaleInput = {
+  productId: string;
+  quantity: number;
+  unitPrice: number;
+  discountAmount?: number;
+  customerName?: string;
+  customerPhone?: string;
+  comment?: string;
+  saleDate?: string;
+};
+
 type StoreOrderCustomerInput = {
   name: string;
   phone: string;
@@ -239,6 +250,38 @@ export async function createPendingStoreOrder(
   return result.order;
 }
 
+export async function createManualSupabaseStoreSale(
+  storeSlug: string,
+  sale: ManualStoreSaleInput,
+): Promise<StoreOrder> {
+  const headers = await getAuthenticatedHeaders();
+  const response = await fetch(`/api/stores/${encodeURIComponent(storeSlug)}/orders`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      source: "manual",
+      items: [{
+        productId: sale.productId,
+        quantity: sale.quantity,
+        unitPrice: sale.unitPrice,
+        discountAmount: sale.discountAmount,
+      }],
+      customerName: sale.customerName,
+      customerPhone: sale.customerPhone,
+      comment: sale.comment,
+      saleDate: sale.saleDate,
+    }),
+  });
+
+  const result = (await response.json()) as OrderResponse;
+
+  if (!response.ok || !result.order) {
+    throw new Error(result.message || "Manual sale creation failed.");
+  }
+
+  return result.order;
+}
+
 export async function createStoreCertificationPayment(
   storeSlug: string,
   durationMonths: number,
@@ -295,4 +338,17 @@ export async function updateSupabaseStoreOrderStatus(
   }
 
   return result.order;
+}
+
+export async function deleteSupabaseStoreOrder(storeSlug: string, orderId: string) {
+  const headers = await getAuthenticatedHeaders(false);
+  const response = await fetch(
+    `/api/stores/${encodeURIComponent(storeSlug)}/orders/${encodeURIComponent(orderId)}`,
+    { method: "DELETE", headers },
+  );
+
+  if (!response.ok) {
+    const result = (await response.json().catch(() => ({}))) as { message?: string };
+    throw new Error(result.message || "Order deletion failed.");
+  }
 }

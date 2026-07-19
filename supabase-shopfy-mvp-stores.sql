@@ -55,6 +55,8 @@ create table if not exists public.shopfy_store_orders (
   id uuid primary key default gen_random_uuid(),
   store_id uuid not null references public.shopfy_stores(id) on delete cascade,
   status text not null default 'pending' check (status in ('pending', 'confirmed', 'cancelled')),
+  order_source text not null default 'platform' check (order_source in ('platform', 'manual')),
+  stock_reserved boolean not null default false,
   payment_status text not null default 'unpaid' check (payment_status in ('unpaid', 'pending', 'paid', 'failed', 'cancelled')),
   payment_provider text not null default 'manual',
   payment_reference text,
@@ -66,6 +68,7 @@ create table if not exists public.shopfy_store_orders (
   customer_name text not null default '',
   customer_phone text not null default '',
   customer_email text not null default '',
+  seller_comment text not null default '',
   total_amount numeric(12, 2) not null default 0,
   currency text not null default 'XOF',
   created_at timestamptz not null default now(),
@@ -139,6 +142,8 @@ alter table public.shopfy_stores
   add column if not exists certification_amount integer;
 
 alter table public.shopfy_store_orders
+  add column if not exists order_source text not null default 'platform',
+  add column if not exists stock_reserved boolean not null default false,
   add column if not exists payment_status text not null default 'unpaid',
   add column if not exists payment_provider text not null default 'manual',
   add column if not exists payment_reference text,
@@ -147,7 +152,13 @@ alter table public.shopfy_store_orders
   add column if not exists payment_requested_at timestamptz,
   add column if not exists paid_at timestamptz,
   add column if not exists payment_error text,
-  add column if not exists customer_email text not null default '';
+  add column if not exists customer_email text not null default '',
+  add column if not exists seller_comment text not null default '';
+
+alter table public.shopfy_store_orders
+  drop constraint if exists shopfy_store_orders_order_source_check,
+  add constraint shopfy_store_orders_order_source_check
+    check (order_source in ('platform', 'manual'));
 
 alter table public.shopfy_store_orders
   drop constraint if exists shopfy_store_orders_payment_status_check,

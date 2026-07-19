@@ -14,6 +14,8 @@ import {
 } from "@/lib/whatsapp";
 import {
   addManualSupabaseStoreProduct,
+  createManualSupabaseStoreSale,
+  deleteSupabaseStoreOrder,
   deleteSupabaseStoreProduct,
   getMySupabaseStoreOrders,
   getMySupabaseStores,
@@ -54,6 +56,17 @@ type ProductEditValues = {
   image: string;
 };
 
+type ManualSaleValues = {
+  productId: string;
+  quantity: string;
+  unitPrice: string;
+  discountAmount: string;
+  customerName: string;
+  customerPhone: string;
+  comment: string;
+  saleDate: string;
+};
+
 const initialManualProductValues: ManualProductValues = {
   title: "",
   description: "",
@@ -61,6 +74,23 @@ const initialManualProductValues: ManualProductValues = {
   compareAtPrice: "",
   inventoryQuantity: "1",
 };
+
+function getTodayInputDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function getInitialManualSaleValues(product?: StoreProduct): ManualSaleValues {
+  return {
+    productId: product?.id || "",
+    quantity: "1",
+    unitPrice: product ? String(product.price || "") : "",
+    discountAmount: "",
+    customerName: "",
+    customerPhone: "",
+    comment: "",
+    saleDate: getTodayInputDate(),
+  };
+}
 
 function getStoreEditValues(store: ShopfyStore): StoreEditValues {
   return {
@@ -181,12 +211,16 @@ export function SellerDashboardMvp() {
   const [manualProductMessage, setManualProductMessage] = useState("");
   const [manualProductStatus, setManualProductStatus] = useState<"idle" | "saving" | "success" | "error">("idle");
   const [isSavingManualProduct, setIsSavingManualProduct] = useState(false);
+  const [isAddingManualSale, setIsAddingManualSale] = useState(false);
+  const [manualSaleValues, setManualSaleValues] = useState<ManualSaleValues>(getInitialManualSaleValues());
+  const [manualSaleMessage, setManualSaleMessage] = useState("");
+  const [isSavingManualSale, setIsSavingManualSale] = useState(false);
   const [storeOrders, setStoreOrders] = useState<StoreOrder[]>([]);
   const [orderMessage, setOrderMessage] = useState("");
   const [updatingOrderId, setUpdatingOrderId] = useState("");
   const [certificationDurationMonths, setCertificationDurationMonths] = useState(1);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const allProducts = activeStore?.products || [];
+  const allProducts = useMemo(() => activeStore?.products || [], [activeStore?.products]);
   const pendingOrders = useMemo(
     () => storeOrders.filter((order) => order.status === "pending"),
     [storeOrders],
@@ -199,8 +233,21 @@ export function SellerDashboardMvp() {
     () => storeOrders.filter((order) => order.status === "cancelled"),
     [storeOrders],
   );
+  const nonConfirmedOrders = useMemo(
+    () => storeOrders.filter((order) => order.status !== "confirmed"),
+    [storeOrders],
+  );
   const productSalesStats = useMemo(() => getProductSalesStats(storeOrders), [storeOrders]);
   const confirmedRevenue = confirmedOrders.reduce((total, order) => total + order.totalAmount, 0);
+  const selectedManualSaleProduct = useMemo(
+    () => allProducts.find((product) => product.id === manualSaleValues.productId),
+    [allProducts, manualSaleValues.productId],
+  );
+  const manualSaleTotal = Math.max(
+    0,
+    (Number(manualSaleValues.unitPrice) || 0) * (Number(manualSaleValues.quantity) || 0)
+      - (Number(manualSaleValues.discountAmount) || 0),
+  );
 
   useEffect(() => {
     const frameId = window.requestAnimationFrame(() => {
@@ -235,6 +282,19 @@ export function SellerDashboardMvp() {
 
     return () => window.cancelAnimationFrame(frameId);
   }, [language]);
+
+  async function refreshDashboardData(storeSlug = activeStore?.slug) {
+    if (!storeSlug) {
+      return;
+    }
+
+    const [stores, orders] = await Promise.all([
+      getMySupabaseStores(),
+      getMySupabaseStoreOrders(storeSlug),
+    ]);
+    setActiveStore(stores.find((item) => item.slug === storeSlug) || activeStore);
+    setStoreOrders(orders);
+  }
 
   function startStoreEdit() {
     if (!activeStore) {
@@ -434,6 +494,41 @@ export function SellerDashboardMvp() {
     setManualProductValues((currentValues) => ({ ...currentValues, [field]: value }));
   }
 
+  function openManualSaleForm() {
+    setErrorMessage("");
+    setManualSaleMessage("");
+
+    if (activeStore?.requiresCertification) {
+      setErrorMessage(copy.certificationRequiredAction);
+      return;
+    }
+
+    setManualSaleValues(getInitialManualSaleValues(allProducts[0]));
+    setIsAddingManualSale(true);
+  }
+
+  function cancelManualSaleForm() {
+    setIsAddingManualSale(false);
+    setManualSaleValues(getInitialManualSaleValues(allProducts[0]));
+    setManualSaleMessage("");
+  }
+
+  function updateManualSaleValue(field: keyof ManualSaleValues, value: string) {
+    setManualSaleValues((currentValues) => {
+      if (field === "productId") {
+        const product = allProducts.find((item) => item.id === value);
+
+        return {
+          ...currentValues,
+          productId: value,
+          unitPrice: product ? String(product.price || "") : currentValues.unitPrice,
+        };
+      }
+
+      return { ...currentValues, [field]: value };
+    });
+  }
+
   function resetManualProductForm(preserveMessage = false) {
     setManualProductImage("");
     setManualProductFile(null);
@@ -534,6 +629,61 @@ export function SellerDashboardMvp() {
     }
   }
 
+  async function saveManualSale(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setErrorMessage("");
+    setManualSaleMessage("");
+
+    if (!activeStore) {
+      setErrorMessage(copy.noStore);
+      return;
+    }
+
+    if (activeStore.requiresCertification) {
+      setErrorMessage(copy.certificationRequiredAction);
+      return;
+    }
+
+    const quantity = Number(manualSaleValues.quantity);
+    const unitPrice = Number(manualSaleValues.unitPrice);
+    const discountAmount = Number(manualSaleValues.discountAmount || 0);
+
+    if (!manualSaleValues.productId || !selectedManualSaleProduct || !Number.isFinite(quantity) || quantity <= 0 || !Number.isFinite(unitPrice) || unitPrice <= 0 || manualSaleTotal <= 0) {
+      setManualSaleMessage(copy.manualSaleRequired);
+      return;
+    }
+
+    if (selectedManualSaleProduct.inventoryQuantity < Math.trunc(quantity)) {
+      setManualSaleMessage(copy.manualSaleStockError);
+      return;
+    }
+
+    setIsSavingManualSale(true);
+
+    try {
+      const sale = await createManualSupabaseStoreSale(activeStore.slug, {
+        productId: manualSaleValues.productId,
+        quantity: Math.trunc(quantity),
+        unitPrice,
+        discountAmount: Number.isFinite(discountAmount) ? discountAmount : 0,
+        customerName: manualSaleValues.customerName,
+        customerPhone: manualSaleValues.customerPhone,
+        comment: manualSaleValues.comment,
+        saleDate: manualSaleValues.saleDate,
+      });
+
+      setStoreOrders((currentOrders) => [sale, ...currentOrders.filter((order) => order.id !== sale.id)]);
+      await refreshDashboardData(activeStore.slug);
+      setManualSaleMessage(copy.manualSaleSaved);
+      setIsAddingManualSale(false);
+      setManualSaleValues(getInitialManualSaleValues(allProducts[0]));
+    } catch (error) {
+      setManualSaleMessage(error instanceof Error ? error.message : copy.manualSaleError);
+    } finally {
+      setIsSavingManualSale(false);
+    }
+  }
+
   async function removeProduct(productId: string) {
     setErrorMessage("");
 
@@ -557,6 +707,28 @@ export function SellerDashboardMvp() {
 
   async function cancelOrder(orderId: string) {
     await updateOrderStatus(orderId, "cancelled");
+  }
+
+  async function removeOrder(orderId: string) {
+    if (!activeStore) {
+      setErrorMessage(copy.noStore);
+      return;
+    }
+
+    setErrorMessage("");
+    setOrderMessage("");
+    setUpdatingOrderId(orderId);
+
+    try {
+      await deleteSupabaseStoreOrder(activeStore.slug, orderId);
+      setStoreOrders((currentOrders) => currentOrders.filter((order) => order.id !== orderId));
+      await refreshDashboardData(activeStore.slug);
+      setOrderMessage(copy.orderDeleted);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : copy.orderDeleteError);
+    } finally {
+      setUpdatingOrderId("");
+    }
   }
 
   async function updateOrderStatus(orderId: string, status: StoreOrder["status"]) {
@@ -666,6 +838,13 @@ export function SellerDashboardMvp() {
             className="inline-flex min-h-11 items-center justify-center rounded-md border border-gray-200 px-5 text-sm font-black text-gray-900 transition hover:border-orange-200 hover:text-orange-600 dark:border-white/10 dark:text-gray-100"
           >
             {copy.addManualProduct}
+          </button>
+          <button
+            type="button"
+            onClick={isAddingManualSale ? cancelManualSaleForm : openManualSaleForm}
+            className="inline-flex min-h-11 items-center justify-center rounded-md border border-gray-200 px-5 text-sm font-black text-gray-900 transition hover:border-orange-200 hover:text-orange-600 dark:border-white/10 dark:text-gray-100"
+          >
+            {isAddingManualSale ? copy.cancel : copy.addManualSale}
           </button>
           <button
             type="button"
@@ -837,6 +1016,129 @@ export function SellerDashboardMvp() {
         </p>
       ) : null}
 
+      {isAddingManualSale ? (
+        <form onSubmit={saveManualSale} className="grid gap-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-900">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-wide text-orange-500">{copy.manualSaleBadge}</p>
+              <h2 className="mt-1 text-xl font-black text-gray-950 dark:text-white">{copy.addManualSale}</h2>
+            </div>
+            <div className="rounded-md bg-gray-50 px-3 py-2 text-sm font-black text-gray-950 dark:bg-gray-950 dark:text-white">
+              {copy.manualSaleTotal}: {formatStoreMoney(manualSaleTotal, activeStore.currency)}
+            </div>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="grid gap-2">
+              <span className="text-sm font-black text-gray-950 dark:text-white">{copy.manualSaleProduct}</span>
+              <select
+                value={manualSaleValues.productId}
+                onChange={(event) => updateManualSaleValue("productId", event.target.value)}
+                required
+                className="min-h-11 rounded-md border border-gray-200 bg-white px-3 text-sm text-gray-950 outline-none transition focus:border-orange-300 focus:ring-4 focus:ring-orange-100 dark:border-white/10 dark:bg-gray-950 dark:text-white"
+              >
+                <option value="">{copy.manualSaleSelectProduct}</option>
+                {allProducts.map((product) => (
+                  <option key={product.id} value={product.id}>
+                    {product.title} - {copy.productInventory}: {product.inventoryQuantity}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="grid gap-2">
+              <span className="text-sm font-black text-gray-950 dark:text-white">{copy.manualSaleDate}</span>
+              <input
+                type="date"
+                value={manualSaleValues.saleDate}
+                onChange={(event) => updateManualSaleValue("saleDate", event.target.value)}
+                className="min-h-11 rounded-md border border-gray-200 bg-white px-4 text-sm text-gray-950 outline-none transition focus:border-orange-300 focus:ring-4 focus:ring-orange-100 dark:border-white/10 dark:bg-gray-950 dark:text-white"
+              />
+            </label>
+            <label className="grid gap-2">
+              <span className="text-sm font-black text-gray-950 dark:text-white">{copy.manualSaleQuantity}</span>
+              <input
+                type="number"
+                min="1"
+                value={manualSaleValues.quantity}
+                onChange={(event) => updateManualSaleValue("quantity", event.target.value)}
+                required
+                className="min-h-11 rounded-md border border-gray-200 bg-white px-4 text-sm text-gray-950 outline-none transition focus:border-orange-300 focus:ring-4 focus:ring-orange-100 dark:border-white/10 dark:bg-gray-950 dark:text-white"
+              />
+            </label>
+            <label className="grid gap-2">
+              <span className="text-sm font-black text-gray-950 dark:text-white">{copy.manualSaleUnitPrice}</span>
+              <input
+                type="number"
+                min="1"
+                value={manualSaleValues.unitPrice}
+                onChange={(event) => updateManualSaleValue("unitPrice", event.target.value)}
+                required
+                className="min-h-11 rounded-md border border-gray-200 bg-white px-4 text-sm text-gray-950 outline-none transition focus:border-orange-300 focus:ring-4 focus:ring-orange-100 dark:border-white/10 dark:bg-gray-950 dark:text-white"
+              />
+            </label>
+            <label className="grid gap-2">
+              <span className="text-sm font-black text-gray-950 dark:text-white">{copy.manualSaleDiscount}</span>
+              <input
+                type="number"
+                min="0"
+                value={manualSaleValues.discountAmount}
+                onChange={(event) => updateManualSaleValue("discountAmount", event.target.value)}
+                className="min-h-11 rounded-md border border-gray-200 bg-white px-4 text-sm text-gray-950 outline-none transition focus:border-orange-300 focus:ring-4 focus:ring-orange-100 dark:border-white/10 dark:bg-gray-950 dark:text-white"
+              />
+            </label>
+            <label className="grid gap-2">
+              <span className="text-sm font-black text-gray-950 dark:text-white">{copy.manualSaleCustomerName}</span>
+              <input
+                value={manualSaleValues.customerName}
+                onChange={(event) => updateManualSaleValue("customerName", event.target.value)}
+                className="min-h-11 rounded-md border border-gray-200 bg-white px-4 text-sm text-gray-950 outline-none transition focus:border-orange-300 focus:ring-4 focus:ring-orange-100 dark:border-white/10 dark:bg-gray-950 dark:text-white"
+              />
+            </label>
+            <label className="grid gap-2">
+              <span className="text-sm font-black text-gray-950 dark:text-white">{copy.manualSaleCustomerPhone}</span>
+              <input
+                value={manualSaleValues.customerPhone}
+                onChange={(event) => updateManualSaleValue("customerPhone", event.target.value)}
+                className="min-h-11 rounded-md border border-gray-200 bg-white px-4 text-sm text-gray-950 outline-none transition focus:border-orange-300 focus:ring-4 focus:ring-orange-100 dark:border-white/10 dark:bg-gray-950 dark:text-white"
+              />
+            </label>
+          </div>
+
+          <label className="grid gap-2">
+            <span className="text-sm font-black text-gray-950 dark:text-white">{copy.manualSaleComment}</span>
+            <textarea
+              value={manualSaleValues.comment}
+              onChange={(event) => updateManualSaleValue("comment", event.target.value)}
+              rows={3}
+              className="rounded-md border border-gray-200 bg-white px-4 py-3 text-sm text-gray-950 outline-none transition focus:border-orange-300 focus:ring-4 focus:ring-orange-100 dark:border-white/10 dark:bg-gray-950 dark:text-white"
+            />
+          </label>
+
+          {manualSaleMessage ? (
+            <p className="rounded-md border border-orange-100 bg-orange-50 p-3 text-sm font-bold text-orange-700 dark:border-orange-400/20 dark:bg-orange-400/10 dark:text-orange-200">
+              {manualSaleMessage}
+            </p>
+          ) : null}
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="submit"
+              disabled={isSavingManualSale}
+              className="inline-flex min-h-10 items-center justify-center rounded-md bg-orange-500 px-4 text-sm font-black text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSavingManualSale ? copy.savingManualSale : copy.saveManualSale}
+            </button>
+            <button
+              type="button"
+              onClick={cancelManualSaleForm}
+              className="inline-flex min-h-10 items-center justify-center rounded-md border border-gray-200 px-4 text-sm font-black text-gray-900 transition hover:border-orange-200 hover:text-orange-600 dark:border-white/10 dark:text-gray-100"
+            >
+              {copy.cancel}
+            </button>
+          </div>
+        </form>
+      ) : null}
+
       <div className="grid gap-3 md:grid-cols-5">
         <DashboardMetric label={copy.products} value={String(allProducts.length)} />
         <DashboardMetric label={copy.pendingOrdersMetric} value={String(pendingOrders.length)} />
@@ -847,9 +1149,9 @@ export function SellerDashboardMvp() {
 
       <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-900">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-xl font-black text-gray-950 dark:text-white">{copy.pendingOrders}</h2>
+          <h2 className="text-xl font-black text-gray-950 dark:text-white">{copy.nonConfirmedSales}</h2>
           <span className="rounded-md bg-orange-50 px-2 py-1 text-xs font-black text-orange-700 dark:bg-orange-400/10 dark:text-orange-300">
-            {pendingOrders.length}
+            {nonConfirmedOrders.length}
           </span>
         </div>
 
@@ -859,12 +1161,12 @@ export function SellerDashboardMvp() {
               {orderMessage}
             </p>
           ) : null}
-          {pendingOrders.length === 0 ? (
+          {nonConfirmedOrders.length === 0 ? (
             <p className="rounded-md border border-dashed border-gray-200 p-4 text-sm font-bold text-gray-500 dark:border-white/10 dark:text-gray-300">
               {copy.noPendingOrders}
             </p>
           ) : (
-            pendingOrders.map((order) => (
+            nonConfirmedOrders.map((order) => (
               <article key={order.id} className="grid gap-3 rounded-md border border-gray-100 p-3 dark:border-white/10 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
@@ -877,6 +1179,11 @@ export function SellerDashboardMvp() {
                     <span className={`rounded-md px-2 py-1 text-xs font-black ${getPaymentBadgeClass(order.paymentStatus)}`}>
                       {getPaymentStatusLabel(order.paymentStatus, copy)}
                     </span>
+                    {order.source === "manual" ? (
+                      <span className="rounded-md bg-blue-50 px-2 py-1 text-xs font-black text-blue-700 dark:bg-blue-400/10 dark:text-blue-200">
+                        {copy.manualSaleBadge}
+                      </span>
+                    ) : null}
                   </div>
                   <p className="mt-2 text-sm font-black text-gray-950 dark:text-white">
                     {copy.orderTotal}: {formatStoreMoney(order.totalAmount, order.currency)}
@@ -890,26 +1197,83 @@ export function SellerDashboardMvp() {
                   </div>
                 </div>
                 <div className="grid gap-2">
+                  {order.status === "pending" ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => confirmOrder(order.id)}
+                        disabled={updatingOrderId === order.id || isWaitingForOnlinePayment(order)}
+                        className="inline-flex min-h-10 items-center justify-center rounded-md bg-green-500 px-4 text-sm font-black text-white transition hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {isWaitingForOnlinePayment(order)
+                          ? copy.awaitingPayment
+                          : updatingOrderId === order.id
+                            ? copy.confirmingOrder
+                            : copy.confirmOrder}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => cancelOrder(order.id)}
+                        disabled={updatingOrderId === order.id}
+                        className="inline-flex min-h-10 items-center justify-center rounded-md border border-red-200 px-4 text-sm font-black text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-400/30 dark:text-red-200 dark:hover:bg-red-400/10"
+                      >
+                        {updatingOrderId === order.id ? copy.cancellingOrder : copy.cancelOrder}
+                      </button>
+                    </>
+                  ) : null}
                   <button
                     type="button"
-                    onClick={() => confirmOrder(order.id)}
-                    disabled={updatingOrderId === order.id || isWaitingForOnlinePayment(order)}
-                    className="inline-flex min-h-10 items-center justify-center rounded-md bg-green-500 px-4 text-sm font-black text-white transition hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {isWaitingForOnlinePayment(order)
-                      ? copy.awaitingPayment
-                      : updatingOrderId === order.id
-                        ? copy.confirmingOrder
-                        : copy.confirmOrder}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => cancelOrder(order.id)}
+                    onClick={() => removeOrder(order.id)}
                     disabled={updatingOrderId === order.id}
-                    className="inline-flex min-h-10 items-center justify-center rounded-md border border-red-200 px-4 text-sm font-black text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-400/30 dark:text-red-200 dark:hover:bg-red-400/10"
+                    className="inline-flex min-h-10 items-center justify-center rounded-md border border-gray-200 px-4 text-sm font-black text-gray-900 transition hover:border-red-200 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:text-gray-100"
                   >
-                    {updatingOrderId === order.id ? copy.cancellingOrder : copy.cancelOrder}
+                    {updatingOrderId === order.id ? copy.deletingOrder : copy.deleteOrder}
                   </button>
+                </div>
+              </article>
+            ))
+          )}
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-900">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-xl font-black text-gray-950 dark:text-white">{copy.recentSales}</h2>
+          <span className="rounded-md bg-green-50 px-2 py-1 text-xs font-black text-green-700 dark:bg-green-400/10 dark:text-green-300">
+            {confirmedOrders.length}
+          </span>
+        </div>
+
+        <div className="mt-4 grid gap-3">
+          {confirmedOrders.length === 0 ? (
+            <p className="rounded-md border border-dashed border-gray-200 p-4 text-sm font-bold text-gray-500 dark:border-white/10 dark:text-gray-300">
+              {copy.noRecentSales}
+            </p>
+          ) : (
+            confirmedOrders.slice(0, 6).map((order) => (
+              <article key={order.id} className="grid gap-2 rounded-md border border-gray-100 p-3 dark:border-white/10">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-black text-gray-950 dark:text-white">
+                    {copy.orderReference} {order.id.slice(0, 8)}
+                  </p>
+                  <span className="rounded-md bg-gray-100 px-2 py-1 text-xs font-black text-gray-600 dark:bg-white/10 dark:text-gray-300">
+                    {new Date(order.createdAt).toLocaleString(language === "fr" ? "fr-FR" : "en-US")}
+                  </span>
+                  {order.source === "manual" ? (
+                    <span className="rounded-md bg-blue-50 px-2 py-1 text-xs font-black text-blue-700 dark:bg-blue-400/10 dark:text-blue-200">
+                      {copy.manualSaleBadge}
+                    </span>
+                  ) : null}
+                </div>
+                <p className="text-sm font-black text-gray-950 dark:text-white">
+                  {copy.orderTotal}: {formatStoreMoney(order.totalAmount, order.currency)}
+                </p>
+                <div className="grid gap-1 text-sm text-gray-600 dark:text-gray-300">
+                  {order.items.map((item) => (
+                    <p key={item.id} className="break-words">
+                      {item.title} x{item.quantity} - {formatStoreMoney(item.totalPrice, item.currency)}
+                    </p>
+                  ))}
                 </div>
               </article>
             ))
@@ -940,7 +1304,7 @@ export function SellerDashboardMvp() {
               allProducts.map((product) => (
                 <div key={product.id} className="grid gap-3 rounded-md border border-gray-100 p-3 dark:border-white/10 sm:grid-cols-[72px_minmax(0,1fr)_auto] sm:items-center">
                   <div className="relative h-20 overflow-hidden rounded-md bg-gray-100 dark:bg-gray-950 sm:h-16">
-                    <StoreProductImage src={product.image} alt={product.title} sizes="72px" className="object-cover" />
+                    <StoreProductImage src={product.image} alt={product.title} sizes="72px" className="object-contain p-1" />
                   </div>
                   <div className="min-w-0">
                     <p className="break-words font-black text-gray-950 dark:text-white">{product.title}</p>
@@ -1220,6 +1584,7 @@ function getDashboardCopy(language: string) {
       viewStore: "Voir la boutique",
       createStore: "Creer une boutique",
       addManualProduct: "Ajouter des produits",
+      addManualSale: "Ajouter une vente",
       products: "Produits",
       imported: "Importes",
       orders: "Commandes",
@@ -1228,7 +1593,10 @@ function getDashboardCopy(language: string) {
       cancelledOrdersMetric: "Annulees",
       revenue: "Ventes",
       pendingOrders: "Commandes en attente",
+      nonConfirmedSales: "Ventes non confirmees",
       noPendingOrders: "Aucune commande en attente.",
+      recentSales: "Ventes recentes",
+      noRecentSales: "Aucune vente confirmee pour le moment.",
       orderReference: "Commande",
       orderTotal: "Total",
       confirmOrder: "Confirmer la vente",
@@ -1238,7 +1606,11 @@ function getDashboardCopy(language: string) {
       awaitingPayment: "En attente paiement",
       orderConfirmed: "Commande confirmee. La vente est maintenant comptabilisee.",
       orderCancelled: "Commande annulee. Elle n'est plus comptabilisee dans les ventes.",
+      orderDeleted: "Vente non confirmee supprimee.",
       orderUpdateError: "Impossible de confirmer cette commande.",
+      orderDeleteError: "Impossible de supprimer cette vente.",
+      deleteOrder: "Supprimer",
+      deletingOrder: "Suppression...",
       storeProducts: "Produits de la boutique",
       noProducts: "Aucun produit pour le moment.",
       manualProduct: "Produit ajoute manuellement",
@@ -1308,6 +1680,23 @@ function getDashboardCopy(language: string) {
       productPrice: "Prix",
       productInventory: "Stock",
       productDescription: "Description",
+      manualSaleBadge: "Vente manuelle",
+      manualSaleProduct: "Produit vendu",
+      manualSaleSelectProduct: "Selectionner un produit",
+      manualSaleQuantity: "Quantite",
+      manualSaleUnitPrice: "Prix unitaire",
+      manualSaleDiscount: "Remise",
+      manualSaleTotal: "Total",
+      manualSaleCustomerName: "Nom du client",
+      manualSaleCustomerPhone: "Telephone",
+      manualSaleComment: "Commentaire",
+      manualSaleDate: "Date de la vente",
+      manualSaleRequired: "Produit, quantite, prix unitaire et total valide sont obligatoires.",
+      manualSaleStockError: "Stock insuffisant pour cette vente.",
+      manualSaleSaved: "Vente manuelle enregistree.",
+      manualSaleError: "Echec de l'enregistrement de la vente.",
+      saveManualSale: "Enregistrer la vente",
+      savingManualSale: "Enregistrement...",
       manualProductRequired: "Le nom du produit, la photo et un prix valide sont obligatoires.",
       manualProductSaved: "✅ Produit ajouté avec succès.",
       manualProductError: "❌ Échec de l'enregistrement du produit.",
@@ -1344,6 +1733,7 @@ function getDashboardCopy(language: string) {
     viewStore: "View store",
     createStore: "Create a store",
     addManualProduct: "Add products",
+    addManualSale: "Add sale",
     products: "Products",
     imported: "Imported",
     orders: "Orders",
@@ -1352,7 +1742,10 @@ function getDashboardCopy(language: string) {
     cancelledOrdersMetric: "Cancelled",
     revenue: "Sales",
     pendingOrders: "Pending orders",
+    nonConfirmedSales: "Unconfirmed sales",
     noPendingOrders: "No pending order.",
+    recentSales: "Recent sales",
+    noRecentSales: "No confirmed sale yet.",
     orderReference: "Order",
     orderTotal: "Total",
     confirmOrder: "Confirm sale",
@@ -1362,7 +1755,11 @@ function getDashboardCopy(language: string) {
     awaitingPayment: "Awaiting payment",
     orderConfirmed: "Order confirmed. The sale is now counted.",
     orderCancelled: "Order cancelled. It is no longer counted in sales.",
+    orderDeleted: "Unconfirmed sale deleted.",
     orderUpdateError: "Unable to confirm this order.",
+    orderDeleteError: "Unable to delete this sale.",
+    deleteOrder: "Delete",
+    deletingOrder: "Deleting...",
     storeProducts: "Store products",
     noProducts: "No product yet.",
     manualProduct: "Manually added product",
@@ -1432,6 +1829,23 @@ function getDashboardCopy(language: string) {
     productPrice: "Price",
     productInventory: "Stock",
     productDescription: "Description",
+    manualSaleBadge: "Manual sale",
+    manualSaleProduct: "Sold product",
+    manualSaleSelectProduct: "Select a product",
+    manualSaleQuantity: "Quantity",
+    manualSaleUnitPrice: "Unit price",
+    manualSaleDiscount: "Discount",
+    manualSaleTotal: "Total",
+    manualSaleCustomerName: "Customer name",
+    manualSaleCustomerPhone: "Phone",
+    manualSaleComment: "Comment",
+    manualSaleDate: "Sale date",
+    manualSaleRequired: "Product, quantity, unit price, and a valid total are required.",
+    manualSaleStockError: "Insufficient stock for this sale.",
+    manualSaleSaved: "Manual sale saved.",
+    manualSaleError: "Manual sale save failed.",
+    saveManualSale: "Save sale",
+    savingManualSale: "Saving...",
     manualProductRequired: "Product name, photo, and a valid price are required.",
     manualProductSaved: "✅ Product added to your store.",
     manualProductError: "❌ Product save failed.",

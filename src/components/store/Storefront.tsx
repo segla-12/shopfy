@@ -200,7 +200,9 @@ function StorefrontContent({ store }: StorefrontProps) {
 
           <div className="grid gap-3 md:grid-cols-2">
             <StoreMetric label={copy.products} value={String(allProducts.length)} />
-            <StoreMetric label={copy.cart} value={`${cart.count} ${copy.items}`} />
+            <div className="hidden md:block">
+              <StoreMetric label={copy.cart} value={`${cart.count} ${copy.items}`} />
+            </div>
           </div>
 
           {mode === "detail" ? <RetailPaymentNotice copy={copy} /> : null}
@@ -269,8 +271,8 @@ function StoreProductCard({
 }) {
   return (
     <article className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-gray-900">
-      <div className="relative aspect-[2/1] bg-gray-100 dark:bg-gray-950">
-        <StoreProductImage src={product.image} alt={product.title} sizes="(min-width: 1024px) 360px, (min-width: 640px) 50vw, 100vw" className="object-cover" />
+      <div className="relative aspect-[4/3] bg-gray-100 dark:bg-gray-950">
+        <StoreProductImage src={product.image} alt={product.title} sizes="(min-width: 1024px) 320px, (min-width: 640px) 50vw, 100vw" className="object-contain p-2" />
       </div>
       <div className="grid gap-2.5 p-3">
         <div>
