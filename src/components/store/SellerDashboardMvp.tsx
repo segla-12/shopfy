@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { createStoreSlug } from "@/lib/createdStores";
 import { formatStoreMoney } from "@/lib/demoStores";
 import { useLanguage } from "@/lib/language";
@@ -219,18 +219,15 @@ export function SellerDashboardMvp() {
   const [orderMessage, setOrderMessage] = useState("");
   const [updatingOrderId, setUpdatingOrderId] = useState("");
   const [certificationDurationMonths, setCertificationDurationMonths] = useState(1);
+  const [openOrderSections, setOpenOrderSections] = useState({
+    pending: false,
+    completed: false,
+    recent: false,
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const allProducts = useMemo(() => activeStore?.products || [], [activeStore?.products]);
-  const pendingOrders = useMemo(
-    () => storeOrders.filter((order) => order.status === "pending"),
-    [storeOrders],
-  );
   const confirmedOrders = useMemo(
     () => storeOrders.filter((order) => order.status === "confirmed"),
-    [storeOrders],
-  );
-  const cancelledOrders = useMemo(
-    () => storeOrders.filter((order) => order.status === "cancelled"),
     [storeOrders],
   );
   const nonConfirmedOrders = useMemo(
@@ -238,8 +235,6 @@ export function SellerDashboardMvp() {
     [storeOrders],
   );
   const productSalesStats = useMemo(() => getProductSalesStats(storeOrders), [storeOrders]);
-  const confirmedRevenue = confirmedOrders.reduce((total, order) => total + order.totalAmount, 0);
-  const totalStock = allProducts.reduce((total, product) => total + Number(product.inventoryQuantity || 0), 0);
   const selectedManualSaleProduct = useMemo(
     () => allProducts.find((product) => product.id === manualSaleValues.productId),
     [allProducts, manualSaleValues.productId],
@@ -249,6 +244,12 @@ export function SellerDashboardMvp() {
     (Number(manualSaleValues.unitPrice) || 0) * (Number(manualSaleValues.quantity) || 0)
       - (Number(manualSaleValues.discountAmount) || 0),
   );
+  const toggleOrderSection = (section: keyof typeof openOrderSections) => {
+    setOpenOrderSections((currentSections) => ({
+      ...currentSections,
+      [section]: !currentSections[section],
+    }));
+  };
 
   useEffect(() => {
     const frameId = window.requestAnimationFrame(() => {
@@ -1144,25 +1145,14 @@ export function SellerDashboardMvp() {
         </form>
       ) : null}
 
-      <div className="grid gap-3 md:grid-cols-7">
-        <DashboardMetric label={copy.totalProductsMetric} value={String(allProducts.length)} />
-        <DashboardMetric label={copy.totalStockMetric} value={String(totalStock)} />
-        <DashboardMetric label={copy.totalOrdersMetric} value={String(storeOrders.length)} />
-        <DashboardMetric label={copy.pendingOrdersMetric} value={String(pendingOrders.length)} />
-        <DashboardMetric label={copy.confirmedOrdersMetric} value={String(confirmedOrders.length)} />
-        <DashboardMetric label={copy.cancelledOrdersMetric} value={String(cancelledOrders.length)} />
-        <DashboardMetric label={copy.revenue} value={formatStoreMoney(confirmedRevenue, activeStore.currency)} />
-      </div>
-
-      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-900">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-xl font-black text-gray-950 dark:text-white">{copy.nonConfirmedSales}</h2>
-          <span className="rounded-md bg-orange-50 px-2 py-1 text-xs font-black text-orange-700 dark:bg-orange-400/10 dark:text-orange-300">
-            {nonConfirmedOrders.length}
-          </span>
-        </div>
-
-        <div className="mt-4 grid gap-3">
+      <div className="grid gap-3">
+        <DashboardAccordion
+          title={copy.pendingOrders}
+          count={nonConfirmedOrders.length}
+          isOpen={openOrderSections.pending}
+          onToggle={() => toggleOrderSection("pending")}
+          tone="orange"
+        >
           {orderMessage ? (
             <p className="rounded-md border border-green-100 bg-green-50 p-3 text-sm font-bold text-green-700 dark:border-green-400/20 dark:bg-green-400/10 dark:text-green-200">
               {orderMessage}
@@ -1174,118 +1164,75 @@ export function SellerDashboardMvp() {
             </p>
           ) : (
             nonConfirmedOrders.map((order) => (
-              <article key={order.id} className="grid gap-3 rounded-md border border-gray-100 p-3 dark:border-white/10 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-black text-gray-950 dark:text-white">
-                      {copy.orderReference} {order.id.slice(0, 8)}
-                    </p>
-                    <span className="rounded-md bg-gray-100 px-2 py-1 text-xs font-black text-gray-600 dark:bg-white/10 dark:text-gray-300">
-                      {new Date(order.createdAt).toLocaleString(language === "fr" ? "fr-FR" : "en-US")}
-                    </span>
-                    <span className={`rounded-md px-2 py-1 text-xs font-black ${getPaymentBadgeClass(order.paymentStatus)}`}>
-                      {getPaymentStatusLabel(order.paymentStatus, copy)}
-                    </span>
-                    {order.source === "manual" ? (
-                      <span className="rounded-md bg-blue-50 px-2 py-1 text-xs font-black text-blue-700 dark:bg-blue-400/10 dark:text-blue-200">
-                        {copy.manualSaleBadge}
-                      </span>
-                    ) : null}
-                  </div>
-                  <p className="mt-2 text-sm font-black text-gray-950 dark:text-white">
-                    {copy.orderTotal}: {formatStoreMoney(order.totalAmount, order.currency)}
-                  </p>
-                  <div className="mt-2 grid gap-1 text-sm text-gray-600 dark:text-gray-300">
-                    {order.items.map((item) => (
-                      <p key={item.id} className="break-words">
-                        {item.title} x{item.quantity} - {formatStoreMoney(item.totalPrice, item.currency)}
-                      </p>
-                    ))}
-                  </div>
-                </div>
-                <div className="grid gap-2">
-                  {order.status === "pending" ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => confirmOrder(order.id)}
-                        disabled={updatingOrderId === order.id || isWaitingForOnlinePayment(order)}
-                        className="inline-flex min-h-10 items-center justify-center rounded-md bg-green-500 px-4 text-sm font-black text-white transition hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {isWaitingForOnlinePayment(order)
-                          ? copy.awaitingPayment
-                          : updatingOrderId === order.id
-                            ? copy.confirmingOrder
-                            : copy.confirmOrder}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => cancelOrder(order.id)}
-                        disabled={updatingOrderId === order.id}
-                        className="inline-flex min-h-10 items-center justify-center rounded-md border border-red-200 px-4 text-sm font-black text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-400/30 dark:text-red-200 dark:hover:bg-red-400/10"
-                      >
-                        {updatingOrderId === order.id ? copy.cancellingOrder : copy.cancelOrder}
-                      </button>
-                    </>
-                  ) : null}
-                  <button
-                    type="button"
-                    onClick={() => removeOrder(order.id)}
-                    disabled={updatingOrderId === order.id}
-                    className="inline-flex min-h-10 items-center justify-center rounded-md border border-gray-200 px-4 text-sm font-black text-gray-900 transition hover:border-red-200 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:text-gray-100"
-                  >
-                    {updatingOrderId === order.id ? copy.deletingOrder : copy.deleteOrder}
-                  </button>
-                </div>
-              </article>
+              <DashboardOrderCard
+                key={order.id}
+                order={order}
+                copy={copy}
+                language={language}
+                updatingOrderId={updatingOrderId}
+                onConfirm={confirmOrder}
+                onCancel={cancelOrder}
+                onRemove={removeOrder}
+              />
             ))
           )}
-        </div>
-      </div>
+        </DashboardAccordion>
 
-      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-900">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-xl font-black text-gray-950 dark:text-white">{copy.recentSales}</h2>
-          <span className="rounded-md bg-green-50 px-2 py-1 text-xs font-black text-green-700 dark:bg-green-400/10 dark:text-green-300">
-            {confirmedOrders.length}
-          </span>
-        </div>
+        <DashboardAccordion
+          title={copy.completedSales}
+          count={confirmedOrders.length}
+          isOpen={openOrderSections.completed}
+          onToggle={() => toggleOrderSection("completed")}
+          tone="green"
+        >
+          {confirmedOrders.length === 0 ? (
+            <p className="rounded-md border border-dashed border-gray-200 p-4 text-sm font-bold text-gray-500 dark:border-white/10 dark:text-gray-300">
+              {copy.noRecentSales}
+            </p>
+          ) : (
+            confirmedOrders.map((order) => (
+              <DashboardOrderCard
+                key={order.id}
+                order={order}
+                copy={copy}
+                language={language}
+                updatingOrderId={updatingOrderId}
+                onConfirm={confirmOrder}
+                onCancel={cancelOrder}
+                onRemove={removeOrder}
+                readonly
+              />
+            ))
+          )}
+        </DashboardAccordion>
 
-        <div className="mt-4 grid gap-3">
+        <DashboardAccordion
+          title={copy.recentSales}
+          count={confirmedOrders.slice(0, 6).length}
+          isOpen={openOrderSections.recent}
+          onToggle={() => toggleOrderSection("recent")}
+          tone="green"
+        >
           {confirmedOrders.length === 0 ? (
             <p className="rounded-md border border-dashed border-gray-200 p-4 text-sm font-bold text-gray-500 dark:border-white/10 dark:text-gray-300">
               {copy.noRecentSales}
             </p>
           ) : (
             confirmedOrders.slice(0, 6).map((order) => (
-              <article key={order.id} className="grid gap-2 rounded-md border border-gray-100 p-3 dark:border-white/10">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-black text-gray-950 dark:text-white">
-                    {copy.orderReference} {order.id.slice(0, 8)}
-                  </p>
-                  <span className="rounded-md bg-gray-100 px-2 py-1 text-xs font-black text-gray-600 dark:bg-white/10 dark:text-gray-300">
-                    {new Date(order.createdAt).toLocaleString(language === "fr" ? "fr-FR" : "en-US")}
-                  </span>
-                  {order.source === "manual" ? (
-                    <span className="rounded-md bg-blue-50 px-2 py-1 text-xs font-black text-blue-700 dark:bg-blue-400/10 dark:text-blue-200">
-                      {copy.manualSaleBadge}
-                    </span>
-                  ) : null}
-                </div>
-                <p className="text-sm font-black text-gray-950 dark:text-white">
-                  {copy.orderTotal}: {formatStoreMoney(order.totalAmount, order.currency)}
-                </p>
-                <div className="grid gap-1 text-sm text-gray-600 dark:text-gray-300">
-                  {order.items.map((item) => (
-                    <p key={item.id} className="break-words">
-                      {item.title} x{item.quantity} - {formatStoreMoney(item.totalPrice, item.currency)}
-                    </p>
-                  ))}
-                </div>
-              </article>
+              <DashboardOrderCard
+                key={order.id}
+                order={order}
+                copy={copy}
+                language={language}
+                updatingOrderId={updatingOrderId}
+                onConfirm={confirmOrder}
+                onCancel={cancelOrder}
+                onRemove={removeOrder}
+                readonly
+              />
             ))
           )}
-        </div>
+        </DashboardAccordion>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -1364,12 +1311,137 @@ export function SellerDashboardMvp() {
   );
 }
 
-function DashboardMetric({ label, value }: { label: string; value: string }) {
+function DashboardAccordion({
+  title,
+  count,
+  isOpen,
+  onToggle,
+  tone,
+  children,
+}: {
+  title: string;
+  count: number;
+  isOpen: boolean;
+  onToggle: () => void;
+  tone: "green" | "orange";
+  children: ReactNode;
+}) {
+  const badgeClass =
+    tone === "green"
+      ? "bg-green-50 text-green-700 dark:bg-green-400/10 dark:text-green-300"
+      : "bg-orange-50 text-orange-700 dark:bg-orange-400/10 dark:text-orange-300";
+
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-900">
-      <p className="text-xs font-black uppercase text-gray-500 dark:text-gray-400">{label}</p>
-      <p className="mt-1 text-2xl font-black text-gray-950 dark:text-white">{value}</p>
+    <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-gray-900">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={isOpen}
+        className="flex min-h-14 w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-gray-50 dark:hover:bg-white/5"
+      >
+        <span className="min-w-0 text-base font-black text-gray-950 dark:text-white sm:text-xl">{title}</span>
+        <span className="inline-flex shrink-0 items-center gap-2">
+          <span className={`rounded-md px-2 py-1 text-xs font-black ${badgeClass}`}>{count}</span>
+          <span className="text-lg font-black text-gray-400 dark:text-gray-500">{isOpen ? "−" : "+"}</span>
+        </span>
+      </button>
+
+      {isOpen ? (
+        <div className="grid gap-3 border-t border-gray-100 p-3 dark:border-white/10 sm:p-4">
+          {children}
+        </div>
+      ) : null}
     </div>
+  );
+}
+
+function DashboardOrderCard({
+  order,
+  copy,
+  language,
+  updatingOrderId,
+  onConfirm,
+  onCancel,
+  onRemove,
+  readonly = false,
+}: {
+  order: StoreOrder;
+  copy: ReturnType<typeof getDashboardCopy>;
+  language: string;
+  updatingOrderId: string;
+  onConfirm: (orderId: string) => void;
+  onCancel: (orderId: string) => void;
+  onRemove: (orderId: string) => void;
+  readonly?: boolean;
+}) {
+  return (
+    <article className="grid gap-3 rounded-md border border-gray-100 p-3 dark:border-white/10 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="font-black text-gray-950 dark:text-white">
+            {copy.orderReference} {order.id.slice(0, 8)}
+          </p>
+          <span className="rounded-md bg-gray-100 px-2 py-1 text-xs font-black text-gray-600 dark:bg-white/10 dark:text-gray-300">
+            {new Date(order.createdAt).toLocaleString(language === "fr" ? "fr-FR" : "en-US")}
+          </span>
+          <span className={`rounded-md px-2 py-1 text-xs font-black ${getPaymentBadgeClass(order.paymentStatus)}`}>
+            {getPaymentStatusLabel(order.paymentStatus, copy)}
+          </span>
+          {order.source === "manual" ? (
+            <span className="rounded-md bg-blue-50 px-2 py-1 text-xs font-black text-blue-700 dark:bg-blue-400/10 dark:text-blue-200">
+              {copy.manualSaleBadge}
+            </span>
+          ) : null}
+        </div>
+        <p className="mt-2 text-sm font-black text-gray-950 dark:text-white">
+          {copy.orderTotal}: {formatStoreMoney(order.totalAmount, order.currency)}
+        </p>
+        <div className="mt-2 grid gap-1 text-sm text-gray-600 dark:text-gray-300">
+          {order.items.map((item) => (
+            <p key={item.id} className="break-words">
+              {item.title} x{item.quantity} - {formatStoreMoney(item.totalPrice, item.currency)}
+            </p>
+          ))}
+        </div>
+      </div>
+
+      {!readonly ? (
+        <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-1">
+          {order.status === "pending" ? (
+            <>
+              <button
+                type="button"
+                onClick={() => onConfirm(order.id)}
+                disabled={updatingOrderId === order.id || isWaitingForOnlinePayment(order)}
+                className="inline-flex min-h-10 items-center justify-center rounded-md bg-green-500 px-4 text-sm font-black text-white transition hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isWaitingForOnlinePayment(order)
+                  ? copy.awaitingPayment
+                  : updatingOrderId === order.id
+                    ? copy.confirmingOrder
+                    : copy.confirmOrder}
+              </button>
+              <button
+                type="button"
+                onClick={() => onCancel(order.id)}
+                disabled={updatingOrderId === order.id}
+                className="inline-flex min-h-10 items-center justify-center rounded-md border border-red-200 px-4 text-sm font-black text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-400/30 dark:text-red-200 dark:hover:bg-red-400/10"
+              >
+                {updatingOrderId === order.id ? copy.cancellingOrder : copy.cancelOrder}
+              </button>
+            </>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => onRemove(order.id)}
+            disabled={updatingOrderId === order.id}
+            className="inline-flex min-h-10 items-center justify-center rounded-md border border-gray-200 px-4 text-sm font-black text-gray-900 transition hover:border-red-200 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:text-gray-100 sm:col-span-2 md:col-span-1"
+          >
+            {updatingOrderId === order.id ? copy.deletingOrder : copy.deleteOrder}
+          </button>
+        </div>
+      ) : null}
+    </article>
   );
 }
 
@@ -1679,7 +1751,8 @@ function getDashboardCopy(language: string) {
       pendingOrders: "Commandes en attente",
       nonConfirmedSales: "Ventes non confirmees",
       noPendingOrders: "Aucune commande en attente.",
-      recentSales: "Ventes recentes",
+      completedSales: "Ventes effectuées",
+      recentSales: "Ventes récentes",
       noRecentSales: "Aucune vente confirmee pour le moment.",
       orderReference: "Commande",
       orderTotal: "Total",
@@ -1843,6 +1916,7 @@ function getDashboardCopy(language: string) {
     pendingOrders: "Pending orders",
     nonConfirmedSales: "Unconfirmed sales",
     noPendingOrders: "No pending order.",
+    completedSales: "Completed sales",
     recentSales: "Recent sales",
     noRecentSales: "No confirmed sale yet.",
     orderReference: "Order",
