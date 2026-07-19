@@ -1309,7 +1309,7 @@ export function SellerDashboardMvp() {
               </p>
             ) : (
               allProducts.map((product) => (
-                <div key={product.id} className="grid gap-3 rounded-md border border-gray-100 p-3 dark:border-white/10 sm:grid-cols-[72px_minmax(0,1fr)_auto] sm:items-center">
+                <div key={product.id} className="grid gap-3 rounded-md border border-gray-100 p-3 dark:border-white/10 sm:grid-cols-[72px_minmax(0,1fr)_auto] sm:items-start">
                   <div className="relative h-20 overflow-hidden rounded-md bg-gray-100 dark:bg-gray-950 sm:h-16">
                     <StoreProductImage src={product.image} alt={product.title} sizes="72px" className="object-contain p-1" />
                   </div>
@@ -1325,13 +1325,28 @@ export function SellerDashboardMvp() {
                       copy={copy}
                     />
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => removeProduct(product.id)}
-                    className="inline-flex min-h-9 items-center justify-center rounded-md border border-gray-200 px-3 text-sm font-black text-gray-900 transition hover:border-red-200 hover:text-red-600 dark:border-white/10 dark:text-gray-100"
-                  >
-                    {copy.remove}
-                  </button>
+                  <div className="grid gap-2">
+                    <button
+                      type="button"
+                      onClick={() => startProductEdit(product)}
+                      className="inline-flex min-h-9 items-center justify-center rounded-md border border-gray-200 px-3 text-sm font-black text-gray-900 transition hover:border-orange-200 hover:text-orange-600 dark:border-white/10 dark:text-gray-100"
+                    >
+                      {copy.edit}
+                    </button>
+                    <Link
+                      href={getStorePublicUrl(activeStore.slug)}
+                      className="inline-flex min-h-9 items-center justify-center rounded-md border border-gray-200 px-3 text-sm font-black text-gray-900 transition hover:border-orange-200 hover:text-orange-600 dark:border-white/10 dark:text-gray-100"
+                    >
+                      {copy.view}
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => removeProduct(product.id)}
+                      className="inline-flex min-h-9 items-center justify-center rounded-md border border-gray-200 px-3 text-sm font-black text-gray-900 transition hover:border-red-200 hover:text-red-600 dark:border-white/10 dark:text-gray-100"
+                    >
+                      {copy.remove}
+                    </button>
+                  </div>
                 </div>
               ))
             )}
@@ -1378,23 +1393,65 @@ function ProductStatsSummary({
   currency: string;
   copy: ReturnType<typeof getDashboardCopy>;
 }) {
+  const stockTone = getStockTone(stock);
+  const stockBase = Math.max(stock + (stats?.totalQuantitySold || 0), stock, 1);
+  const stockPercent = Math.max(0, Math.min(100, Math.round((stock / stockBase) * 100)));
+
   if (!stats || stats.totalOrders === 0) {
     return (
-      <p className="mt-2 text-xs font-bold text-gray-400 dark:text-gray-500">
-        {copy.productStock}: {stock} - {copy.noProductSales}
-      </p>
+      <div className="mt-3 grid gap-2 text-xs font-bold text-gray-500 dark:text-gray-300">
+        <StockLevelBar stock={stock} percent={stockPercent} tone={stockTone} copy={copy} />
+        <p>{copy.productOrdersIcon} {copy.productTotalOrders}: 0</p>
+        <p>{copy.productConfirmedIcon} {copy.productConfirmedSales}: 0</p>
+        <p>{copy.productRevenueIcon} {copy.productRevenue}: {formatStoreMoney(0, currency)}</p>
+        <p>{copy.productDateIcon} {copy.productLastSale}: {copy.none}</p>
+      </div>
     );
   }
 
   return (
-    <div className="mt-2 grid gap-1 text-xs font-bold text-gray-500 dark:text-gray-300 sm:grid-cols-2">
-      <p>{copy.productStock}: {stock}</p>
-      <p>{copy.productTotalOrders}: {stats.totalOrders}</p>
-      <p>{copy.productQuantitySold}: {stats.totalQuantitySold}</p>
-      <p>{copy.productRevenue}: {formatStoreMoney(stats.revenue, currency)}</p>
-      <p>{copy.productConfirmedSales}: {stats.confirmedSales}</p>
-      <p>{copy.productCancelledSales}: {stats.cancelledSales}</p>
-      <p>{copy.productLastSale}: {stats.lastSaleAt ? new Date(stats.lastSaleAt).toLocaleDateString() : copy.none}</p>
+    <div className="mt-3 grid gap-2 text-xs font-bold text-gray-500 dark:text-gray-300 sm:grid-cols-2">
+      <div className="sm:col-span-2">
+        <StockLevelBar stock={stock} percent={stockPercent} tone={stockTone} copy={copy} />
+      </div>
+      <p>{copy.productOrdersIcon} {copy.productTotalOrders}: {stats.totalOrders}</p>
+      <p>{copy.productConfirmedIcon} {copy.productConfirmedSales}: {stats.confirmedSales}</p>
+      <p>{copy.productQuantityIcon} {copy.productQuantitySold}: {stats.totalQuantitySold}</p>
+      <p>{copy.productRevenueIcon} {copy.productRevenue}: {formatStoreMoney(stats.revenue, currency)}</p>
+      <p>{copy.productDateIcon} {copy.productLastSale}: {stats.lastSaleAt ? new Date(stats.lastSaleAt).toLocaleDateString() : copy.none}</p>
+    </div>
+  );
+}
+
+function StockLevelBar({
+  stock,
+  percent,
+  tone,
+  copy,
+}: {
+  stock: number;
+  percent: number;
+  tone: "green" | "orange" | "red";
+  copy: ReturnType<typeof getDashboardCopy>;
+}) {
+  const toneClass = {
+    green: "bg-green-500 text-green-700 dark:text-green-300",
+    orange: "bg-orange-500 text-orange-700 dark:text-orange-300",
+    red: "bg-red-500 text-red-700 dark:text-red-300",
+  }[tone];
+
+  return (
+    <div className="grid gap-1.5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span>{copy.productStockIcon} {copy.productStock}: {stock}</span>
+        <span className={toneClass.replace("bg-", "text-")}>
+          {tone === "red" ? copy.stockOut : tone === "orange" ? copy.stockLow : copy.stockGood}
+        </span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+        <div className={`h-full rounded-full ${toneClass.split(" ")[0]}`} style={{ width: `${percent}%` }} />
+      </div>
+      <span className="text-[11px] text-gray-400 dark:text-gray-500">{percent}%</span>
     </div>
   );
 }
