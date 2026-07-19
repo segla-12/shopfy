@@ -16,6 +16,7 @@ export type StoreProduct = {
   inventoryQuantity: number;
   sourceSupplierName?: string;
   sourceSupplierSlug?: string;
+  sourceProductId?: string;
 };
 
 export type ShopfyStore = {

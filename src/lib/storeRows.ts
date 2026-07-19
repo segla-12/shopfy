@@ -158,5 +158,6 @@ export function mapProductRow(row: ProductRow): StoreProduct {
     inventoryQuantity: Number(row.inventory_quantity || 0),
     sourceSupplierName: row.source_supplier_name || undefined,
     sourceSupplierSlug: row.source_supplier_slug || undefined,
+    sourceProductId: row.source_product_id || undefined,
   };
 }
