@@ -1,4 +1,4 @@
-import type { StoreOrder, StoreOrderItem, StoreOrderSource, StoreOrderStatus, StorePaymentStatus } from "@/types/storefront";
+import type { StoreOrder, StoreOrderItem, StoreOrderStatus, StorePaymentStatus } from "@/types/storefront";
 
 export type OrderItemRow = {
   id: string;
@@ -13,7 +13,6 @@ export type OrderItemRow = {
 export type OrderRow = {
   id: string;
   status: string | null;
-  order_source?: string | null;
   payment_status?: string | null;
   stock_reserved?: boolean | null;
   total_amount: number | string | null;
@@ -35,7 +34,6 @@ export type OrderRow = {
 export const ORDER_SELECT_FIELDS = `
   id,
   status,
-  order_source,
   payment_status,
   stock_reserved,
   total_amount,
@@ -76,10 +74,6 @@ function mapPaymentStatus(status: string | null | undefined): StorePaymentStatus
   return "unpaid";
 }
 
-function mapOrderSource(source: string | null | undefined): StoreOrderSource {
-  return source === "manual" ? "manual" : "platform";
-}
-
 function mapOrderItemRow(row: OrderItemRow): StoreOrderItem {
   return {
     id: row.id,
@@ -99,7 +93,7 @@ export function mapOrderRow(row: OrderRow): StoreOrder {
     id: row.id,
     storeSlug: storeRelation?.slug || "",
     status: mapOrderStatus(row.status),
-    source: mapOrderSource(row.order_source),
+    source: row.status === "confirmed" && row.payment_status === "paid" ? "manual" : "platform",
     paymentStatus: mapPaymentStatus(row.payment_status),
     stockReserved: Boolean(row.stock_reserved),
     totalAmount: Number(row.total_amount || 0),

@@ -341,7 +341,7 @@ function FloatingStoreCart({
       <button
         type="button"
         onClick={onOpen}
-        className="fixed right-[calc(env(safe-area-inset-right)+1rem)] top-[calc(env(safe-area-inset-top)+5rem)] z-40 inline-flex min-h-14 min-w-14 items-center justify-center rounded-full bg-orange-500 px-4 text-white shadow-lg shadow-orange-500/30 transition hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-200 dark:focus:ring-orange-400/30 sm:right-[calc(env(safe-area-inset-right)+1.25rem)] sm:top-[calc(env(safe-area-inset-top)+5.5rem)]"
+        className="fixed right-[calc(env(safe-area-inset-right)+1rem)] top-[calc(env(safe-area-inset-top)+5rem)] z-50 inline-flex min-h-14 min-w-14 items-center justify-center rounded-full bg-orange-500 px-4 text-white shadow-lg shadow-orange-500/30 transition hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-200 dark:focus:ring-orange-400/30 sm:right-[calc(env(safe-area-inset-right)+1.25rem)] sm:top-[calc(env(safe-area-inset-top)+5.5rem)]"
         aria-label={copy.openCart}
       >
         <svg
