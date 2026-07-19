@@ -56,7 +56,6 @@ create table if not exists public.shopfy_store_orders (
   store_id uuid not null references public.shopfy_stores(id) on delete cascade,
   status text not null default 'pending' check (status in ('pending', 'confirmed', 'cancelled')),
   order_source text not null default 'platform' check (order_source in ('platform', 'manual')),
-  stock_reserved boolean not null default false,
   payment_status text not null default 'unpaid' check (payment_status in ('unpaid', 'pending', 'paid', 'failed', 'cancelled')),
   payment_provider text not null default 'manual',
   payment_reference text,
@@ -143,7 +142,6 @@ alter table public.shopfy_stores
 
 alter table public.shopfy_store_orders
   add column if not exists order_source text not null default 'platform',
-  add column if not exists stock_reserved boolean not null default false,
   add column if not exists payment_status text not null default 'unpaid',
   add column if not exists payment_provider text not null default 'manual',
   add column if not exists payment_reference text,
