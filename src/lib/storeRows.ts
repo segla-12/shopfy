@@ -67,6 +67,7 @@ const dayInMs = 24 * 60 * 60 * 1000;
 
 export function mapStoreRow(row: StoreRow): ShopfyStore {
   const products = (row.shopfy_store_products || []).map(mapProductRow);
+  const trialStatus = getStoreTrialStatus(row.created_at);
   const certificationExpiresAt = row.certification_expires_at || undefined;
   const isCertificationActive = Boolean(row.is_certified) && isFutureOrMissingDate(certificationExpiresAt);
 
@@ -83,10 +84,8 @@ export function mapStoreRow(row: StoreRow): ShopfyStore {
     currency: row.currency || "XOF",
     whatsappPhone: row.whatsapp_phone || "",
     isCertified: isCertificationActive,
+    ...trialStatus,
     createdAt: row.created_at || undefined,
-    trialEndsAt: undefined, // Ne plus exposer par défaut
-    trialDaysRemaining: 0, // Ne plus exposer par défaut
-    isTrialActive: false, // Ne plus exposer par défaut
     requiresCertification: doesStoreRequireCertification(row),
     certificationStartedAt: row.certification_started_at || undefined,
     certificationExpiresAt,
