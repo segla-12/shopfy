@@ -1,0 +1,1 @@
+export const SHOPFY_SUPPORT_WHATSAPP = "+229 01 49 34 12 19";

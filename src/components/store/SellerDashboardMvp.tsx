@@ -14,7 +14,6 @@ import {
 } from "@/lib/whatsapp";
 import {
   addManualSupabaseStoreProduct,
-  createStoreCertificationPayment,
   deleteSupabaseStoreProduct,
   getMySupabaseStoreOrders,
   getMySupabaseStores,
@@ -196,6 +195,11 @@ export function SellerDashboardMvp() {
     () => storeOrders.filter((order) => order.status === "confirmed"),
     [storeOrders],
   );
+  const cancelledOrders = useMemo(
+    () => storeOrders.filter((order) => order.status === "cancelled"),
+    [storeOrders],
+  );
+  const productSalesStats = useMemo(() => getProductSalesStats(storeOrders), [storeOrders]);
   const confirmedRevenue = confirmedOrders.reduce((total, order) => total + order.totalAmount, 0);
 
   useEffect(() => {
@@ -548,6 +552,14 @@ export function SellerDashboardMvp() {
   }
 
   async function confirmOrder(orderId: string) {
+    await updateOrderStatus(orderId, "confirmed");
+  }
+
+  async function cancelOrder(orderId: string) {
+    await updateOrderStatus(orderId, "cancelled");
+  }
+
+  async function updateOrderStatus(orderId: string, status: StoreOrder["status"]) {
     if (!activeStore) {
       setErrorMessage(copy.noStore);
       return;
@@ -563,9 +575,11 @@ export function SellerDashboardMvp() {
     setUpdatingOrderId(orderId);
 
     try {
-      await updateSupabaseStoreOrderStatus(activeStore.slug, orderId, "confirmed");
-      setStoreOrders(await getMySupabaseStoreOrders(activeStore.slug));
-      setOrderMessage(copy.orderConfirmed);
+      const updatedOrder = await updateSupabaseStoreOrderStatus(activeStore.slug, orderId, status);
+      setStoreOrders((currentOrders) => (
+        currentOrders.map((order) => order.id === updatedOrder.id ? updatedOrder : order)
+      ));
+      setOrderMessage(status === "confirmed" ? copy.orderConfirmed : copy.orderCancelled);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : copy.orderUpdateError);
     } finally {
@@ -672,6 +686,7 @@ export function SellerDashboardMvp() {
 
       <CertificationPanel
         store={activeStore}
+        storeUrl={activeStoreUrl}
         copy={copy}
         language={language}
         durationMonths={certificationDurationMonths}
@@ -822,10 +837,11 @@ export function SellerDashboardMvp() {
         </p>
       ) : null}
 
-      <div className="grid gap-3 md:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-5">
         <DashboardMetric label={copy.products} value={String(allProducts.length)} />
         <DashboardMetric label={copy.pendingOrdersMetric} value={String(pendingOrders.length)} />
         <DashboardMetric label={copy.confirmedOrdersMetric} value={String(confirmedOrders.length)} />
+        <DashboardMetric label={copy.cancelledOrdersMetric} value={String(cancelledOrders.length)} />
         <DashboardMetric label={copy.revenue} value={formatStoreMoney(confirmedRevenue, activeStore.currency)} />
       </div>
 
@@ -873,18 +889,28 @@ export function SellerDashboardMvp() {
                     ))}
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => confirmOrder(order.id)}
-                  disabled={updatingOrderId === order.id || isWaitingForOnlinePayment(order)}
-                  className="inline-flex min-h-10 items-center justify-center rounded-md bg-green-500 px-4 text-sm font-black text-white transition hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isWaitingForOnlinePayment(order)
-                    ? copy.awaitingPayment
-                    : updatingOrderId === order.id
-                      ? copy.confirmingOrder
-                      : copy.confirmOrder}
-                </button>
+                <div className="grid gap-2">
+                  <button
+                    type="button"
+                    onClick={() => confirmOrder(order.id)}
+                    disabled={updatingOrderId === order.id || isWaitingForOnlinePayment(order)}
+                    className="inline-flex min-h-10 items-center justify-center rounded-md bg-green-500 px-4 text-sm font-black text-white transition hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isWaitingForOnlinePayment(order)
+                      ? copy.awaitingPayment
+                      : updatingOrderId === order.id
+                        ? copy.confirmingOrder
+                        : copy.confirmOrder}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => cancelOrder(order.id)}
+                    disabled={updatingOrderId === order.id}
+                    className="inline-flex min-h-10 items-center justify-center rounded-md border border-red-200 px-4 text-sm font-black text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-400/30 dark:text-red-200 dark:hover:bg-red-400/10"
+                  >
+                    {updatingOrderId === order.id ? copy.cancellingOrder : copy.cancelOrder}
+                  </button>
+                </div>
               </article>
             ))
           )}
@@ -912,15 +938,20 @@ export function SellerDashboardMvp() {
               </p>
             ) : (
               allProducts.map((product) => (
-                <div key={product.id} className="grid gap-3 rounded-md border border-gray-100 p-3 dark:border-white/10 sm:grid-cols-[88px_minmax(0,1fr)_auto] sm:items-center">
-                  <div className="relative h-24 overflow-hidden rounded-md bg-gray-100 dark:bg-gray-950 sm:h-20">
-                    <StoreProductImage src={product.image} alt={product.title} sizes="88px" className="object-cover" />
+                <div key={product.id} className="grid gap-3 rounded-md border border-gray-100 p-3 dark:border-white/10 sm:grid-cols-[72px_minmax(0,1fr)_auto] sm:items-center">
+                  <div className="relative h-20 overflow-hidden rounded-md bg-gray-100 dark:bg-gray-950 sm:h-16">
+                    <StoreProductImage src={product.image} alt={product.title} sizes="72px" className="object-cover" />
                   </div>
                   <div className="min-w-0">
                     <p className="break-words font-black text-gray-950 dark:text-white">{product.title}</p>
                     <p className="mt-1 break-words text-sm text-gray-500 dark:text-gray-300">
                       {product.sourceSupplierName || copy.manualProduct} - {formatStoreMoney(product.price, product.currency)}
                     </p>
+                    <ProductStatsSummary
+                      stats={productSalesStats[product.id]}
+                      currency={activeStore.currency}
+                      copy={copy}
+                    />
                   </div>
                   <button
                     type="button"
@@ -955,14 +986,82 @@ function DashboardMetric({ label, value }: { label: string; value: string }) {
   );
 }
 
+type ProductSalesStats = {
+  totalOrders: number;
+  totalQuantitySold: number;
+  revenue: number;
+  confirmedSales: number;
+  cancelledSales: number;
+};
+
+function ProductStatsSummary({
+  stats,
+  currency,
+  copy,
+}: {
+  stats?: ProductSalesStats;
+  currency: string;
+  copy: ReturnType<typeof getDashboardCopy>;
+}) {
+  if (!stats || stats.totalOrders === 0) {
+    return (
+      <p className="mt-2 text-xs font-bold text-gray-400 dark:text-gray-500">
+        {copy.noProductSales}
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-2 grid gap-1 text-xs font-bold text-gray-500 dark:text-gray-300 sm:grid-cols-2">
+      <p>{copy.productTotalOrders}: {stats.totalOrders}</p>
+      <p>{copy.productQuantitySold}: {stats.totalQuantitySold}</p>
+      <p>{copy.productRevenue}: {formatStoreMoney(stats.revenue, currency)}</p>
+      <p>{copy.productConfirmedSales}: {stats.confirmedSales}</p>
+      <p>{copy.productCancelledSales}: {stats.cancelledSales}</p>
+    </div>
+  );
+}
+
+function getProductSalesStats(orders: StoreOrder[]) {
+  return orders.reduce<Record<string, ProductSalesStats>>((statsByProduct, order) => {
+    order.items.forEach((item) => {
+      const currentStats = statsByProduct[item.productId] || {
+        totalOrders: 0,
+        totalQuantitySold: 0,
+        revenue: 0,
+        confirmedSales: 0,
+        cancelledSales: 0,
+      };
+
+      currentStats.totalOrders += 1;
+
+      if (order.status === "confirmed") {
+        currentStats.totalQuantitySold += item.quantity;
+        currentStats.revenue += item.totalPrice;
+        currentStats.confirmedSales += 1;
+      }
+
+      if (order.status === "cancelled") {
+        currentStats.cancelledSales += 1;
+      }
+
+      statsByProduct[item.productId] = currentStats;
+    });
+
+    return statsByProduct;
+  }, {});
+}
+
 function CertificationPanel({
   store,
+  storeUrl,
   copy,
   language,
   durationMonths,
   onDurationChange,
 }: {
   store: ShopfyStore;
+  storeUrl: string;
   copy: ReturnType<typeof getDashboardCopy>;
   language: string;
   durationMonths: number;
@@ -980,6 +1079,16 @@ function CertificationPanel({
       ? copy.trialActiveTitle
       : copy.trialEndedTitle;
   const statusText = getCertificationStatusText(store, copy, language);
+  const certificationAction = store.isCertified ? copy.certificationAction : copy.activationAction;
+  const whatsappMessage = [
+    copy.certificationWhatsappGreeting,
+    "",
+    `${copy.certificationWhatsappIntro} ${certificationAction} ${copy.certificationWhatsappSuffix}`,
+    "",
+    `${copy.certificationWhatsappStoreName}: ${store.name}`,
+    "",
+    `${copy.certificationWhatsappStoreLink}: ${storeUrl}`,
+  ].join("\n");
 
   return (
     <section className={`grid gap-4 rounded-lg border p-4 shadow-sm ${statusClass}`}>
@@ -1018,6 +1127,7 @@ function CertificationPanel({
         </div>
 
         <AdminWhatsappButton
+          message={whatsappMessage}
           className="inline-flex min-h-11 items-center justify-center rounded-md bg-gray-950 px-5 text-sm font-black text-white transition hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-gray-950 dark:hover:bg-orange-300"
         >
           {store.isCertified
@@ -1115,6 +1225,7 @@ function getDashboardCopy(language: string) {
       orders: "Commandes",
       pendingOrdersMetric: "En attente",
       confirmedOrdersMetric: "Confirmees",
+      cancelledOrdersMetric: "Annulees",
       revenue: "Ventes",
       pendingOrders: "Commandes en attente",
       noPendingOrders: "Aucune commande en attente.",
@@ -1122,8 +1233,11 @@ function getDashboardCopy(language: string) {
       orderTotal: "Total",
       confirmOrder: "Confirmer la vente",
       confirmingOrder: "Confirmation...",
+      cancelOrder: "Annuler la vente",
+      cancellingOrder: "Annulation...",
       awaitingPayment: "En attente paiement",
       orderConfirmed: "Commande confirmee. La vente est maintenant comptabilisee.",
+      orderCancelled: "Commande annulee. Elle n'est plus comptabilisee dans les ventes.",
       orderUpdateError: "Impossible de confirmer cette commande.",
       storeProducts: "Produits de la boutique",
       noProducts: "Aucun produit pour le moment.",
@@ -1154,8 +1268,15 @@ function getDashboardCopy(language: string) {
       monthLabel: "mois",
       monthsLabel: "mois",
       certificationAmount: "Montant de certification",
-      startCertification: "Activer / certifier",
-      renewCertification: "Prolonger",
+      startCertification: "Activer",
+      renewCertification: "Certifier",
+      activationAction: "l'activation",
+      certificationAction: "la certification",
+      certificationWhatsappGreeting: "Bonjour,",
+      certificationWhatsappIntro: "je souhaite proceder a",
+      certificationWhatsappSuffix: "de ma boutique.",
+      certificationWhatsappStoreName: "Nom de la boutique",
+      certificationWhatsappStoreLink: "Lien de la boutique",
       startingCertification: "Enregistrement...",
       certificationPaymentStarted: "Demande d'activation enregistree. Lequipe Shopfy contactera le vendeur pour finaliser la procedure.",
       certificationPaymentError: "Impossible d'enregistrer la demande de certification.",
@@ -1164,6 +1285,12 @@ function getDashboardCopy(language: string) {
       trialStatus: "Essai gratuit",
       lockedStatus: "Bloquee",
       removeError: "Impossible de retirer le produit dans Supabase.",
+      noProductSales: "Aucune vente pour ce produit.",
+      productTotalOrders: "Commandes",
+      productQuantitySold: "Quantite vendue",
+      productRevenue: "CA",
+      productConfirmedSales: "Confirmees",
+      productCancelledSales: "Annulees",
       authRequired: "Connectez-vous avec votre compte vendeur pour voir votre dashboard securise.",
       authChecking: "Verification du compte vendeur...",
       authKicker: "Acces securise",
@@ -1222,6 +1349,7 @@ function getDashboardCopy(language: string) {
     orders: "Orders",
     pendingOrdersMetric: "Pending",
     confirmedOrdersMetric: "Confirmed",
+    cancelledOrdersMetric: "Cancelled",
     revenue: "Sales",
     pendingOrders: "Pending orders",
     noPendingOrders: "No pending order.",
@@ -1229,8 +1357,11 @@ function getDashboardCopy(language: string) {
     orderTotal: "Total",
     confirmOrder: "Confirm sale",
     confirmingOrder: "Confirming...",
+    cancelOrder: "Cancel sale",
+    cancellingOrder: "Cancelling...",
     awaitingPayment: "Awaiting payment",
     orderConfirmed: "Order confirmed. The sale is now counted.",
+    orderCancelled: "Order cancelled. It is no longer counted in sales.",
     orderUpdateError: "Unable to confirm this order.",
     storeProducts: "Store products",
     noProducts: "No product yet.",
@@ -1261,8 +1392,15 @@ function getDashboardCopy(language: string) {
     monthLabel: "month",
     monthsLabel: "months",
     certificationAmount: "Certification amount",
-    startCertification: "Activate / certify",
-    renewCertification: "Extend",
+    startCertification: "Activate",
+    renewCertification: "Certify",
+    activationAction: "the activation",
+    certificationAction: "the certification",
+    certificationWhatsappGreeting: "Hello,",
+    certificationWhatsappIntro: "I would like to proceed with",
+    certificationWhatsappSuffix: "of my store.",
+    certificationWhatsappStoreName: "Store name",
+    certificationWhatsappStoreLink: "Store link",
     startingCertification: "Recording...",
     certificationPaymentStarted: "Certification request recorded. The Shopfy team will contact the seller to finalize the process.",
     certificationPaymentError: "Unable to record the certification request.",
@@ -1271,6 +1409,12 @@ function getDashboardCopy(language: string) {
     trialStatus: "Free trial",
     lockedStatus: "Locked",
     removeError: "Unable to remove the product in Supabase.",
+    noProductSales: "No sale yet for this product.",
+    productTotalOrders: "Orders",
+    productQuantitySold: "Qty sold",
+    productRevenue: "Revenue",
+    productConfirmedSales: "Confirmed",
+    productCancelledSales: "Cancelled",
     authRequired: "Sign in with your seller account to view your secured dashboard.",
     authChecking: "Checking seller account...",
     authKicker: "Secured access",

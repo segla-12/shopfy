@@ -216,7 +216,7 @@ function StorefrontContent({ store }: StorefrontProps) {
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {allProducts.map((product) => (
               <StoreProductCard
                 key={product.id}
@@ -269,14 +269,14 @@ function StoreProductCard({
 }) {
   return (
     <article className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-gray-900">
-      <div className="relative aspect-video bg-gray-100 dark:bg-gray-950">
-        <StoreProductImage src={product.image} alt={product.title} sizes="(min-width: 1024px) 520px, (min-width: 640px) 50vw, 100vw" className="object-cover" />
+      <div className="relative aspect-[2/1] bg-gray-100 dark:bg-gray-950">
+        <StoreProductImage src={product.image} alt={product.title} sizes="(min-width: 1024px) 360px, (min-width: 640px) 50vw, 100vw" className="object-cover" />
       </div>
-      <div className="grid gap-3 p-4">
+      <div className="grid gap-2.5 p-3">
         <div>
           <p className="text-xs font-black uppercase text-orange-500">{product.category}</p>
-          <h3 className="mt-1 break-words text-lg font-black text-gray-950 dark:text-white">{product.title}</h3>
-          <p className="mt-2 break-words text-sm leading-6 text-gray-600 dark:text-gray-300">{product.description}</p>
+          <h3 className="mt-1 break-words text-base font-black text-gray-950 dark:text-white">{product.title}</h3>
+          <p className="mt-1 break-words text-sm leading-5 text-gray-600 dark:text-gray-300">{product.description}</p>
         </div>
         {product.sourceSupplierName ? (
           <p className="break-words text-xs font-bold text-gray-500 dark:text-gray-400">
@@ -285,7 +285,7 @@ function StoreProductCard({
         ) : null}
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-xl font-black text-gray-950 dark:text-white">{formatStoreMoney(product.price, product.currency)}</p>
+            <p className="text-lg font-black text-gray-950 dark:text-white">{formatStoreMoney(product.price, product.currency)}</p>
             {product.compareAtPrice ? (
               <p className="text-xs font-bold text-gray-400 line-through">{formatStoreMoney(product.compareAtPrice, product.currency)}</p>
             ) : null}

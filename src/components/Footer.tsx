@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { useLanguage } from "@/lib/language";
+import { SHOPFY_SUPPORT_WHATSAPP } from "@/lib/support";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
 import { BrandLogo } from "./BrandLogo";
-
-const SHOPFY_SUPPORT_WHATSAPP = "+229 01 49 34 12 19";
 
 export function Footer() {
   const { language, t } = useLanguage();
