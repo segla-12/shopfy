@@ -5,7 +5,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { createStoreSlug } from "@/lib/createdStores";
 import { useLanguage } from "@/lib/language";
 import { supabase } from "@/lib/supabase";
-import { getStorePublicUrl } from "@/lib/storeLinks";
+import { getStorePublicUrl, getStoreQrUrl } from "@/lib/storeLinks";
 import {
   getInternationalWhatsappPhoneError,
   isValidInternationalWhatsappPhoneInput,
@@ -134,7 +134,7 @@ export function CreateStoreWizard() {
           </div>
         </div>
         <StoreQrCode
-          url={storeUrl}
+          url={getStoreQrUrl(createdStore.slug)}
           title={copy.qrTitle}
           downloadLabel={copy.downloadQr}
           fileName={`shopfy-${createdStore.slug}-qr.png`}

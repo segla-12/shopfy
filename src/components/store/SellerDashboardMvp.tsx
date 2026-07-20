@@ -6,7 +6,7 @@ import { ChangeEvent, FormEvent, ReactNode, useEffect, useMemo, useRef, useState
 import { createStoreSlug } from "@/lib/createdStores";
 import { formatStoreMoney } from "@/lib/demoStores";
 import { useLanguage } from "@/lib/language";
-import { getStorePublicUrl } from "@/lib/storeLinks";
+import { getStorePublicUrl, getStoreQrUrl } from "@/lib/storeLinks";
 import {
   getInternationalWhatsappPhoneError,
   isValidWhatsappPhone,
@@ -879,7 +879,7 @@ export function SellerDashboardMvp() {
       />
 
       <StoreQrCode
-        url={activeStoreUrl}
+        url={getStoreQrUrl(activeStore.slug)}
         title={copy.qrTitle}
         downloadLabel={copy.downloadQr}
         fileName={`shopfy-${activeStore.slug}-qr.png`}

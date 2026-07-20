@@ -6,12 +6,12 @@ type QrVersionConfig = {
 };
 
 const versionConfigs: QrVersionConfig[] = [
-  { version: 1, dataCodewords: 19, ecCodewords: 7, blockCount: 1 },
-  { version: 2, dataCodewords: 34, ecCodewords: 10, blockCount: 1 },
-  { version: 3, dataCodewords: 55, ecCodewords: 15, blockCount: 1 },
-  { version: 4, dataCodewords: 80, ecCodewords: 20, blockCount: 1 },
-  { version: 5, dataCodewords: 108, ecCodewords: 26, blockCount: 1 },
-  { version: 6, dataCodewords: 136, ecCodewords: 18, blockCount: 2 },
+  { version: 1, dataCodewords: 16, ecCodewords: 10, blockCount: 1 },
+  { version: 2, dataCodewords: 28, ecCodewords: 16, blockCount: 1 },
+  { version: 3, dataCodewords: 44, ecCodewords: 26, blockCount: 1 },
+  { version: 4, dataCodewords: 64, ecCodewords: 18, blockCount: 2 },
+  { version: 5, dataCodewords: 86, ecCodewords: 24, blockCount: 2 },
+  { version: 6, dataCodewords: 108, ecCodewords: 16, blockCount: 4 },
 ];
 
 const alignmentCenters: Record<number, number[]> = {
@@ -25,12 +25,43 @@ const alignmentCenters: Record<number, number[]> = {
 
 export type QrMatrix = boolean[][];
 
+export const qrCodePrintOptions = {
+  errorCorrectionLevel: "M",
+  margin: 4,
+  foreground: "#000000",
+  background: "#FFFFFF",
+  rasterSize: 1200,
+} as const;
+
 export function createQrMatrix(text: string): QrMatrix {
   const bytes = Array.from(new TextEncoder().encode(text));
   const config = getVersionConfig(bytes.length);
   const dataCodewords = createDataCodewords(bytes, config);
   const codewords = createFinalCodewords(dataCodewords, config);
   return createMatrix(codewords, config.version);
+}
+
+export function createQrSvg(text: string) {
+  const matrix = createQrMatrix(text);
+  const moduleCount = matrix.length + qrCodePrintOptions.margin * 2;
+  const cells = matrix.flatMap((row, rowIndex) => (
+    row
+      .map((isDark, columnIndex) => (
+        isDark
+          ? `<rect x="${columnIndex + qrCodePrintOptions.margin}" y="${rowIndex + qrCodePrintOptions.margin}" width="1" height="1"/>`
+          : ""
+      ))
+      .filter(Boolean)
+  ));
+
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${moduleCount} ${moduleCount}" width="${qrCodePrintOptions.rasterSize}" height="${qrCodePrintOptions.rasterSize}" shape-rendering="crispEdges">`,
+    `<rect width="100%" height="100%" fill="${qrCodePrintOptions.background}"/>`,
+    `<g fill="${qrCodePrintOptions.foreground}">`,
+    ...cells,
+    "</g>",
+    "</svg>",
+  ].join("");
 }
 
 function getVersionConfig(byteLength: number) {
@@ -247,9 +278,9 @@ function drawFormatBits(
 }
 
 function getFormatBits() {
-  const errorCorrectionLevelLow = 0b01;
+  const errorCorrectionLevelMedium = 0b00;
   const maskPattern = 0b000;
-  const data = (errorCorrectionLevelLow << 3) | maskPattern;
+  const data = (errorCorrectionLevelMedium << 3) | maskPattern;
   let bits = data << 10;
 
   for (let index = 14; index >= 10; index -= 1) {

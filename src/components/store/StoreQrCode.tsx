@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createQrMatrix } from "@/lib/qrCode";
+import { createQrMatrix, createQrSvg, qrCodePrintOptions } from "@/lib/qrCode";
 
 type StoreQrCodeProps = {
   url: string;
@@ -10,8 +10,8 @@ type StoreQrCodeProps = {
   fileName?: string;
 };
 
-const quietZone = 4;
-const canvasSize = 1024;
+const quietZone = qrCodePrintOptions.margin;
+const canvasSize = qrCodePrintOptions.rasterSize;
 
 export function StoreQrCode({ url, title, downloadLabel, fileName = "shopfy-store-qr.png" }: StoreQrCodeProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -21,6 +21,13 @@ export function StoreQrCode({ url, title, downloadLabel, fileName = "shopfy-stor
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
     return new URL(url, siteUrl).href;
   }, [url]);
+  const svgPreview = useMemo(() => {
+    try {
+      return createQrSvg(absoluteUrl);
+    } catch {
+      return "";
+    }
+  }, [absoluteUrl]);
 
   useEffect(() => {
     let nextErrorMessage = "";
@@ -45,9 +52,10 @@ export function StoreQrCode({ url, title, downloadLabel, fileName = "shopfy-stor
 
       canvas.width = canvasSize;
       canvas.height = canvasSize;
-      context.fillStyle = "#ffffff";
+      context.imageSmoothingEnabled = false;
+      context.fillStyle = qrCodePrintOptions.background;
       context.fillRect(0, 0, canvasSize, canvasSize);
-      context.fillStyle = "#111827";
+      context.fillStyle = qrCodePrintOptions.foreground;
 
       matrix.forEach((row, rowIndex) => {
         row.forEach((isDark, columnIndex) => {
@@ -71,7 +79,20 @@ export function StoreQrCode({ url, title, downloadLabel, fileName = "shopfy-stor
     return () => window.cancelAnimationFrame(frameId);
   }, [absoluteUrl]);
 
-  function downloadQrCode() {
+  function downloadQrCode(format: "svg" | "png") {
+    if (format === "svg") {
+      const blob = new Blob([createQrSvg(absoluteUrl)], { type: "image/svg+xml;charset=utf-8" });
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = getDownloadFileName(fileName, "svg");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+      return;
+    }
+
     const canvas = canvasRef.current;
 
     if (!canvas) {
@@ -86,12 +107,12 @@ export function StoreQrCode({ url, title, downloadLabel, fileName = "shopfy-stor
       const objectUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = objectUrl;
-      link.download = fileName;
+      link.download = getDownloadFileName(fileName, "png");
       document.body.appendChild(link);
       link.click();
       link.remove();
       URL.revokeObjectURL(objectUrl);
-    }, "image/png");
+    }, "image/png", 1);
   }
 
   return (
@@ -101,18 +122,31 @@ export function StoreQrCode({ url, title, downloadLabel, fileName = "shopfy-stor
         <p className="mt-1 break-all text-xs font-bold text-gray-500 dark:text-gray-300">{absoluteUrl}</p>
       </div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <canvas
-          ref={canvasRef}
-          aria-label={title}
-          className="h-40 w-40 rounded-md border border-gray-100 bg-white p-2 dark:border-white/10"
-        />
-        <button
-          type="button"
-          onClick={downloadQrCode}
-          className="inline-flex min-h-10 items-center justify-center rounded-md bg-gray-950 px-4 text-sm font-black text-white transition hover:bg-orange-500 dark:bg-white dark:text-gray-950 dark:hover:bg-orange-300"
-        >
-          {downloadLabel}
-        </button>
+        {svgPreview ? (
+          <div
+            role="img"
+            aria-label={title}
+            className="h-40 w-40 rounded-md border border-gray-100 bg-white p-2 dark:border-white/10 [&_svg]:h-full [&_svg]:w-full"
+            dangerouslySetInnerHTML={{ __html: svgPreview }}
+          />
+        ) : null}
+        <canvas ref={canvasRef} aria-hidden="true" className="hidden" />
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => downloadQrCode("svg")}
+            className="inline-flex min-h-10 items-center justify-center rounded-md bg-gray-950 px-4 text-sm font-black text-white transition hover:bg-orange-500 dark:bg-white dark:text-gray-950 dark:hover:bg-orange-300"
+          >
+            {downloadLabel} SVG
+          </button>
+          <button
+            type="button"
+            onClick={() => downloadQrCode("png")}
+            className="inline-flex min-h-10 items-center justify-center rounded-md border border-gray-200 px-4 text-sm font-black text-gray-900 transition hover:border-orange-200 hover:text-orange-600 dark:border-white/10 dark:text-gray-100"
+          >
+            PNG HD
+          </button>
+        </div>
       </div>
       {errorMessage ? (
         <p className="rounded-md border border-red-100 bg-red-50 p-3 text-sm font-bold text-red-700 dark:border-red-400/20 dark:bg-red-400/10 dark:text-red-200">
@@ -121,4 +155,8 @@ export function StoreQrCode({ url, title, downloadLabel, fileName = "shopfy-stor
       ) : null}
     </section>
   );
+}
+
+function getDownloadFileName(fileName: string, extension: "svg" | "png") {
+  return fileName.replace(/\.[^.]+$/, `.${extension}`);
 }
