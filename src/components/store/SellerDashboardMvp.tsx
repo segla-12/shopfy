@@ -1256,44 +1256,96 @@ export function SellerDashboardMvp() {
               </p>
             ) : (
               allProducts.map((product) => (
-                <div key={product.id} className="grid gap-3 rounded-md border border-gray-100 p-3 dark:border-white/10 sm:grid-cols-[72px_minmax(0,1fr)_auto] sm:items-start">
-                  <div className="relative h-20 overflow-hidden rounded-md bg-gray-100 dark:bg-gray-950 sm:h-16">
-                    <StoreProductImage src={product.image} alt={product.title} sizes="72px" className="object-contain p-1" />
+                <div key={product.id} className="grid gap-3 rounded-md border border-gray-100 p-3 dark:border-white/10">
+                  <div className="grid gap-3 sm:grid-cols-[72px_minmax(0,1fr)_auto] sm:items-start">
+                    <div className="relative h-20 overflow-hidden rounded-md bg-gray-100 dark:bg-gray-950 sm:h-16">
+                      <StoreProductImage src={product.image} alt={product.title} sizes="72px" className="object-contain p-1" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="break-words font-black text-gray-950 dark:text-white">{product.title}</p>
+                      <p className="mt-1 break-words text-sm text-gray-500 dark:text-gray-300">
+                        {product.sourceSupplierName || copy.manualProduct} - {formatStoreMoney(product.price, product.currency)}
+                      </p>
+                      <ProductStatsSummary
+                        stats={productSalesStats[product.id]}
+                        stock={product.inventoryQuantity}
+                        currency={activeStore.currency}
+                        copy={copy}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <button
+                        type="button"
+                        onClick={() => startProductEdit(product)}
+                        className="inline-flex min-h-9 items-center justify-center rounded-md border border-gray-200 px-3 text-sm font-black text-gray-900 transition hover:border-orange-200 hover:text-orange-600 dark:border-white/10 dark:text-gray-100"
+                      >
+                        {copy.edit}
+                      </button>
+                      <Link
+                        href={`${getStorePublicUrl(activeStore.slug)}#product-${encodeURIComponent(product.slug)}`}
+                        className="inline-flex min-h-9 items-center justify-center rounded-md border border-gray-200 px-3 text-sm font-black text-gray-900 transition hover:border-orange-200 hover:text-orange-600 dark:border-white/10 dark:text-gray-100"
+                      >
+                        {copy.view}
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => removeProduct(product.id)}
+                        className="inline-flex min-h-9 items-center justify-center rounded-md border border-gray-200 px-3 text-sm font-black text-gray-900 transition hover:border-red-200 hover:text-red-600 dark:border-white/10 dark:text-gray-100"
+                      >
+                        {copy.remove}
+                      </button>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <p className="break-words font-black text-gray-950 dark:text-white">{product.title}</p>
-                    <p className="mt-1 break-words text-sm text-gray-500 dark:text-gray-300">
-                      {product.sourceSupplierName || copy.manualProduct} - {formatStoreMoney(product.price, product.currency)}
-                    </p>
-                    <ProductStatsSummary
-                      stats={productSalesStats[product.id]}
-                      stock={product.inventoryQuantity}
-                      currency={activeStore.currency}
-                      copy={copy}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <button
-                      type="button"
-                      onClick={() => startProductEdit(product)}
-                      className="inline-flex min-h-9 items-center justify-center rounded-md border border-gray-200 px-3 text-sm font-black text-gray-900 transition hover:border-orange-200 hover:text-orange-600 dark:border-white/10 dark:text-gray-100"
-                    >
-                      {copy.edit}
-                    </button>
-                    <Link
-                      href={getStorePublicUrl(activeStore.slug)}
-                      className="inline-flex min-h-9 items-center justify-center rounded-md border border-gray-200 px-3 text-sm font-black text-gray-900 transition hover:border-orange-200 hover:text-orange-600 dark:border-white/10 dark:text-gray-100"
-                    >
-                      {copy.view}
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => removeProduct(product.id)}
-                      className="inline-flex min-h-9 items-center justify-center rounded-md border border-gray-200 px-3 text-sm font-black text-gray-900 transition hover:border-red-200 hover:text-red-600 dark:border-white/10 dark:text-gray-100"
-                    >
-                      {copy.remove}
-                    </button>
-                  </div>
+
+                  {editingProductId === product.id && productEditValues ? (
+                    <form onSubmit={saveProductEdit} className="grid gap-3 border-t border-gray-100 pt-3 dark:border-white/10">
+                      {productEditMessage ? (
+                        <p className="rounded-md border border-orange-100 bg-orange-50 p-3 text-sm font-bold text-orange-700 dark:border-orange-400/20 dark:bg-orange-400/10 dark:text-orange-200">
+                          {productEditMessage}
+                        </p>
+                      ) : null}
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <EditTextField label={copy.productTitle} value={productEditValues.title} onChange={(value) => updateProductEditValue("title", value)} required />
+                        <EditTextField label={copy.productCategory} value={productEditValues.category} onChange={(value) => updateProductEditValue("category", value)} />
+                        <EditTextField label={copy.productPrice} value={productEditValues.price} onChange={(value) => updateProductEditValue("price", value)} required />
+                        <EditTextField label={copy.productInventory} value={productEditValues.inventoryQuantity} onChange={(value) => updateProductEditValue("inventoryQuantity", value)} />
+                      </div>
+                      <label className="grid gap-2">
+                        <span className="text-sm font-black text-gray-950 dark:text-white">{copy.productDescription}</span>
+                        <textarea
+                          value={productEditValues.description}
+                          onChange={(event) => updateProductEditValue("description", event.target.value)}
+                          rows={3}
+                          className="rounded-md border border-gray-200 bg-white px-4 py-3 text-sm text-gray-950 outline-none transition focus:border-orange-300 focus:ring-4 focus:ring-orange-100 dark:border-white/10 dark:bg-gray-950 dark:text-white"
+                        />
+                      </label>
+                      <label className="grid gap-2">
+                        <span className="text-sm font-black text-gray-950 dark:text-white">{copy.manualProductPreviewAlt}</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(event) => updateProductEditImage(event.currentTarget.files?.[0])}
+                          className="min-h-11 rounded-md border border-gray-200 bg-white px-4 py-2 text-sm text-gray-950 outline-none transition file:mr-3 file:rounded-md file:border-0 file:bg-gray-950 file:px-3 file:py-2 file:text-sm file:font-black file:text-white focus:border-orange-300 focus:ring-4 focus:ring-orange-100 dark:border-white/10 dark:bg-gray-950 dark:text-white dark:file:bg-white dark:file:text-gray-950"
+                        />
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="submit"
+                          disabled={isSavingProductEdit}
+                          className="inline-flex min-h-10 items-center justify-center rounded-md bg-orange-500 px-4 text-sm font-black text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {isSavingProductEdit ? copy.savingProduct : copy.saveProduct}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={cancelProductEdit}
+                          className="inline-flex min-h-10 items-center justify-center rounded-md border border-gray-200 px-4 text-sm font-black text-gray-900 transition hover:border-orange-200 hover:text-orange-600 dark:border-white/10 dark:text-gray-100"
+                        >
+                          {copy.cancel}
+                        </button>
+                      </div>
+                    </form>
+                  ) : null}
                 </div>
               ))
             )}

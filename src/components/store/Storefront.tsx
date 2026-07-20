@@ -270,7 +270,7 @@ function StoreProductCard({
   onAddToCart: () => void;
 }) {
   return (
-    <article className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-gray-900">
+    <article id={`product-${product.slug}`} className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm scroll-mt-24 dark:border-white/10 dark:bg-gray-900">
       <div className="relative aspect-[4/3] bg-gray-100 dark:bg-gray-950">
         <StoreProductImage src={product.image} alt={product.title} sizes="(min-width: 1024px) 320px, (min-width: 640px) 50vw, 100vw" className="object-contain p-2" />
       </div>

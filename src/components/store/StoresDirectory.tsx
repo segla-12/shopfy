@@ -39,20 +39,12 @@ export function StoresDirectory({ stores }: StoresDirectoryProps) {
           <p className="mt-3 max-w-2xl text-base leading-7 text-gray-600 dark:text-gray-300">{copy.description}</p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <Link
-            href="/create-store"
-            className="inline-flex min-h-11 items-center justify-center rounded-md bg-orange-500 px-5 text-sm font-black text-white transition hover:bg-orange-600"
-          >
-            {copy.createStore}
-          </Link>
-          <Link
-            href="/sourcing"
-            className="inline-flex min-h-11 items-center justify-center rounded-md bg-gray-950 px-5 text-sm font-black text-white transition hover:bg-orange-500 dark:bg-white dark:text-gray-950 dark:hover:bg-orange-300"
-          >
-            {copy.sourcing}
-          </Link>
-        </div>
+        <Link
+          href="/create-store"
+          className="inline-flex min-h-11 items-center justify-center rounded-md bg-orange-500 px-5 text-sm font-black text-white transition hover:bg-orange-600"
+        >
+          {copy.createStore}
+        </Link>
       </div>
 
       <div className="rounded-lg border border-orange-100 bg-orange-50 p-4 dark:border-orange-400/20 dark:bg-orange-400/10">
@@ -61,12 +53,6 @@ export function StoresDirectory({ stores }: StoresDirectoryProps) {
             <p className="text-sm font-black text-gray-950 dark:text-white">{copy.createTitle}</p>
             <p className="mt-1 text-sm leading-6 text-gray-600 dark:text-gray-300">{copy.createText}</p>
           </div>
-          <Link
-            href="/create-store"
-            className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-md bg-orange-500 px-4 text-sm font-black text-white transition hover:bg-orange-600"
-          >
-            {copy.createStore}
-          </Link>
         </div>
       </div>
 
@@ -88,7 +74,6 @@ function getStoresDirectoryCopy(language: string) {
       createTitle: "Créez votre boutique en quelques etapes",
       createText: "Choisissez un nom, ajoutez votre identite, validez le lien public, puis commencez a importer des produits.",
       createStore: "Créer boutique",
-      sourcing: "Voir les produits fournisseurs",
     };
   }
 
@@ -99,6 +84,5 @@ function getStoresDirectoryCopy(language: string) {
     createTitle: "Create your store in a few steps",
     createText: "Choose a name, add your brand identity, validate the public link, then start importing products.",
     createStore: "Create store",
-    sourcing: "Browse supplier products",
   };
 }
