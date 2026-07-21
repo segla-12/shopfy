@@ -7,6 +7,7 @@ import { createStoreSlug } from "@/lib/createdStores";
 import { formatStoreMoney } from "@/lib/demoStores";
 import { useLanguage } from "@/lib/language";
 import { getStorePublicUrl, getStoreQrUrl } from "@/lib/storeLinks";
+import { useInactivityTimeout } from "@/lib/useInactivityTimeout";
 import {
   getInternationalWhatsappPhoneError,
   isValidWhatsappPhone,
@@ -250,6 +251,28 @@ export function SellerDashboardMvp() {
       [section]: !currentSections[section],
     }));
   };
+
+  useInactivityTimeout({
+    enabled: dashboardStatus === "ready" || dashboardStatus === "missing-store",
+    onLock: () => {
+      setActiveStore(null);
+      setStoreEditValues(null);
+      setProductEditValues(null);
+      setManualProductFile(null);
+      setManualProductImage("");
+      setManualProductValues(initialManualProductValues);
+      setManualSaleValues(getInitialManualSaleValues());
+      setStoreOrders([]);
+      setHasSellerStore(false);
+      setDashboardStatus("unauthenticated");
+      setSellerStoreMessage(copy.authRequired);
+      setIsEditingStore(false);
+      setIsAddingManualSale(false);
+      setEditingProductId("");
+      setToastMessage("");
+      setErrorMessage("");
+    },
+  });
 
   useEffect(() => {
     const frameId = window.requestAnimationFrame(() => {

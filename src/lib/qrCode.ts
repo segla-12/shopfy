@@ -6,13 +6,20 @@ type QrVersionConfig = {
 };
 
 const versionConfigs: QrVersionConfig[] = [
-  { version: 1, dataCodewords: 19, ecCodewords: 7, blockCount: 1 },
-  { version: 2, dataCodewords: 34, ecCodewords: 10, blockCount: 1 },
-  { version: 3, dataCodewords: 55, ecCodewords: 15, blockCount: 1 },
-  { version: 4, dataCodewords: 80, ecCodewords: 20, blockCount: 1 },
-  { version: 5, dataCodewords: 108, ecCodewords: 26, blockCount: 1 },
-  { version: 6, dataCodewords: 136, ecCodewords: 18, blockCount: 2 },
+  { version: 1, dataCodewords: 16, ecCodewords: 10, blockCount: 1 },
+  { version: 2, dataCodewords: 28, ecCodewords: 16, blockCount: 1 },
+  { version: 3, dataCodewords: 44, ecCodewords: 26, blockCount: 1 },
+  { version: 4, dataCodewords: 64, ecCodewords: 18, blockCount: 2 },
+  { version: 5, dataCodewords: 86, ecCodewords: 24, blockCount: 2 },
+  { version: 6, dataCodewords: 108, ecCodewords: 16, blockCount: 4 },
 ];
+
+export const qrCodePrintOptions = {
+  rasterSize: 1024,
+  margin: 4,
+  background: "#ffffff",
+  foreground: "#000000",
+} as const;
 
 const alignmentCenters: Record<number, number[]> = {
   1: [],
@@ -247,9 +254,8 @@ function drawFormatBits(
 }
 
 function getFormatBits() {
-  const errorCorrectionLevelLow = 0b00; // Niveau L (Low) pour une densité minimale et un scan rapide
   const maskPattern = 0b000;
-  const data = (errorCorrectionLevelLow << 3) | maskPattern;
+  const data = (0b00 << 3) | maskPattern;
   let bits = data << 10;
 
   for (let index = 14; index >= 10; index -= 1) {

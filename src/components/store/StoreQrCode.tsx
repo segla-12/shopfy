@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createQrMatrix, createQrSvg, qrCodePrintOptions } from "@/lib/qrCode";
+import { createQrMatrix, qrCodePrintOptions } from "@/lib/qrCode";
 
 type StoreQrCodeProps = {
   url: string;
@@ -21,13 +21,6 @@ export function StoreQrCode({ url, title, downloadLabel, fileName = "shopfy-stor
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
     return new URL(url, siteUrl).href;
   }, [url]);
-  const svgPreview = useMemo(() => {
-    try {
-      return createQrSvg(absoluteUrl);
-    } catch {
-      return "";
-    }
-  }, [absoluteUrl]);
 
   useEffect(() => {
     let nextErrorMessage = "";
@@ -79,20 +72,7 @@ export function StoreQrCode({ url, title, downloadLabel, fileName = "shopfy-stor
     return () => window.cancelAnimationFrame(frameId);
   }, [absoluteUrl]);
 
-  function downloadQrCode(format: "svg" | "png") {
-    if (format === "svg") {
-      const blob = new Blob([createQrSvg(absoluteUrl)], { type: "image/svg+xml;charset=utf-8" });
-      const objectUrl = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = objectUrl;
-      link.download = getDownloadFileName(fileName, "svg");
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(objectUrl);
-      return;
-    }
-
+  function downloadQrCode() {
     const canvas = canvasRef.current;
 
     if (!canvas) {
@@ -107,7 +87,7 @@ export function StoreQrCode({ url, title, downloadLabel, fileName = "shopfy-stor
       const objectUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = objectUrl;
-      link.download = getDownloadFileName(fileName, "png");
+      link.download = getDownloadFileName(fileName);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -122,29 +102,19 @@ export function StoreQrCode({ url, title, downloadLabel, fileName = "shopfy-stor
         <p className="mt-1 break-all text-xs font-bold text-gray-500 dark:text-gray-300">{absoluteUrl}</p>
       </div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        {svgPreview ? (
-          <div
-            role="img"
-            aria-label={title}
-            className="h-40 w-40 rounded-md border border-gray-100 bg-white p-2 dark:border-white/10 [&_svg]:h-full [&_svg]:w-full"
-            dangerouslySetInnerHTML={{ __html: svgPreview }}
-          />
-        ) : null}
-        <canvas ref={canvasRef} aria-hidden="true" className="hidden" />
+        <canvas
+          ref={canvasRef}
+          role="img"
+          aria-label={title}
+          className="h-40 w-40 rounded-md border border-gray-100 bg-white p-2 dark:border-white/10"
+        />
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => downloadQrCode("svg")}
+            onClick={downloadQrCode}
             className="inline-flex min-h-10 items-center justify-center rounded-md bg-gray-950 px-4 text-sm font-black text-white transition hover:bg-orange-500 dark:bg-white dark:text-gray-950 dark:hover:bg-orange-300"
           >
-            {downloadLabel} SVG
-          </button>
-          <button
-            type="button"
-            onClick={() => downloadQrCode("png")}
-            className="inline-flex min-h-10 items-center justify-center rounded-md border border-gray-200 px-4 text-sm font-black text-gray-900 transition hover:border-orange-200 hover:text-orange-600 dark:border-white/10 dark:text-gray-100"
-          >
-            PNG HD
+            {getDownloadButtonLabel(downloadLabel)}
           </button>
         </div>
       </div>
@@ -157,6 +127,10 @@ export function StoreQrCode({ url, title, downloadLabel, fileName = "shopfy-stor
   );
 }
 
-function getDownloadFileName(fileName: string, extension: "svg" | "png") {
-  return fileName.replace(/\.[^.]+$/, `.${extension}`);
+function getDownloadFileName(fileName: string) {
+  return fileName.replace(/\.[^.]+$/, ".png");
+}
+
+function getDownloadButtonLabel(downloadLabel: string) {
+  return downloadLabel.toLowerCase().includes("download") ? "Download HD PNG" : "Telecharger en PNG HD";
 }

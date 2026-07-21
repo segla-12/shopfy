@@ -1,54 +1,103 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
-import { supabase, clearServerAuthSession } from "@/lib/supabase";
+import { clearServerAuthSession, supabase } from "@/lib/supabase";
 
-const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
+const configuredInactivityTimeout = Number(process.env.NEXT_PUBLIC_DASHBOARD_INACTIVITY_TIMEOUT_MS);
 
-/**
- * Déconnecte l'utilisateur après une période d'inactivité.
- * Redirige vers la page de connexion et nettoie la session.
- * À utiliser dans les layouts des dashboards sécurisés.
- */
-export function useInactivityTimeout() {
-  const router = useRouter();
+export const INACTIVITY_TIMEOUT_MS = Number.isFinite(configuredInactivityTimeout) && configuredInactivityTimeout > 0
+  ? configuredInactivityTimeout
+  : 15 * 60 * 1000;
+
+type InactivityTimeoutOptions = {
+  enabled?: boolean;
+  timeoutMs?: number;
+  loginPath?: string;
+  signOutSupabase?: boolean;
+  onLock?: () => void | Promise<void>;
+};
+
+export function useInactivityTimeout({
+  enabled = true,
+  timeoutMs = INACTIVITY_TIMEOUT_MS,
+  loginPath = "/auth?reason=inactive",
+  signOutSupabase = true,
+  onLock,
+}: InactivityTimeoutOptions = {}) {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  const handleLogout = async () => {
-    // 1. Déconnexion côté client Supabase
-    await supabase.auth.signOut();
-
-    // 2. Nettoyage de la session côté serveur (cookie)
-    await clearServerAuthSession();
-
-    // 3. Redirection vers la page de connexion
-    // Le rechargement complet de la page garantit que l'état React est vidé.
-    router.push("/auth?reason=inactive");
-    router.refresh();
-  };
-
-  const resetTimeout = () => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-    timeoutRef.current = setTimeout(handleLogout, INACTIVITY_TIMEOUT_MS);
-  };
+  const isLockingRef = useRef(false);
+  const onLockRef = useRef(onLock);
 
   useEffect(() => {
-    const events: (keyof WindowEventMap)[] = ["mousemove", "keydown", "mousedown", "touchstart", "scroll"];
+    onLockRef.current = onLock;
+  }, [onLock]);
 
+  useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
+    const lockDashboard = async () => {
+      if (isLockingRef.current) {
+        return;
+      }
+
+      isLockingRef.current = true;
+
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+
+      await onLockRef.current?.();
+
+      if (signOutSupabase) {
+        await supabase.auth.signOut();
+        await clearServerAuthSession();
+      }
+
+      window.history.replaceState(null, "", loginPath);
+      window.location.replace(loginPath);
+    };
+
+    const resetTimeout = () => {
+      if (isLockingRef.current) {
+        return;
+      }
+
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+
+      timeoutRef.current = setTimeout(lockDashboard, timeoutMs);
+    };
+
+    const activityEvents: (keyof WindowEventMap)[] = [
+      "mousemove",
+      "keydown",
+      "mousedown",
+      "touchstart",
+      "scroll",
+    ];
     const eventListener = () => resetTimeout();
+    const pageshowListener = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        window.location.reload();
+      }
+    };
 
-    // Initialiser le timeout
     resetTimeout();
-
-    // Ajouter les écouteurs d'événements pour réinitialiser le timeout
-    events.forEach((event) => window.addEventListener(event, eventListener));
+    activityEvents.forEach((event) => window.addEventListener(event, eventListener, { passive: true }));
+    document.addEventListener("visibilitychange", eventListener);
+    window.addEventListener("pageshow", pageshowListener);
 
     return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      events.forEach((event) => window.removeEventListener(event, eventListener));
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+
+      activityEvents.forEach((event) => window.removeEventListener(event, eventListener));
+      document.removeEventListener("visibilitychange", eventListener);
+      window.removeEventListener("pageshow", pageshowListener);
     };
-  }, [router]);
+  }, [enabled, loginPath, signOutSupabase, timeoutMs]);
 }

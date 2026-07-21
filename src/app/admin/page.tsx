@@ -8,6 +8,7 @@ import { formatPrice } from "@/lib/format";
 import { TranslationKey } from "@/lib/i18n";
 import { useLanguage } from "@/lib/language";
 import { buildWholesaleSuppliers } from "@/lib/supplierDirectory";
+import { useInactivityTimeout } from "@/lib/useInactivityTimeout";
 import { getProducts } from "@/services/productService";
 import { getSupabaseStores } from "@/services/storeService";
 import type { Product, WholesaleSupplier } from "@/types/marketplace";
@@ -34,6 +35,24 @@ export default function AdminPage() {
   const suppliers = useMemo(() => buildWholesaleSuppliers(products), [products]);
   const supplierCopy = getAdminSupplierCopy(language);
   const storeCopy = getAdminStoreCopy(language);
+
+  useInactivityTimeout({
+    enabled: isUnlocked,
+    loginPath: "/admin?reason=inactive",
+    signOutSupabase: false,
+    onLock: () => {
+      setAdminSecret("");
+      setIsUnlocked(false);
+      setIsLoading(false);
+      setMessage(null);
+      setProducts([]);
+      setStores([]);
+      setCertificationDates({});
+      setCertificationDurations({});
+      setStoreCertificationDates({});
+      setStoreCertificationDurations({});
+    },
+  });
 
   async function handleUnlock(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
