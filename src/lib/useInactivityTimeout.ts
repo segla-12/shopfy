@@ -7,7 +7,7 @@ const configuredInactivityTimeout = Number(process.env.NEXT_PUBLIC_DASHBOARD_INA
 
 export const INACTIVITY_TIMEOUT_MS = Number.isFinite(configuredInactivityTimeout) && configuredInactivityTimeout > 0
   ? configuredInactivityTimeout
-  : 15 * 60 * 1000;
+  : 5 * 60 * 1000;
 
 type InactivityTimeoutOptions = {
   enabled?: boolean;
