@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useLanguage } from "@/lib/language";
 import { getSupabaseStores } from "@/services/storeService";
 import type { ShopfyStore } from "@/types/storefront";
@@ -14,11 +15,25 @@ type StoresDirectoryProps = {
 export function StoresDirectory({ stores }: StoresDirectoryProps) {
   const { language } = useLanguage();
   const copy = getStoresDirectoryCopy(language);
+  const searchParams = useSearchParams();
   const [supabaseStores, setSupabaseStores] = useState<ShopfyStore[]>([]);
+  const query = searchParams.get("q")?.trim().toLowerCase() || "";
+
   const allStores = useMemo(() => {
     const supabaseSlugs = new Set(supabaseStores.map((store) => store.slug));
     return [...supabaseStores, ...stores.filter((store) => !supabaseSlugs.has(store.slug))];
   }, [stores, supabaseStores]);
+
+  const filteredStores = useMemo(() => {
+    if (!query) {
+      return allStores;
+    }
+
+    return allStores.filter((store) => {
+      const normalized = `${store.name} ${store.tagline} ${store.city} ${store.country}`.toLowerCase();
+      return normalized.includes(query);
+    });
+  }, [allStores, query]);
 
   useEffect(() => {
     const frameId = window.requestAnimationFrame(() => {
@@ -57,7 +72,7 @@ export function StoresDirectory({ stores }: StoresDirectoryProps) {
       </div>
 
       <div className="grid gap-4">
-        {allStores.map((store) => (
+        {filteredStores.map((store) => (
           <StoreCard key={store.slug} store={store} />
         ))}
       </div>

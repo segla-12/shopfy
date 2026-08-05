@@ -19,8 +19,8 @@ export function Hero() {
             {t("hero.description")}
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
-            <ButtonLink href="#products">{t("hero.explore")}</ButtonLink>
-            <ButtonLink href="/sell" variant="secondary">{t("hero.publish")}</ButtonLink>
+            <ButtonLink href="/stores">{t("hero.explore")}</ButtonLink>
+            <ButtonLink href="/create-store" variant="secondary">{t("hero.publish")}</ButtonLink>
           </div>
         </div>
 

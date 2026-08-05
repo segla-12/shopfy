@@ -1,15 +1,5 @@
-import { Footer } from "@/components/Footer";
-import { Navbar } from "@/components/Navbar";
-import { Hero } from "@/sections/Hero";
-import { MarketplaceSection } from "@/sections/MarketplaceSection";
+import { redirect } from "next/navigation";
 
 export default function Home() {
-  return (
-    <main className="min-h-screen bg-gray-50 transition-colors dark:bg-gray-950">
-      <Navbar />
-      <Hero />
-      <MarketplaceSection />
-      <Footer />
-    </main>
-  );
+  redirect("/stores");
 }

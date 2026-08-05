@@ -18,7 +18,7 @@ export function SupplierGrid({ suppliers }: SupplierGridProps) {
       <div className="rounded-lg border border-dashed border-gray-300 bg-white p-10 text-center dark:border-white/10 dark:bg-gray-900">
         <h3 className="text-lg font-black text-gray-950 dark:text-white">{copy.emptyTitle}</h3>
         <p className="mt-2 text-sm text-gray-500 dark:text-gray-300">{copy.emptyText}</p>
-        <Link href="/sell" className="mt-4 inline-flex min-h-10 items-center justify-center rounded-md bg-orange-500 px-4 text-sm font-black text-white transition hover:bg-orange-600">
+        <Link href="/stores" className="mt-4 inline-flex min-h-10 items-center justify-center rounded-md bg-orange-500 px-4 text-sm font-black text-white transition hover:bg-orange-600">
           {copy.addSupplier}
         </Link>
       </div>

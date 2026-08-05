@@ -14,7 +14,7 @@ const NAVBAR_MODE_KEY = "shopfy-navbar-mode";
 const NavbarModeContext = createContext<NavbarModeContextValue | null>(null);
 
 export function NavbarModeProvider({ children }: { children: ReactNode }) {
-  const [mode, setModeState] = useState<NavbarMode>("gros");
+  const [mode, setModeState] = useState<NavbarMode>("detail");
   const shouldRedirect = useRef(false);
   const router = useRouter();
   const pathname = usePathname();

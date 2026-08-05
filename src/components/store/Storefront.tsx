@@ -280,11 +280,6 @@ function StoreProductCard({
           <h3 className="mt-1 break-words text-base font-black text-gray-950 dark:text-white">{product.title}</h3>
           <p className="mt-1 break-words text-sm leading-5 text-gray-600 dark:text-gray-300">{product.description}</p>
         </div>
-        {product.sourceSupplierName ? (
-          <p className="break-words text-xs font-bold text-gray-500 dark:text-gray-400">
-            {copy.source}: {product.sourceSupplierName}
-          </p>
-        ) : null}
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-lg font-black text-gray-950 dark:text-white">{formatStoreMoney(product.price, product.currency)}</p>
