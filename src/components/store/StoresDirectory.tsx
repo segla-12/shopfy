@@ -1,47 +1,22 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { useLanguage } from "@/lib/language";
-import { getSupabaseStores } from "@/services/storeService";
 import type { ShopfyStore } from "@/types/storefront";
 import { StoreCard } from "./StoreCard";
 
 type StoresDirectoryProps = {
   stores: ShopfyStore[];
+  query?: string;
+  language: string;
 };
 
-export function StoresDirectory({ stores }: StoresDirectoryProps) {
-  const { language } = useLanguage();
+export function StoresDirectory({ stores, query = "", language }: StoresDirectoryProps) {
   const copy = getStoresDirectoryCopy(language);
-  const searchParams = useSearchParams();
-  const [supabaseStores, setSupabaseStores] = useState<ShopfyStore[]>([]);
-  const query = searchParams.get("q")?.trim().toLowerCase() || "";
-
-  const allStores = useMemo(() => {
-    const supabaseSlugs = new Set(supabaseStores.map((store) => store.slug));
-    return [...supabaseStores, ...stores.filter((store) => !supabaseSlugs.has(store.slug))];
-  }, [stores, supabaseStores]);
-
-  const filteredStores = useMemo(() => {
-    if (!query) {
-      return allStores;
-    }
-
-    return allStores.filter((store) => {
-      const normalized = `${store.name} ${store.tagline} ${store.city} ${store.country}`.toLowerCase();
-      return normalized.includes(query);
-    });
-  }, [allStores, query]);
-
-  useEffect(() => {
-    const frameId = window.requestAnimationFrame(() => {
-      getSupabaseStores().then(setSupabaseStores).catch(() => setSupabaseStores([]));
-    });
-
-    return () => window.cancelAnimationFrame(frameId);
-  }, []);
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredStores = normalizedQuery
+    ? stores.filter((store) => {
+        const normalized = `${store.name} ${store.tagline} ${store.city} ${store.country}`.toLowerCase();
+        return normalized.includes(normalizedQuery);
+      })
+    : stores;
 
   return (
     <section className="mx-auto grid max-w-6xl gap-6 px-4 py-10">
@@ -71,6 +46,19 @@ export function StoresDirectory({ stores }: StoresDirectoryProps) {
         </div>
       </div>
 
+      <form action="/stores" className="grid gap-4">
+        <label className="sr-only" htmlFor="stores-search">
+          Search stores
+        </label>
+        <input
+          id="stores-search"
+          name="q"
+          defaultValue={query}
+          placeholder={copy.searchPlaceholder}
+          className="h-10 w-full rounded-full border border-gray-200 bg-white px-4 text-sm text-gray-950 outline-none transition focus:border-orange-300 focus:ring-4 focus:ring-orange-100 dark:border-white/10 dark:bg-white/10 dark:text-white dark:placeholder:text-gray-400"
+        />
+      </form>
+
       <div className="grid gap-4">
         {filteredStores.map((store) => (
           <StoreCard key={store.slug} store={store} />
@@ -89,6 +77,7 @@ function getStoresDirectoryCopy(language: string) {
       createTitle: "Créez votre boutique en quelques etapes",
       createText: "Choisissez un nom, ajoutez votre identite, validez le lien public, puis commencez a importer des produits.",
       createStore: "Créer boutique",
+      searchPlaceholder: "Rechercher une boutique...",
     };
   }
 
@@ -99,5 +88,6 @@ function getStoresDirectoryCopy(language: string) {
     createTitle: "Create your store in a few steps",
     createText: "Choose a name, add your brand identity, validate the public link, then start importing products.",
     createStore: "Create store",
+    searchPlaceholder: "Search stores...",
   };
 }

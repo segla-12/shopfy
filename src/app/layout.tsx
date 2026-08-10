@@ -3,7 +3,6 @@ import { cookies } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import { FavoritesProvider } from "@/lib/favorites";
 import { LanguageProvider } from "@/lib/language";
-import { NavbarModeProvider } from "@/lib/navbarMode";
 import { DEFAULT_LANGUAGE, isLanguage, LANGUAGE_COOKIE_KEY } from "@/lib/languageConfig";
 import { ThemeProvider } from "@/lib/theme";
 import { SafetyNoticeModal } from "@/ui/SafetyNoticeModal";
@@ -61,10 +60,8 @@ export default async function RootLayout({
         <ThemeProvider>
           <LanguageProvider initialLanguage={initialLanguage}>
             <FavoritesProvider>
-              <NavbarModeProvider>
               <SafetyNoticeModal />
               {children}
-              </NavbarModeProvider>
             </FavoritesProvider>
           </LanguageProvider>
         </ThemeProvider>

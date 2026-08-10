@@ -5,6 +5,7 @@ import { getDemoStore } from "@/lib/demoStores";
 import { createSupabaseAnonClient } from "@/lib/supabaseAdmin";
 import { mapStoreRow, STORE_SELECT_FIELDS, type StoreRow } from "@/lib/storeRows";
 import { cleanText } from "@/lib/validation";
+import { NavbarModeProvider } from "@/lib/navbarMode";
 import type { ShopfyStore } from "@/types/storefront";
 import { connection } from "next/server";
 
@@ -39,7 +40,9 @@ export default async function StorePage({ params }: StorePageProps) {
   return (
     <main className="min-h-screen bg-gray-50 transition-colors dark:bg-gray-950">
       <Navbar />
-      <StorefrontResolver slug={slug} initialStore={store} />
+      <NavbarModeProvider>
+        <StorefrontResolver slug={slug} initialStore={store} />
+      </NavbarModeProvider>
       <Footer />
     </main>
   );

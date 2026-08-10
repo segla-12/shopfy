@@ -1,9 +1,6 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { useLanguage } from "@/lib/language";
-import { getSupabaseStore } from "@/services/storeService";
+import { cookies } from "next/headers";
+import { DEFAULT_LANGUAGE, isLanguage, LANGUAGE_COOKIE_KEY } from "@/lib/languageConfig";
 import type { ShopfyStore } from "@/types/storefront";
 import { Storefront } from "./Storefront";
 
@@ -12,37 +9,13 @@ type StorefrontResolverProps = {
   initialStore: ShopfyStore | null;
 };
 
-export function StorefrontResolver({ slug, initialStore }: StorefrontResolverProps) {
-  const { language } = useLanguage();
+export async function StorefrontResolver({ initialStore }: StorefrontResolverProps) {
+  const cookiesStore = await cookies();
+  const languageCookie = cookiesStore.get(LANGUAGE_COOKIE_KEY)?.value;
+  const language = isLanguage(languageCookie) ? languageCookie : DEFAULT_LANGUAGE;
   const copy = getResolverCopy(language);
-  const [store, setStore] = useState<ShopfyStore | null>(initialStore);
-  const [isReady, setIsReady] = useState(Boolean(initialStore));
 
-  useEffect(() => {
-    const frameId = window.requestAnimationFrame(() => {
-      getSupabaseStore(slug)
-        .then((supabaseStore) => {
-          setStore(supabaseStore || initialStore);
-          setIsReady(true);
-        })
-        .catch(() => {
-          setStore(initialStore);
-          setIsReady(true);
-        });
-    });
-
-    return () => window.cancelAnimationFrame(frameId);
-  }, [initialStore, slug]);
-
-  if (!isReady) {
-    return (
-      <section className="mx-auto max-w-4xl px-4 py-12">
-        <p className="text-sm font-black text-gray-500 dark:text-gray-300">{copy.loading}</p>
-      </section>
-    );
-  }
-
-  if (!store) {
+  if (!initialStore) {
     return (
       <section className="mx-auto grid max-w-4xl gap-4 px-4 py-12">
         <p className="text-sm font-black uppercase tracking-wide text-orange-500">{copy.kicker}</p>
@@ -66,7 +39,7 @@ export function StorefrontResolver({ slug, initialStore }: StorefrontResolverPro
     );
   }
 
-  return <Storefront store={store} />;
+  return <Storefront store={initialStore} />;
 }
 
 function getResolverCopy(language: string) {
