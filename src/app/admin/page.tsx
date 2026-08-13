@@ -3,10 +3,12 @@
 /* eslint-disable @next/next/no-img-element */
 import { FormEvent, useMemo, useState } from "react";
 import { Footer } from "@/components/Footer";
+import { AdminWhatsappButton } from "@/components/store/AdminWhatsappButton";
 import { Navbar } from "@/components/Navbar";
 import { formatPrice } from "@/lib/format";
 import { TranslationKey } from "@/lib/i18n";
 import { useLanguage } from "@/lib/language";
+import { getContactDisplayName } from "@/lib/resellerStore";
 import { buildWholesaleSuppliers } from "@/lib/supplierDirectory";
 import { useInactivityTimeout } from "@/lib/useInactivityTimeout";
 import { getProducts } from "@/services/productService";
@@ -125,6 +127,11 @@ export default function AdminPage() {
   }
 
   async function handleStoreCertification(store: ShopfyStore, isCertified: boolean) {
+    if (isCertified && store.kind === "reseller" && !store.ownerUserId) {
+      setMessage({ key: "admin.actionDenied" });
+      return;
+    }
+
     setIsLoading(true);
     setMessage(null);
 
@@ -302,7 +309,12 @@ export default function AdminPage() {
                   {storeCopy.noStores}
                 </p>
               ) : (
-                stores.map((store) => (
+                stores.map((store) => {
+                  const isResellerDraft = store.kind === "reseller" && !store.ownerUserId;
+                  const resellerContact = store.reseller;
+                  const ownerContact = store.futureOwner;
+
+                  return (
                   <article key={store.slug} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
                     <div className="flex flex-col gap-4 sm:flex-row">
                       <img src={store.logoUrl || store.bannerUrl} alt={store.name} className="h-28 w-28 rounded-xl object-cover" />
@@ -314,9 +326,15 @@ export default function AdminPage() {
                         <p className="mt-1 font-black text-orange-500">@{store.slug}</p>
                         <p className="mt-1 text-sm text-gray-500">{store.city}, {store.country}</p>
                         <div className="mt-3 grid gap-1 text-sm text-gray-500">
+                          <p>{storeCopy.typeLabel}: {store.kind === "reseller" ? storeCopy.resellerType : storeCopy.personalType}</p>
+                          <p>{storeCopy.publicationLabel}: {store.isCertified ? storeCopy.publishedStatus : storeCopy.draftStatus}</p>
                           <p>{t("admin.certificationLabel")}: {getStoreCertificationStatus(store, t)}</p>
                           <p>{t("admin.expirationLabel")}: {formatCertificationDate(store.certificationExpiresAt, language, t)}</p>
                           <p>{t("admin.amountLabel")}: {formatPrice(store.certificationAmount || getCertificationAmount(storeCertificationDurations[store.slug] || 1))} FCFA</p>
+                        </div>
+                        <div className="mt-4 grid gap-3 rounded-xl border border-gray-100 p-3 text-sm text-gray-600">
+                          <ContactBlock title={storeCopy.resellerContactTitle} contact={resellerContact} copy={storeCopy} />
+                          <ContactBlock title={storeCopy.ownerContactTitle} contact={ownerContact} fallbackName={store.kind === "personal" ? store.ownerName : ""} fallbackCity={store.kind === "personal" ? store.city : ""} fallbackCountry={store.kind === "personal" ? store.country : ""} fallbackPhone={store.kind === "personal" ? store.whatsappPhone : ""} copy={storeCopy} />
                         </div>
                       </div>
 
@@ -355,7 +373,7 @@ export default function AdminPage() {
                         <button
                           type="button"
                           onClick={() => handleStoreCertification(store, true)}
-                          disabled={isLoading}
+                          disabled={isLoading || isResellerDraft}
                           className="min-h-10 rounded-full bg-blue-600 px-4 text-sm font-black text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {store.isCertified ? t("admin.renew") : t("admin.certify")}
@@ -371,7 +389,8 @@ export default function AdminPage() {
                       </div>
                     </div>
                   </article>
-                ))
+                  );
+                })
               )}
             </section>
           </div>
@@ -380,6 +399,45 @@ export default function AdminPage() {
 
       <Footer />
     </main>
+  );
+}
+
+function ContactBlock({
+  title,
+  contact,
+  fallbackName = "",
+  fallbackCity = "",
+  fallbackCountry = "",
+  fallbackPhone = "",
+  copy,
+}: {
+  title: string;
+  contact?: ShopfyStore["reseller"];
+  fallbackName?: string;
+  fallbackCity?: string;
+  fallbackCountry?: string;
+  fallbackPhone?: string;
+  copy: ReturnType<typeof getAdminStoreCopy>;
+}) {
+  const name = getContactDisplayName(contact) || fallbackName;
+  const city = contact?.city || fallbackCity;
+  const country = contact?.country || fallbackCountry;
+  const phone = contact?.whatsappPhone || fallbackPhone;
+
+  return (
+    <div className="grid gap-2 border-t border-gray-100 pt-3 first:border-t-0 first:pt-0">
+      <p className="font-black text-gray-950">{title}</p>
+      <p>{copy.nameLabel}: {name || copy.notProvided}</p>
+      <p>{copy.locationLabel}: {[city, country].filter(Boolean).join(", ") || copy.notProvided}</p>
+      <p>{copy.whatsappLabel}: {phone || copy.notProvided}</p>
+      <AdminWhatsappButton
+        phone={phone}
+        disabled={!phone}
+        className="inline-flex min-h-9 w-fit items-center justify-center rounded-full border border-gray-200 px-3 text-xs font-black text-gray-900 transition hover:border-green-200 hover:text-green-700 aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
+      >
+        {copy.whatsappAction}
+      </AdminWhatsappButton>
+    </div>
   );
 }
 
@@ -412,6 +470,19 @@ function getAdminStoreCopy(language: "fr" | "en") {
       description: "Certify or remove certification from seller stores.",
       certifiedBadge: "Certified store",
       noStores: "No store has been created yet.",
+      typeLabel: "Type",
+      personalType: "Personal",
+      resellerType: "Reseller",
+      publicationLabel: "Publication",
+      publishedStatus: "Published",
+      draftStatus: "Unpublished",
+      resellerContactTitle: "Reseller / creator",
+      ownerContactTitle: "Owner",
+      nameLabel: "Name",
+      locationLabel: "Location",
+      whatsappLabel: "WhatsApp",
+      whatsappAction: "Open WhatsApp",
+      notProvided: "Not provided",
     };
   }
 
@@ -420,6 +491,19 @@ function getAdminStoreCopy(language: "fr" | "en") {
     description: "Certifie ou retire la certification des boutiques vendeur.",
     certifiedBadge: "Boutique certifiée",
     noStores: "Aucune boutique creee pour le moment.",
+    typeLabel: "Type",
+    personalType: "Personnelle",
+    resellerType: "Revendeur",
+    publicationLabel: "Publication",
+    publishedStatus: "Publiee",
+    draftStatus: "Non publiee",
+    resellerContactTitle: "Revendeur / createur",
+    ownerContactTitle: "Proprietaire",
+    nameLabel: "Nom",
+    locationLabel: "Localisation",
+    whatsappLabel: "WhatsApp",
+    whatsappAction: "Ouvrir WhatsApp",
+    notProvided: "Non renseigne",
   };
 }
 

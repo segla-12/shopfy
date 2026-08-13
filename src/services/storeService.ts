@@ -121,7 +121,9 @@ export async function getSupabaseStore(slug: string): Promise<ShopfyStore | null
 }
 
 export async function createSupabaseStore(input: CreateStoreInput): Promise<ShopfyStore> {
-  const headers = await getAuthenticatedHeaders();
+  const headers = input.kind === "reseller"
+    ? { "Content-Type": "application/json" }
+    : await getAuthenticatedHeaders();
   const response = await fetch("/api/stores", {
     method: "POST",
     headers,

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { createStoreSlug } from "@/lib/createdStores";
 import { useLanguage } from "@/lib/language";
+import { phoneCountries } from "@/lib/phoneCountries";
+import { getContactDisplayName } from "@/lib/resellerStore";
 import { supabase } from "@/lib/supabase";
 import { getStorePublicUrl, getStoreQrUrl } from "@/lib/storeLinks";
 import {
@@ -16,6 +18,7 @@ import type { ShopfyStore } from "@/types/storefront";
 import { StoreQrCode } from "./StoreQrCode";
 
 type WizardValues = {
+  kind: "" | "personal" | "reseller";
   name: string;
   category: string;
   ownerName: string;
@@ -27,20 +30,41 @@ type WizardValues = {
   description: string;
   logoUrl: string;
   bannerUrl: string;
+  resellerFirstName: string;
+  resellerLastName: string;
+  resellerCountry: string;
+  resellerCity: string;
+  resellerWhatsappPhone: string;
+  futureOwnerFirstName: string;
+  futureOwnerLastName: string;
+  futureOwnerCountry: string;
+  futureOwnerCity: string;
+  futureOwnerWhatsappPhone: string;
 };
 
 const initialValues: WizardValues = {
+  kind: "",
   name: "",
   category: "General",
   ownerName: "",
   city: "",
-  country: "Benin",
+  country: "",
   currency: "XOF",
   whatsappPhone: "",
   tagline: "",
   description: "",
   logoUrl: "",
   bannerUrl: "",
+  resellerFirstName: "",
+  resellerLastName: "",
+  resellerCountry: "",
+  resellerCity: "",
+  resellerWhatsappPhone: "",
+  futureOwnerFirstName: "",
+  futureOwnerLastName: "",
+  futureOwnerCountry: "",
+  futureOwnerCity: "",
+  futureOwnerWhatsappPhone: "",
 };
 
 export function CreateStoreWizard() {
@@ -54,6 +78,10 @@ export function CreateStoreWizard() {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const slug = useMemo(() => createStoreSlug(values.name), [values.name]);
+  const countryOptions = useMemo(
+    () => phoneCountries.map((country) => country.name[language === "fr" ? "fr" : "en"]),
+    [language],
+  );
 
   useEffect(() => {
     const frameId = window.requestAnimationFrame(() => {
@@ -82,7 +110,19 @@ export function CreateStoreWizard() {
     event.preventDefault();
     setErrorMessage("");
 
-    if (step === 1 && !isValidInternationalWhatsappPhoneInput(values.whatsappPhone)) {
+    if (step === 1) {
+      if (values.kind === "personal" && !isValidInternationalWhatsappPhoneInput(values.whatsappPhone)) {
+        setErrorMessage(getInternationalWhatsappPhoneError());
+        return;
+      }
+
+      if (values.kind === "reseller" && !isValidInternationalWhatsappPhoneInput(values.resellerWhatsappPhone)) {
+        setErrorMessage(getInternationalWhatsappPhoneError());
+        return;
+      }
+    }
+
+    if (values.kind === "reseller" && values.futureOwnerWhatsappPhone && !isValidInternationalWhatsappPhoneInput(values.futureOwnerWhatsappPhone)) {
       setErrorMessage(getInternationalWhatsappPhoneError());
       return;
     }
@@ -95,10 +135,44 @@ export function CreateStoreWizard() {
     setIsSaving(true);
 
     try {
-      const store = await createSupabaseStore({
-        ...values,
-        whatsappPhone: normalizeWhatsappPhone(values.whatsappPhone),
-      });
+      const reseller = {
+        firstName: values.resellerFirstName,
+        lastName: values.resellerLastName,
+        country: values.resellerCountry,
+        city: values.resellerCity,
+        whatsappPhone: normalizeWhatsappPhone(values.resellerWhatsappPhone),
+      };
+      const futureOwner = {
+        firstName: values.futureOwnerFirstName,
+        lastName: values.futureOwnerLastName,
+        country: values.futureOwnerCountry,
+        city: values.futureOwnerCity,
+        whatsappPhone: normalizeWhatsappPhone(values.futureOwnerWhatsappPhone),
+      };
+      const futureOwnerName = getContactDisplayName(futureOwner);
+      const resellerName = getContactDisplayName(reseller);
+      const store = await createSupabaseStore(values.kind === "reseller"
+        ? {
+            kind: "reseller",
+            name: values.name,
+            category: values.category,
+            ownerName: futureOwnerName || resellerName,
+            city: futureOwner.city || reseller.city,
+            country: futureOwner.country || reseller.country,
+            currency: values.currency,
+            whatsappPhone: futureOwner.whatsappPhone || reseller.whatsappPhone,
+            tagline: values.tagline,
+            description: values.description,
+            logoUrl: values.logoUrl,
+            bannerUrl: values.bannerUrl,
+            reseller,
+            futureOwner,
+          }
+        : {
+            ...values,
+            kind: "personal",
+            whatsappPhone: normalizeWhatsappPhone(values.whatsappPhone),
+          });
       setCreatedStore(store);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : copy.saveError);
@@ -116,15 +190,16 @@ export function CreateStoreWizard() {
           <p className="text-sm font-black uppercase tracking-wide text-green-600 dark:text-green-300">{copy.successKicker}</p>
           <h1 className="mt-2 text-3xl font-black text-gray-950 dark:text-white">{copy.successTitle}</h1>
           <p className="mt-3 break-words text-base leading-7 text-gray-600 dark:text-gray-300">
-            {copy.successText} <span className="font-black text-gray-950 dark:text-white">{storeUrl}</span>
+            {createdStore.kind === "reseller" ? copy.resellerSuccessText : copy.successText}{" "}
+            {createdStore.kind === "reseller" ? null : <span className="font-black text-gray-950 dark:text-white">{storeUrl}</span>}
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
-            <Link
+            {createdStore.kind === "reseller" ? null : <Link
               href={`/store/${createdStore.slug}`}
               className="inline-flex min-h-11 items-center justify-center rounded-md bg-orange-500 px-5 text-sm font-black text-white transition hover:bg-orange-600"
             >
               {copy.openStore}
-            </Link>
+            </Link>}
             <Link
               href="/dashboard"
               className="inline-flex min-h-11 items-center justify-center rounded-md border border-gray-200 px-5 text-sm font-black text-gray-900 transition hover:border-orange-200 hover:text-orange-600 dark:border-white/10 dark:text-gray-100"
@@ -153,7 +228,7 @@ export function CreateStoreWizard() {
     );
   }
 
-  if (!isAuthenticated) {
+  if (values.kind === "personal" && !isAuthenticated) {
     return (
       <section className="mx-auto grid max-w-4xl gap-5 px-4 py-10">
         <div className="rounded-lg border border-orange-100 bg-white p-5 shadow-sm dark:border-orange-400/20 dark:bg-gray-900">
@@ -179,7 +254,28 @@ export function CreateStoreWizard() {
         <p className="max-w-2xl text-base leading-7 text-gray-600 dark:text-gray-300">{copy.description}</p>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-3">
+      {!values.kind ? (
+        <div className="grid gap-3 md:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => updateValue("kind", "personal")}
+            className="rounded-lg border border-gray-200 bg-white p-5 text-left shadow-sm transition hover:border-orange-200 dark:border-white/10 dark:bg-gray-900"
+          >
+            <span className="text-lg font-black text-gray-950 dark:text-white">{copy.personalStore}</span>
+            <span className="mt-2 block text-sm font-semibold leading-6 text-gray-500 dark:text-gray-300">{copy.personalStoreText}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => updateValue("kind", "reseller")}
+            className="rounded-lg border border-gray-200 bg-white p-5 text-left shadow-sm transition hover:border-orange-200 dark:border-white/10 dark:bg-gray-900"
+          >
+            <span className="text-lg font-black text-gray-950 dark:text-white">{copy.resellerStore}</span>
+            <span className="mt-2 block text-sm font-semibold leading-6 text-gray-500 dark:text-gray-300">{copy.resellerStoreText}</span>
+          </button>
+        </div>
+      ) : null}
+
+      {values.kind ? <div className="grid gap-3 md:grid-cols-3">
         {[copy.stepIdentity, copy.stepBrand, copy.stepLaunch].map((label, index) => {
           const itemStep = index + 1;
           const isActive = step === itemStep;
@@ -199,24 +295,36 @@ export function CreateStoreWizard() {
             </div>
           );
         })}
-      </div>
+      </div> : null}
 
-      <form onSubmit={handleSubmit} className="grid gap-5 rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-900 sm:p-6">
+      {values.kind ? <form onSubmit={handleSubmit} className="grid gap-5 rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-900 sm:p-6">
         {step === 1 ? (
           <div className="grid gap-4 md:grid-cols-2">
-            <TextField label={copy.storeName} value={values.name} onChange={(value) => updateValue("name", value)} required placeholder={copy.storeNamePlaceholder} />
-            <TextField label={copy.ownerName} value={values.ownerName} onChange={(value) => updateValue("ownerName", value)} required placeholder={copy.ownerNamePlaceholder} />
+            {values.kind === "reseller" ? (
+              <>
+                <TextField label={copy.resellerLastName} value={values.resellerLastName} onChange={(value) => updateValue("resellerLastName", value)} required />
+                <TextField label={copy.resellerFirstName} value={values.resellerFirstName} onChange={(value) => updateValue("resellerFirstName", value)} required />
+                <SelectField label={copy.resellerCountry} value={values.resellerCountry} onChange={(value) => updateValue("resellerCountry", value)} options={countryOptions} required placeholder={copy.selectCountry} />
+                <TextField label={copy.resellerCity} value={values.resellerCity} onChange={(value) => updateValue("resellerCity", value)} required />
+                <TextField label={copy.resellerWhatsappPhone} value={values.resellerWhatsappPhone} onChange={(value) => updateValue("resellerWhatsappPhone", value)} required placeholder={copy.whatsappPlaceholder} />
+              </>
+            ) : (
+              <>
+                <TextField label={copy.ownerName} value={values.ownerName} onChange={(value) => updateValue("ownerName", value)} required />
+                <TextField label={copy.city} value={values.city} onChange={(value) => updateValue("city", value)} required />
+                <SelectField label={copy.country} value={values.country} onChange={(value) => updateValue("country", value)} options={countryOptions} required placeholder={copy.selectCountry} />
+                <TextField label={copy.whatsappPhone} value={values.whatsappPhone} onChange={(value) => updateValue("whatsappPhone", value)} required placeholder={copy.whatsappPlaceholder} />
+              </>
+            )}
+            <TextField label={copy.storeName} value={values.name} onChange={(value) => updateValue("name", value)} required />
             <SelectField label={copy.category} value={values.category} onChange={(value) => updateValue("category", value)} options={["General", "Fashion", "Beauty", "Shoes", "Electronics", "Home", "Food", "Other"]} />
             <SelectField label={copy.currency} value={values.currency} onChange={(value) => updateValue("currency", value)} options={["XOF", "USD", "EUR", "GBP", "CAD"]} />
-            <TextField label={copy.city} value={values.city} onChange={(value) => updateValue("city", value)} required placeholder={copy.cityPlaceholder} />
-            <SelectField label={copy.country} value={values.country} onChange={(value) => updateValue("country", value)} options={["Benin", "Togo", "Senegal", "Cote d'Ivoire", "Burkina Faso", "Mali", "Niger", "Guinea-Bissau", "France", "United States", "Canada", "United Kingdom"]} />
-            <TextField label={copy.whatsappPhone} value={values.whatsappPhone} onChange={(value) => updateValue("whatsappPhone", value)} required placeholder="+229 01 49 34 12 19" />
           </div>
         ) : null}
 
         {step === 2 ? (
           <div className="grid gap-4">
-            <TextField label={copy.tagline} value={values.tagline} onChange={(value) => updateValue("tagline", value)} placeholder="Premium essentials for modern shoppers" />
+            <TextField label={copy.tagline} value={values.tagline} onChange={(value) => updateValue("tagline", value)} />
             <label className="grid gap-2">
               <span className="text-sm font-black text-gray-950 dark:text-white">{copy.descriptionLabel}</span>
               <textarea
@@ -231,6 +339,16 @@ export function CreateStoreWizard() {
               <TextField label={copy.logoUrl} value={values.logoUrl} onChange={(value) => updateValue("logoUrl", value)} placeholder="https://..." />
               <TextField label={copy.bannerUrl} value={values.bannerUrl} onChange={(value) => updateValue("bannerUrl", value)} placeholder="https://..." />
             </div>
+            {values.kind === "reseller" ? (
+              <div className="grid gap-4 rounded-lg border border-gray-100 bg-gray-50 p-4 dark:border-white/10 dark:bg-white/5 md:grid-cols-2">
+                <p className="md:col-span-2 text-sm font-black text-gray-950 dark:text-white">{copy.futureOwnerTitle}</p>
+                <TextField label={copy.futureOwnerLastName} value={values.futureOwnerLastName} onChange={(value) => updateValue("futureOwnerLastName", value)} />
+                <TextField label={copy.futureOwnerFirstName} value={values.futureOwnerFirstName} onChange={(value) => updateValue("futureOwnerFirstName", value)} />
+                <SelectField label={copy.futureOwnerCountry} value={values.futureOwnerCountry} onChange={(value) => updateValue("futureOwnerCountry", value)} options={countryOptions} placeholder={copy.notProvided} />
+                <TextField label={copy.futureOwnerCity} value={values.futureOwnerCity} onChange={(value) => updateValue("futureOwnerCity", value)} />
+                <TextField label={copy.futureOwnerWhatsappPhone} value={values.futureOwnerWhatsappPhone} onChange={(value) => updateValue("futureOwnerWhatsappPhone", value)} placeholder={copy.whatsappPlaceholder} />
+              </div>
+            ) : null}
           </div>
         ) : null}
 
@@ -242,9 +360,9 @@ export function CreateStoreWizard() {
               <p className="mt-2 break-words text-sm leading-6 text-gray-600 dark:text-gray-300">{values.tagline || copy.defaultTagline}</p>
               <div className="mt-4 grid gap-2 text-sm font-bold text-gray-600 dark:text-gray-300">
                 <p>{copy.publicUrl}: <span className="text-gray-950 dark:text-white">{getStorePublicUrl(slug)}</span></p>
-                <p>{copy.location}: <span className="text-gray-950 dark:text-white">{values.city}, {values.country}</span></p>
+                <p>{copy.location}: <span className="text-gray-950 dark:text-white">{values.kind === "reseller" ? `${values.resellerCity}, ${values.resellerCountry}` : `${values.city}, ${values.country}`}</span></p>
                 <p>{copy.currency}: <span className="text-gray-950 dark:text-white">{values.currency}</span></p>
-                <p>{copy.whatsappPhone}: <span className="text-gray-950 dark:text-white">{values.whatsappPhone}</span></p>
+                <p>{copy.whatsappPhone}: <span className="text-gray-950 dark:text-white">{values.kind === "reseller" ? values.resellerWhatsappPhone : values.whatsappPhone}</span></p>
               </div>
             </div>
           </div>
@@ -273,7 +391,7 @@ export function CreateStoreWizard() {
             {isSaving ? copy.saving : step === 3 ? copy.create : copy.next}
           </button>
         </div>
-      </form>
+      </form> : null}
     </section>
   );
 }
@@ -313,11 +431,15 @@ function SelectField({
   value,
   onChange,
   options,
+  required,
+  placeholder,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   options: string[];
+  required?: boolean;
+  placeholder?: string;
 }) {
   return (
     <label className="grid gap-2">
@@ -325,8 +447,10 @@ function SelectField({
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        required={required}
         className="min-h-11 rounded-md border border-gray-200 bg-white px-4 text-sm font-bold text-gray-950 outline-none transition focus:border-orange-300 focus:ring-4 focus:ring-orange-100 dark:border-white/10 dark:bg-gray-950 dark:text-white"
       >
+        {placeholder ? <option value="">{placeholder}</option> : null}
         {options.map((option) => (
           <option key={option} value={option}>{option}</option>
         ))}
@@ -341,20 +465,35 @@ function getCreateStoreCopy(language: string) {
       kicker: "Creation boutique",
       title: "Creez votre boutique Shopfy",
       description: "Suivez les etapes, obtenez votre lien public, puis ajoutez vos produits ou importez ceux des fournisseurs.",
+      personalStore: "Boutique personnelle",
+      personalStoreText: "Creez une boutique rattachee a votre compte vendeur.",
+      resellerStore: "Boutique revendeur",
+      resellerStoreText: "Preparez une boutique pour un futur proprietaire, sans creer de compte maintenant.",
       step: "Etape",
       stepIdentity: "Identite",
       stepBrand: "Design",
       stepLaunch: "Validation",
       storeName: "Nom de la boutique",
-      storeNamePlaceholder: "Boutique Soleil",
       ownerName: "Nom du vendeur",
-      ownerNamePlaceholder: "Nom du proprietaire",
       category: "Categorie",
       currency: "Devise",
       city: "Ville",
-      cityPlaceholder: "Cotonou",
       country: "Pays",
       whatsappPhone: "WhatsApp de commande",
+      whatsappPlaceholder: "+ indicatif pays et numero",
+      selectCountry: "Selectionner un pays",
+      notProvided: "Non renseigne",
+      resellerLastName: "Nom du revendeur",
+      resellerFirstName: "Prenoms du revendeur",
+      resellerCountry: "Pays du revendeur",
+      resellerCity: "Ville / lieu de vie",
+      resellerWhatsappPhone: "WhatsApp du revendeur",
+      futureOwnerTitle: "Futur proprietaire (optionnel)",
+      futureOwnerLastName: "Nom du proprietaire",
+      futureOwnerFirstName: "Prenoms du proprietaire",
+      futureOwnerCountry: "Pays du proprietaire",
+      futureOwnerCity: "Ville / localisation",
+      futureOwnerWhatsappPhone: "WhatsApp du proprietaire",
       tagline: "Phrase courte",
       descriptionLabel: "Description",
       descriptionPlaceholder: "Expliquez ce que votre boutique vend...",
@@ -371,6 +510,7 @@ function getCreateStoreCopy(language: string) {
       successKicker: "Boutique creee",
       successTitle: "Votre boutique est prete",
       successText: "Votre lien public est",
+      resellerSuccessText: "La boutique revendeur est enregistree en brouillon non publie dans l'Admin Shopfy.",
       openStore: "Ouvrir ma boutique",
       dashboard: "Aller au dashboard",
       qrTitle: "Code QR de la boutique",
@@ -387,22 +527,37 @@ function getCreateStoreCopy(language: string) {
 
   return {
     kicker: "Store creation",
-    title: "Create your Shopfy store",
-    description: "Follow the steps, get your public link, then add your products or import supplier products.",
-    step: "Step",
+      title: "Create your Shopfy store",
+      description: "Follow the steps, get your public link, then add your products or import supplier products.",
+      personalStore: "Personal store",
+      personalStoreText: "Create a store attached to your seller account.",
+      resellerStore: "Reseller store",
+      resellerStoreText: "Prepare a store for a future owner without creating an account now.",
+      step: "Step",
     stepIdentity: "Identity",
     stepBrand: "Brand",
     stepLaunch: "Review",
     storeName: "Store name",
-    storeNamePlaceholder: "Soleil Store",
     ownerName: "Seller name",
-    ownerNamePlaceholder: "Owner name",
     category: "Category",
     currency: "Currency",
     city: "City",
-    cityPlaceholder: "Cotonou",
     country: "Country",
     whatsappPhone: "Order WhatsApp",
+    whatsappPlaceholder: "+ country code and number",
+    selectCountry: "Select a country",
+    notProvided: "Not provided",
+    resellerLastName: "Reseller last name",
+    resellerFirstName: "Reseller first names",
+    resellerCountry: "Reseller country",
+    resellerCity: "City / place of life",
+    resellerWhatsappPhone: "Reseller WhatsApp",
+    futureOwnerTitle: "Future owner (optional)",
+    futureOwnerLastName: "Owner last name",
+    futureOwnerFirstName: "Owner first names",
+    futureOwnerCountry: "Owner country",
+    futureOwnerCity: "City / location",
+    futureOwnerWhatsappPhone: "Owner WhatsApp",
     tagline: "Short tagline",
     descriptionLabel: "Description",
     descriptionPlaceholder: "Explain what your store sells...",
@@ -419,6 +574,7 @@ function getCreateStoreCopy(language: string) {
     successKicker: "Store created",
     successTitle: "Your store is ready",
     successText: "Your public link is",
+    resellerSuccessText: "The reseller store is saved as an unpublished draft in Shopfy Admin.",
     openStore: "Open my store",
     dashboard: "Go to dashboard",
     qrTitle: "Store QR code",

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createStoreSlug, type CreateStoreInput } from "@/lib/createdStores";
-import { createSupabaseRequestClient, createSupabaseServerClient } from "@/lib/supabaseAdmin";
+import { appendStoreMetadata, type StoreContact } from "@/lib/resellerStore";
+import { createSupabaseAdminClient, createSupabaseRequestClient } from "@/lib/supabaseAdmin";
 import { mapStoreRow, STORE_SELECT_FIELDS, type StoreRow } from "@/lib/storeRows";
 import { cleanImage, cleanText, hasUnsafeObjectKeys } from "@/lib/validation";
 import {
@@ -9,8 +10,6 @@ import {
   normalizeWhatsappPhone,
 } from "@/lib/whatsapp";
 
-const fallbackLogoUrl = "https://images.unsplash.com/photo-1521566652839-697aa473761a?auto=format&fit=crop&w=400&q=80";
-const fallbackBannerUrl = "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1400&q=80";
 
 export async function GET(request: Request) {
   try {
@@ -57,10 +56,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Invalid request payload." }, { status: 400 });
   }
 
+  const kind = body.kind === "reseller" ? "reseller" : "personal";
+  const reseller = cleanContact(body.reseller);
+  const futureOwner = cleanContact(body.futureOwner);
   const name = cleanText(body.name);
   const ownerName = cleanText(body.ownerName);
   const city = cleanText(body.city);
-  const country = cleanText(body.country, "Benin");
+  const country = cleanText(body.country);
   const currency = cleanText(body.currency, "XOF").toUpperCase();
   const whatsappPhone = normalizeWhatsappPhone(cleanText(body.whatsappPhone));
   const category = cleanText(body.category, "General");
@@ -71,6 +73,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Store name, owner, city, country, and WhatsApp are required." }, { status: 400 });
   }
 
+  if (kind === "reseller") {
+    const resellerPhone = normalizeWhatsappPhone(reseller.whatsappPhone);
+
+    if (!reseller.firstName || !reseller.lastName || !reseller.country || !reseller.city || !resellerPhone) {
+      return NextResponse.json({ message: "Reseller name, first name, city, country, and WhatsApp are required." }, { status: 400 });
+    }
+
+    if (!isValidWhatsappPhone(resellerPhone)) {
+      return NextResponse.json({ message: getInternationalWhatsappPhoneError() }, { status: 400 });
+    }
+
+    if (futureOwner.whatsappPhone && !isValidWhatsappPhone(futureOwner.whatsappPhone)) {
+      return NextResponse.json({ message: getInternationalWhatsappPhoneError() }, { status: 400 });
+    }
+
+    reseller.whatsappPhone = resellerPhone;
+    futureOwner.whatsappPhone = normalizeWhatsappPhone(futureOwner.whatsappPhone);
+  }
+
   if (!isValidWhatsappPhone(whatsappPhone)) {
     return NextResponse.json({ message: getInternationalWhatsappPhoneError() }, { status: 400 });
   }
@@ -79,14 +100,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Unsupported currency." }, { status: 400 });
   }
 
+  const baseDescription = cleanText(body.description);
+  const description = kind === "reseller"
+    ? appendStoreMetadata(baseDescription, {
+        kind: "reseller",
+        reseller,
+        futureOwner,
+      })
+    : baseDescription;
+
   const payload = {
-    owner_user_id: "",
     slug,
     name,
-    tagline: cleanText(body.tagline) || `Boutique ${category.toLowerCase()} creee avec Shopfy.`,
-    description: cleanText(body.description) || "Une boutique vendeur neutre creee sur Shopfy.",
-    logo_url: cleanImage(body.logoUrl) || fallbackLogoUrl,
-    banner_url: cleanImage(body.bannerUrl) || fallbackBannerUrl,
+    tagline: cleanText(body.tagline),
+    description,
+    logo_url: cleanImage(body.logoUrl),
+    banner_url: cleanImage(body.bannerUrl),
     owner_name: ownerName,
     city,
     country,
@@ -97,6 +126,22 @@ export async function POST(request: Request) {
   try {
     const supabase = createSupabaseRequestClient(request);
     const { data: authData, error: authError } = await supabase.auth.getUser();
+
+    if (kind === "reseller") {
+      const supabaseAdmin = createSupabaseAdminClient();
+      const { data, error } = await supabaseAdmin
+        .from("shopfy_stores")
+        .insert({ ...payload, owner_user_id: null, is_certified: false })
+        .select(STORE_SELECT_FIELDS)
+        .single();
+
+      if (error || !data) {
+        const status = error?.code === "23505" ? 409 : 500;
+        return NextResponse.json({ message: error?.message || "Reseller store creation failed." }, { status });
+      }
+
+      return NextResponse.json({ store: mapStoreRow(data as StoreRow) });
+    }
 
     if (authError || !authData.user) {
       return NextResponse.json({ message: "Connectez-vous pour creer une boutique." }, { status: 401 });
@@ -121,4 +166,14 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ message: "Missing Supabase server configuration." }, { status: 500 });
   }
+}
+
+function cleanContact(contact?: StoreContact) {
+  return {
+    firstName: cleanText(contact?.firstName),
+    lastName: cleanText(contact?.lastName),
+    country: cleanText(contact?.country),
+    city: cleanText(contact?.city),
+    whatsappPhone: normalizeWhatsappPhone(cleanText(contact?.whatsappPhone)),
+  };
 }

@@ -1,7 +1,9 @@
 import type { ShopfyStore, StoreProduct } from "@/types/storefront";
+import { splitStoreDescriptionMetadata } from "@/lib/resellerStore";
 
 export type StoreRow = {
   id: string;
+  owner_user_id?: string | null;
   slug: string;
   name: string;
   tagline: string | null;
@@ -70,19 +72,24 @@ export function mapStoreRow(row: StoreRow): ShopfyStore {
   const trialStatus = getStoreTrialStatus(row.created_at);
   const certificationExpiresAt = row.certification_expires_at || undefined;
   const isCertificationActive = Boolean(row.is_certified) && isFutureOrMissingDate(certificationExpiresAt);
+  const { description, metadata } = splitStoreDescriptionMetadata(row.description);
 
   return {
+    ownerUserId: row.owner_user_id || undefined,
+    kind: metadata.kind,
     slug: row.slug,
     name: row.name,
     tagline: row.tagline || "",
-    description: row.description || "",
+    description,
     logoUrl: row.logo_url || "",
     bannerUrl: row.banner_url || "",
     ownerName: row.owner_name || "",
     city: row.city || "",
-    country: row.country || "Benin",
+    country: row.country || "",
     currency: row.currency || "XOF",
     whatsappPhone: row.whatsapp_phone || "",
+    reseller: metadata.reseller,
+    futureOwner: metadata.futureOwner,
     isCertified: isCertificationActive,
     ...trialStatus,
     createdAt: row.created_at || undefined,

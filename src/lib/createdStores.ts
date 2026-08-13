@@ -1,7 +1,9 @@
 import type { ShopfyStore } from "@/types/storefront";
 import { normalizeWhatsappPhone } from "@/lib/whatsapp";
+import type { StoreContact, StoreKind } from "@/lib/resellerStore";
 
 export type CreateStoreInput = {
+  kind?: StoreKind;
   name: string;
   category: string;
   ownerName: string;
@@ -13,6 +15,8 @@ export type CreateStoreInput = {
   whatsappPhone: string;
   logoUrl?: string;
   bannerUrl?: string;
+  reseller?: StoreContact;
+  futureOwner?: StoreContact;
 };
 
 export function createStoreSlug(name: string) {
@@ -33,11 +37,11 @@ export function buildCreatedStore(input: CreateStoreInput): ShopfyStore {
     name: input.name.trim(),
     tagline: input.tagline.trim() || `Boutique ${input.category.toLowerCase()} creee avec Shopfy.`,
     description: input.description.trim() || "Une boutique vendeur neutre creee sur Shopfy.",
-    logoUrl: input.logoUrl?.trim() || "https://images.unsplash.com/photo-1521566652839-697aa473761a?auto=format&fit=crop&w=400&q=80",
-    bannerUrl: input.bannerUrl?.trim() || "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1400&q=80",
+    logoUrl: input.logoUrl?.trim() || "",
+    bannerUrl: input.bannerUrl?.trim() || "",
     ownerName: input.ownerName.trim(),
     city: input.city.trim(),
-    country: input.country.trim() || "Benin",
+    country: input.country.trim(),
     currency: input.currency,
     whatsappPhone: normalizeWhatsappPhone(input.whatsappPhone),
     theme: {

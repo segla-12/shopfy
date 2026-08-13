@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const authCookieName = "shopfy_session";
-const protectedPaths = ["/dashboard", "/create-store", "/sell"];
+const protectedPaths = ["/dashboard", "/sell"];
 const apiRateLimitWindowMs = 60_000;
 const apiRateLimitMax = 120;
 const abusiveRateLimitMax = 240;

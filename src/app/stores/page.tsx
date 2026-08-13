@@ -48,8 +48,12 @@ async function getPublicStores(): Promise<ShopfyStore[]> {
       return demoStores;
     }
 
-    return (data as StoreRow[]).map(mapStoreRow);
+    return (data as StoreRow[]).map(mapStoreRow).filter(isPublicStore);
   } catch {
     return demoStores;
   }
+}
+
+function isPublicStore(store: ShopfyStore) {
+  return store.kind !== "reseller" || Boolean(store.isCertified && store.ownerUserId);
 }
