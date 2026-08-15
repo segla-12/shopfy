@@ -16,8 +16,11 @@ import {
 import {
   addManualSupabaseStoreProduct,
   createManualSupabaseStoreSale,
+  deleteAdminSupabaseStoreProduct,
   deleteSupabaseStoreOrder,
   deleteSupabaseStoreProduct,
+  getAdminSupabaseStore,
+  getAdminSupabaseStoreOrders,
   getMySupabaseStoreOrders,
   getMySupabaseStores,
   updateSupabaseStore,
@@ -35,6 +38,8 @@ import { AdminWhatsappButton } from "./AdminWhatsappButton";
 type DashboardStatus = "checking" | "unauthenticated" | "missing-store" | "ready";
 
 const CERTIFICATION_PRICE_PER_MONTH = 1500;
+const DESCRIPTION_MAX_LENGTH = 500;
+const ADMIN_SECRET_STORAGE_KEY = "shopfy_admin_secret";
 const certificationDurationOptions = [1, 2, 3, 6, 12];
 
 type ManualProductValues = {
@@ -189,9 +194,10 @@ function EditTextField({
   );
 }
 
-export function SellerDashboardMvp() {
+export function SellerDashboardMvp({ adminStoreSlug = "" }: { adminStoreSlug?: string }) {
   const { language } = useLanguage();
   const copy = getDashboardCopy(language);
+  const isAdminMode = Boolean(adminStoreSlug);
   const [activeStore, setActiveStore] = useState<ShopfyStore | null>(null);
   const [isEditingStore, setIsEditingStore] = useState(false);
   const [storeEditValues, setStoreEditValues] = useState<StoreEditValues | null>(null);
@@ -240,6 +246,7 @@ export function SellerDashboardMvp() {
     () => allProducts.find((product) => product.id === manualSaleValues.productId),
     [allProducts, manualSaleValues.productId],
   );
+  const adminSecret = typeof window === "undefined" ? "" : window.sessionStorage.getItem(ADMIN_SECRET_STORAGE_KEY) || "";
   const manualSaleTotal = Math.max(
     0,
     (Number(manualSaleValues.unitPrice) || 0) * (Number(manualSaleValues.quantity) || 0)
@@ -278,7 +285,9 @@ export function SellerDashboardMvp() {
     const frameId = window.requestAnimationFrame(() => {
       async function loadDashboard() {
         try {
-          const stores = await getMySupabaseStores();
+          const stores = isAdminMode
+            ? [await getAdminSupabaseStore(adminStoreSlug, adminSecret)]
+            : await getMySupabaseStores();
           const sellerStore = stores[0];
 
           setHasSellerStore(Boolean(sellerStore));
@@ -292,7 +301,9 @@ export function SellerDashboardMvp() {
             return;
           }
 
-          setStoreOrders(await getMySupabaseStoreOrders(sellerStore.slug));
+          setStoreOrders(isAdminMode
+            ? await getAdminSupabaseStoreOrders(sellerStore.slug, adminSecret)
+            : await getMySupabaseStoreOrders(sellerStore.slug));
         } catch (error) {
           setHasSellerStore(false);
           setActiveStore(null);
@@ -306,7 +317,7 @@ export function SellerDashboardMvp() {
     });
 
     return () => window.cancelAnimationFrame(frameId);
-  }, [language]);
+  }, [adminSecret, adminStoreSlug, isAdminMode, language]);
 
   async function refreshDashboardData(storeSlug = activeStore?.slug) {
     if (!storeSlug) {
@@ -314,8 +325,8 @@ export function SellerDashboardMvp() {
     }
 
     const [stores, orders] = await Promise.all([
-      getMySupabaseStores(),
-      getMySupabaseStoreOrders(storeSlug),
+      isAdminMode ? Promise.resolve([await getAdminSupabaseStore(storeSlug, adminSecret)]) : getMySupabaseStores(),
+      isAdminMode ? getAdminSupabaseStoreOrders(storeSlug, adminSecret) : getMySupabaseStoreOrders(storeSlug),
     ]);
     setActiveStore(stores.find((item) => item.slug === storeSlug) || activeStore);
     setStoreOrders(orders);
@@ -339,7 +350,9 @@ export function SellerDashboardMvp() {
   }
 
   function updateStoreEditValue(field: keyof StoreEditValues, value: string) {
-    setStoreEditValues((currentValues) => currentValues ? { ...currentValues, [field]: value } : currentValues);
+    setStoreEditValues((currentValues) => currentValues
+      ? { ...currentValues, [field]: field === "description" ? value.slice(0, DESCRIPTION_MAX_LENGTH) : value }
+      : currentValues);
   }
 
   async function updateStoreEditImage(field: "logoUrl" | "bannerUrl", file: File | undefined) {
@@ -353,7 +366,7 @@ export function SellerDashboardMvp() {
     }
 
     try {
-      const imageUrl = await uploadImageFile(file);
+      const imageUrl = await uploadImageFile(file, isAdminMode ? adminSecret : "");
       updateStoreEditValue(field, imageUrl);
     } catch {
       setErrorMessage(copy.imageRequired);
@@ -384,7 +397,7 @@ export function SellerDashboardMvp() {
       const updatedStore = await updateSupabaseStore(activeStore.slug, {
         ...storeEditValues,
         whatsappPhone,
-      });
+      }, isAdminMode ? adminSecret : "");
 
       setActiveStore(updatedStore);
       setStoreEditValues(getStoreEditValues(updatedStore));
@@ -413,7 +426,9 @@ export function SellerDashboardMvp() {
   }
 
   function updateProductEditValue(field: keyof ProductEditValues, value: string) {
-    setProductEditValues((currentValues) => currentValues ? { ...currentValues, [field]: value } : currentValues);
+    setProductEditValues((currentValues) => currentValues
+      ? { ...currentValues, [field]: field === "description" ? value.slice(0, DESCRIPTION_MAX_LENGTH) : value }
+      : currentValues);
   }
 
   async function updateProductEditImage(file: File | undefined) {
@@ -427,7 +442,7 @@ export function SellerDashboardMvp() {
     }
 
     try {
-      const imageUrl = await uploadImageFile(file);
+      const imageUrl = await uploadImageFile(file, isAdminMode ? adminSecret : "");
       updateProductEditValue("image", imageUrl);
     } catch {
       setErrorMessage(copy.imageRequired);
@@ -457,14 +472,14 @@ export function SellerDashboardMvp() {
     try {
       const savedProduct = await updateSupabaseStoreProduct(activeStore.slug, editingProductId, {
         title: productEditValues.title.trim(),
-        description: productEditValues.description.trim(),
+        description: productEditValues.description.trim().slice(0, DESCRIPTION_MAX_LENGTH),
         category: productEditValues.category.trim() || "General",
         image: productEditValues.image,
         price,
         compareAtPrice: Number.isFinite(compareAtPrice) && compareAtPrice > 0 ? compareAtPrice : undefined,
         currency: activeStore.currency,
         inventoryQuantity: Number.isFinite(inventoryQuantity) ? Math.max(0, Math.trunc(inventoryQuantity)) : 0,
-      });
+      }, isAdminMode ? adminSecret : "");
 
       setActiveStore({
         ...activeStore,
@@ -516,7 +531,10 @@ export function SellerDashboardMvp() {
   }
 
   function updateManualProductValue(field: keyof ManualProductValues, value: string) {
-    setManualProductValues((currentValues) => ({ ...currentValues, [field]: value }));
+    setManualProductValues((currentValues) => ({
+      ...currentValues,
+      [field]: field === "description" ? value.slice(0, DESCRIPTION_MAX_LENGTH) : value,
+    }));
   }
 
   function openManualSaleForm() {
@@ -606,7 +624,7 @@ export function SellerDashboardMvp() {
         slug,
         title: manualProductValues.title.trim(),
       });
-      const imageUrl = await uploadImageFile(manualProductFile);
+      const imageUrl = await uploadImageFile(manualProductFile, isAdminMode ? adminSecret : "");
       console.info("[store-product-save] Product image uploaded.", {
         storeSlug: activeStore.slug,
         slug,
@@ -615,7 +633,7 @@ export function SellerDashboardMvp() {
         id: `manual-${Date.now()}`,
         slug,
         title: manualProductValues.title.trim(),
-        description: manualProductValues.description.trim(),
+        description: manualProductValues.description.trim().slice(0, DESCRIPTION_MAX_LENGTH),
         category: "General",
         image: imageUrl,
         price,
@@ -623,7 +641,7 @@ export function SellerDashboardMvp() {
         currency: activeStore.currency,
         inventoryQuantity: Number.isFinite(inventoryQuantity) ? Math.max(0, Math.trunc(inventoryQuantity)) : 0,
       };
-      const savedProduct = await addManualSupabaseStoreProduct(activeStore.slug, product);
+      const savedProduct = await addManualSupabaseStoreProduct(activeStore.slug, product, isAdminMode ? adminSecret : "");
       console.info("[store-product-save] Product insert returned from API.", {
         storeSlug: activeStore.slug,
         productId: savedProduct.id,
@@ -695,7 +713,7 @@ export function SellerDashboardMvp() {
         customerPhone: manualSaleValues.customerPhone,
         comment: manualSaleValues.comment,
         saleDate: manualSaleValues.saleDate,
-      });
+      }, isAdminMode ? adminSecret : "");
 
       setStoreOrders((currentOrders) => [sale, ...currentOrders.filter((order) => order.id !== sale.id)]);
       await refreshDashboardData(activeStore.slug);
@@ -718,8 +736,14 @@ export function SellerDashboardMvp() {
     }
 
     try {
-      await deleteSupabaseStoreProduct(activeStore.slug, productId);
-      const stores = await getMySupabaseStores();
+      if (isAdminMode) {
+        await deleteAdminSupabaseStoreProduct(activeStore.slug, productId, adminSecret);
+      } else {
+        await deleteSupabaseStoreProduct(activeStore.slug, productId);
+      }
+      const stores = isAdminMode
+        ? [await getAdminSupabaseStore(activeStore.slug, adminSecret)]
+        : await getMySupabaseStores();
       setActiveStore(stores.find((item) => item.slug === activeStore.slug) || activeStore);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : copy.removeError);
@@ -749,7 +773,7 @@ export function SellerDashboardMvp() {
     setUpdatingOrderId(orderId);
 
     try {
-      await deleteSupabaseStoreOrder(activeStore.slug, orderId);
+      await deleteSupabaseStoreOrder(activeStore.slug, orderId, isAdminMode ? adminSecret : "");
       setStoreOrders((currentOrders) => currentOrders.filter((order) => order.id !== orderId));
       await refreshDashboardData(activeStore.slug);
       setOrderMessage(copy.orderDeleted);
@@ -776,7 +800,7 @@ export function SellerDashboardMvp() {
     setUpdatingOrderId(orderId);
 
     try {
-      const updatedOrder = await updateSupabaseStoreOrderStatus(activeStore.slug, orderId, status);
+      const updatedOrder = await updateSupabaseStoreOrderStatus(activeStore.slug, orderId, status, isAdminMode ? adminSecret : "");
       setStoreOrders((currentOrders) => (
         currentOrders.map((order) => order.id === updatedOrder.id ? updatedOrder : order)
       ));
@@ -844,6 +868,14 @@ export function SellerDashboardMvp() {
         <Toast message={toastMessage} type={toastType} onClose={() => setToastMessage("")} />
       )}
     <section className="mx-auto grid max-w-6xl gap-6 px-4 py-10">
+      {isAdminMode ? (
+        <div className="rounded-lg border border-orange-200 bg-orange-50 p-4 text-sm font-black text-orange-900 dark:border-orange-400/30 dark:bg-orange-400/10 dark:text-orange-100">
+          {copy.adminModeNotice.replace("{store}", activeStore.name)}
+          <Link href="/admin" className="mt-3 inline-flex min-h-10 items-center justify-center rounded-md bg-gray-950 px-4 text-sm font-black text-white transition hover:bg-orange-500 dark:bg-white dark:text-gray-950">
+            {copy.backToAdmin}
+          </Link>
+        </div>
+      ) : null}
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-sm font-black uppercase tracking-wide text-orange-500">{copy.kicker}</p>
@@ -946,9 +978,13 @@ export function SellerDashboardMvp() {
             <textarea
               value={storeEditValues.description}
               onChange={(event) => updateStoreEditValue("description", event.target.value)}
+              maxLength={DESCRIPTION_MAX_LENGTH}
               rows={4}
               className="rounded-md border border-gray-200 bg-white px-4 py-3 text-sm text-gray-950 outline-none transition focus:border-orange-300 focus:ring-4 focus:ring-orange-100 dark:border-white/10 dark:bg-gray-950 dark:text-white"
             />
+            <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
+              {storeEditValues.description.length} / {DESCRIPTION_MAX_LENGTH} {copy.characters}
+            </span>
           </label>
         </form>
       ) : null}
@@ -1009,9 +1045,13 @@ export function SellerDashboardMvp() {
               <textarea
                 value={manualProductValues.description}
                 onChange={(event) => updateManualProductValue("description", event.target.value)}
+                maxLength={DESCRIPTION_MAX_LENGTH}
                 rows={3}
                 className="rounded-md border border-gray-200 bg-white px-4 py-3 text-sm text-gray-950 outline-none transition focus:border-orange-300 focus:ring-4 focus:ring-orange-100 dark:border-white/10 dark:bg-gray-950 dark:text-white"
               />
+              <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
+                {manualProductValues.description.length} / {DESCRIPTION_MAX_LENGTH} {copy.characters}
+              </span>
             </label>
             <div className="flex flex-wrap gap-2">
               <button
@@ -1338,9 +1378,13 @@ export function SellerDashboardMvp() {
                         <textarea
                           value={productEditValues.description}
                           onChange={(event) => updateProductEditValue("description", event.target.value)}
+                          maxLength={DESCRIPTION_MAX_LENGTH}
                           rows={3}
                           className="rounded-md border border-gray-200 bg-white px-4 py-3 text-sm text-gray-950 outline-none transition focus:border-orange-300 focus:ring-4 focus:ring-orange-100 dark:border-white/10 dark:bg-gray-950 dark:text-white"
                         />
+                        <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
+                          {productEditValues.description.length} / {DESCRIPTION_MAX_LENGTH} {copy.characters}
+                        </span>
                       </label>
                       <label className="grid gap-2">
                         <span className="text-sm font-black text-gray-950 dark:text-white">{copy.manualProductPreviewAlt}</span>
@@ -1809,6 +1853,8 @@ function getDashboardCopy(language: string) {
     return {
       kicker: "Dashboard vendeur",
       title: "Gestion de boutique",
+      adminModeNotice: "MODE ADMINISTRATEUR - Vous consultez le dashboard de {store}",
+      backToAdmin: "Retour a l'administration",
       viewStore: "Voir la boutique",
       createStore: "Creer une boutique",
       addManualProduct: "Ajouter des produits",
@@ -1968,12 +2014,15 @@ function getDashboardCopy(language: string) {
       primaryColor: "Couleur primaire",
       accentColor: "Couleur d'accent",
       storeDescription: "Description",
+      characters: "caracteres",
     };
   }
 
   return {
     kicker: "Seller dashboard",
     title: "Store management",
+    adminModeNotice: "ADMINISTRATOR MODE - You are viewing {store}'s dashboard",
+    backToAdmin: "Back to admin",
     viewStore: "View store",
     createStore: "Create a store",
     addManualProduct: "Add products",
@@ -2133,5 +2182,6 @@ function getDashboardCopy(language: string) {
     primaryColor: "Primary Color",
     accentColor: "Accent Color",
     storeDescription: "Description",
+    characters: "characters",
   };
 }

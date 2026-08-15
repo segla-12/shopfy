@@ -3,8 +3,6 @@
 import Image from "next/image";
 import { useState } from "react";
 
-const fallbackProductImage = "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=900&q=80";
-
 type StoreProductImageProps = {
   src: string;
   alt: string;
@@ -14,8 +12,20 @@ type StoreProductImageProps = {
 
 export function StoreProductImage({ src, alt, sizes, className }: StoreProductImageProps) {
   const [hasError, setHasError] = useState(false);
-  const imageSrc = !hasError && src ? src : fallbackProductImage;
+  const imageSrc = !hasError && src ? src : "";
   const isLocalImage = imageSrc.startsWith("data:");
+
+  if (!imageSrc) {
+    return (
+      <div
+        role="img"
+        aria-label={alt}
+        className="flex h-full w-full items-center justify-center bg-gray-100 text-[10px] font-black uppercase text-gray-400 dark:bg-gray-950 dark:text-gray-600"
+      >
+        Shopfy
+      </div>
+    );
+  }
 
   return (
     <Image

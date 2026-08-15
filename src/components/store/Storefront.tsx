@@ -184,7 +184,7 @@ function StorefrontContent({ store }: StorefrontProps) {
               <div className="grid max-w-3xl gap-4 p-5 sm:p-8">
                 <div className="flex items-center gap-3">
                   <div className="relative h-16 w-16 overflow-hidden rounded-lg border border-white/40 bg-white">
-                    <Image src={store.logoUrl} alt={`${store.name} logo`} fill sizes="64px" className="object-cover" />
+                    <Image src={store.logoUrl} alt={`${store.name} logo`} fill sizes="64px" className="object-contain p-1" />
                   </div>
                   <div>
                     <p className="text-xs font-black uppercase tracking-wide text-orange-200">{store.city}, {store.country}</p>

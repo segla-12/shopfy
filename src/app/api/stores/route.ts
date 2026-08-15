@@ -10,6 +10,7 @@ import {
   normalizeWhatsappPhone,
 } from "@/lib/whatsapp";
 
+const DESCRIPTION_MAX_LENGTH = 500;
 
 export async function GET(request: Request) {
   try {
@@ -100,7 +101,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Unsupported currency." }, { status: 400 });
   }
 
-  const baseDescription = cleanText(body.description);
+  const baseDescription = cleanText(body.description).slice(0, DESCRIPTION_MAX_LENGTH);
   const description = kind === "reseller"
     ? appendStoreMetadata(baseDescription, {
         kind: "reseller",

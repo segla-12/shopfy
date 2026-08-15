@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isValidAdminSecret } from "@/lib/adminAuth";
 import { splitStoreDescriptionMetadata } from "@/lib/resellerStore";
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import { cleanText } from "@/lib/validation";
@@ -16,9 +17,8 @@ const CERTIFICATION_PRICE_PER_MONTH = 1500;
 
 export async function POST(request: Request) {
   const body = await request.json() as CertificationRequest;
-  const adminSecret = process.env.ADMIN_SECRET;
 
-  if (!adminSecret || body.adminSecret !== adminSecret) {
+  if (!isValidAdminSecret(body.adminSecret)) {
     return NextResponse.json(
       { success: false, message: "Admin access denied." },
       { status: 401 },

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getAdminSecretFromRequest, isValidAdminSecret } from "@/lib/adminAuth";
 import { createSupabaseRequestClient } from "@/lib/supabaseAdmin";
 import {
   doesStoreRequireCertification,
@@ -20,6 +21,8 @@ type ImportProductRequest = {
   product?: StoreProduct;
 };
 
+const DESCRIPTION_MAX_LENGTH = 500;
+
 export async function POST(request: Request, context: StoreProductsRouteContext) {
   const { slug } = await context.params;
   const cleanSlug = cleanText(slug);
@@ -37,10 +40,11 @@ export async function POST(request: Request, context: StoreProductsRouteContext)
 
   try {
     console.info("[api-store-products] Product save request received.", { storeSlug: cleanSlug });
+    const hasAdminAccess = isValidAdminSecret(getAdminSecretFromRequest(request));
     const supabase = createSupabaseRequestClient(request);
     const { data: authData, error: authError } = await supabase.auth.getUser();
 
-    if (authError || !authData.user) {
+    if (!hasAdminAccess && (authError || !authData.user)) {
       console.error("[api-store-products] Authentication failed.", authError);
       return NextResponse.json({ message: "Connectez-vous pour importer des produits." }, { status: 401 });
     }
@@ -56,11 +60,11 @@ export async function POST(request: Request, context: StoreProductsRouteContext)
       return NextResponse.json({ message: "Store not found. Create the store in Supabase first." }, { status: 404 });
     }
 
-    if (storeData.owner_user_id !== authData.user.id) {
+    if (!hasAdminAccess && storeData.owner_user_id !== authData.user?.id) {
       console.error("[api-store-products] Store ownership check failed.", {
         storeSlug: cleanSlug,
         ownerUserId: storeData.owner_user_id,
-        authUserId: authData.user.id,
+        authUserId: authData.user?.id,
       });
       return NextResponse.json({ message: "Vous ne pouvez modifier que votre propre boutique." }, { status: 403 });
     }
@@ -78,7 +82,7 @@ export async function POST(request: Request, context: StoreProductsRouteContext)
       store_id: storeData.id,
       slug: cleanText(product.slug),
       title: cleanText(product.title),
-      description: cleanText(product.description),
+      description: cleanText(product.description).slice(0, DESCRIPTION_MAX_LENGTH),
       category: cleanText(product.category, "General"),
       image_url: imageUrl,
       price: cleanPrice(product.price),

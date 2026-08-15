@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getAdminSecretFromRequest, isValidAdminSecret } from "@/lib/adminAuth";
 import { mapOrderRow, ORDER_SELECT_FIELDS, type OrderRow } from "@/lib/orderRows";
 import { createSupabaseAdminClient, createSupabaseRequestClient } from "@/lib/supabaseAdmin";
 import { cleanText, hasUnsafeObjectKeys } from "@/lib/validation";
@@ -46,10 +47,11 @@ export async function PATCH(request: Request, context: StoreOrderRouteContext) {
   }
 
   try {
+    const hasAdminAccess = isValidAdminSecret(getAdminSecretFromRequest(request));
     const requestSupabase = createSupabaseRequestClient(request);
     const { data: authData, error: authError } = await requestSupabase.auth.getUser();
 
-    if (authError || !authData.user) {
+    if (!hasAdminAccess && (authError || !authData.user)) {
       return NextResponse.json({ message: "Authentication required." }, { status: 401 });
     }
 
@@ -64,7 +66,7 @@ export async function PATCH(request: Request, context: StoreOrderRouteContext) {
       return NextResponse.json({ message: "Store not found." }, { status: 404 });
     }
 
-    if (storeData.owner_user_id !== authData.user.id) {
+    if (!hasAdminAccess && storeData.owner_user_id !== authData.user?.id) {
       return NextResponse.json({ message: "Vous ne pouvez modifier que vos propres commandes." }, { status: 403 });
     }
 
@@ -103,7 +105,7 @@ export async function PATCH(request: Request, context: StoreOrderRouteContext) {
         status: nextStatus,
         confirmed_at: nextStatus === "confirmed" ? new Date().toISOString() : null,
         cancelled_at: nextStatus === "cancelled" ? new Date().toISOString() : null,
-        action_user_id: authData.user.id,
+        ...(authData.user ? { action_user_id: authData.user.id } : {}),
         updated_at: new Date().toISOString(),
       })
       .eq("id", cleanOrderId)
@@ -136,10 +138,11 @@ export async function DELETE(request: Request, context: StoreOrderRouteContext) 
   }
 
   try {
+    const hasAdminAccess = isValidAdminSecret(getAdminSecretFromRequest(request));
     const requestSupabase = createSupabaseRequestClient(request);
     const { data: authData, error: authError } = await requestSupabase.auth.getUser();
 
-    if (authError || !authData.user) {
+    if (!hasAdminAccess && (authError || !authData.user)) {
       return NextResponse.json({ message: "Authentication required." }, { status: 401 });
     }
 
@@ -154,7 +157,7 @@ export async function DELETE(request: Request, context: StoreOrderRouteContext) 
       return NextResponse.json({ message: "Store not found." }, { status: 404 });
     }
 
-    if (storeData.owner_user_id !== authData.user.id) {
+    if (!hasAdminAccess && storeData.owner_user_id !== authData.user?.id) {
       return NextResponse.json({ message: "Vous ne pouvez modifier que vos propres commandes." }, { status: 403 });
     }
 

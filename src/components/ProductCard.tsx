@@ -18,6 +18,7 @@ type ProductCardProps = {
 
 export function ProductCard({ product, action = "supplier" }: ProductCardProps) {
   const { language, t } = useLanguage();
+  const hasProductImage = Boolean(product.image);
   const isLocalImage = product.image.startsWith("data:");
   const supplierHref = getSellerProfileHref(product);
   const copy = getProductCardCopy(language);
@@ -26,14 +27,24 @@ export function ProductCard({ product, action = "supplier" }: ProductCardProps) 
   const orderHref = buildWhatsAppLink(product.sellerPhone, t("whatsapp.message"));
   const imageContent = (
     <>
-      <Image
-        src={product.image}
-        alt={product.title}
-        fill
-        unoptimized={isLocalImage}
-        sizes="(min-width: 640px) 192px, 132px"
-        className="object-contain object-center p-3"
-      />
+      {hasProductImage ? (
+        <Image
+          src={product.image}
+          alt={product.title}
+          fill
+          unoptimized={isLocalImage}
+          sizes="(min-width: 640px) 192px, 132px"
+          className="object-contain object-center p-3"
+        />
+      ) : (
+        <div
+          role="img"
+          aria-label={product.title}
+          className="flex h-full w-full items-center justify-center bg-gray-100 text-[10px] font-black uppercase text-gray-400 dark:bg-gray-950 dark:text-gray-600"
+        >
+          Shopfy
+        </div>
+      )}
       {product.isNew ? (
         <span className="absolute left-2 top-2 rounded-md bg-orange-500 px-2 py-1 text-[10px] font-black uppercase text-white shadow-sm sm:left-3 sm:top-3">
           {t("product.new")}

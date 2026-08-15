@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getAdminSecretFromRequest, isValidAdminSecret } from "@/lib/adminAuth";
 import { createSupabaseAdminClient, createSupabaseRequestClient } from "@/lib/supabaseAdmin";
 
 const DEFAULT_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || "uploads";
@@ -32,8 +33,9 @@ export async function POST(request: Request) {
   try {
     const requestSupabase = createSupabaseRequestClient(request);
     const { data: authData, error: authError } = await requestSupabase.auth.getUser();
+    const hasAdminAccess = isValidAdminSecret(getAdminSecretFromRequest(request));
 
-    if (authError || !authData.user) {
+    if (!hasAdminAccess && (authError || !authData.user)) {
       return NextResponse.json({ message: "Authentication required." }, { status: 401 });
     }
 

@@ -1,10 +1,11 @@
 import { supabase } from "@/lib/supabase";
+import { ADMIN_SECRET_HEADER } from "@/lib/adminAuth";
 
-export async function uploadImageFile(file: File): Promise<string> {
+export async function uploadImageFile(file: File, adminSecret = ""): Promise<string> {
   const { data } = await supabase.auth.getSession();
   const accessToken = data.session?.access_token;
 
-  if (!accessToken) {
+  if (!accessToken && !adminSecret) {
     throw new Error("Connectez-vous avec votre compte vendeur pour ajouter une image.");
   }
 
@@ -14,7 +15,8 @@ export async function uploadImageFile(file: File): Promise<string> {
   const response = await fetch("/api/uploads/images", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${accessToken}`,
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      ...(adminSecret ? { [ADMIN_SECRET_HEADER]: adminSecret } : {}),
     },
     body: formData,
   });

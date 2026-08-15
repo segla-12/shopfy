@@ -12,7 +12,7 @@ import { getContactDisplayName } from "@/lib/resellerStore";
 import { buildWholesaleSuppliers } from "@/lib/supplierDirectory";
 import { useInactivityTimeout } from "@/lib/useInactivityTimeout";
 import { getProducts } from "@/services/productService";
-import { getSupabaseStores } from "@/services/storeService";
+import { deleteSupabaseStore, getSupabaseStores } from "@/services/storeService";
 import type { Product, WholesaleSupplier } from "@/types/marketplace";
 import type { ShopfyStore } from "@/types/storefront";
 import { CertifiedBadge } from "@/ui/CertifiedBadge";
@@ -22,6 +22,8 @@ type MessageState = {
   values?: Record<string, string | number>;
 };
 
+const ADMIN_SECRET_STORAGE_KEY = "shopfy_admin_secret";
+
 export default function AdminPage() {
   const { language, t, categoryLabel } = useLanguage();
   const [adminSecret, setAdminSecret] = useState("");
@@ -30,11 +32,30 @@ export default function AdminPage() {
   const [message, setMessage] = useState<MessageState | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [stores, setStores] = useState<ShopfyStore[]>([]);
+  const [storeSearch, setStoreSearch] = useState("");
+  const [deletingStoreSlug, setDeletingStoreSlug] = useState("");
+  const [storeToDelete, setStoreToDelete] = useState<ShopfyStore | null>(null);
   const [certificationDates, setCertificationDates] = useState<Record<string, string>>({});
   const [certificationDurations, setCertificationDurations] = useState<Record<string, number>>({});
   const [storeCertificationDates, setStoreCertificationDates] = useState<Record<string, string>>({});
   const [storeCertificationDurations, setStoreCertificationDurations] = useState<Record<string, number>>({});
   const suppliers = useMemo(() => buildWholesaleSuppliers(products), [products]);
+  const filteredStores = useMemo(() => {
+    const query = storeSearch.trim().toLowerCase();
+
+    if (!query) {
+      return stores;
+    }
+
+    return stores.filter((store) => [
+      store.name,
+      store.slug,
+      store.city,
+      store.country,
+      store.ownerName,
+      store.whatsappPhone,
+    ].some((value) => String(value || "").toLowerCase().includes(query)));
+  }, [storeSearch, stores]);
   const supplierCopy = getAdminSupplierCopy(language);
   const storeCopy = getAdminStoreCopy(language);
 
@@ -49,6 +70,9 @@ export default function AdminPage() {
       setMessage(null);
       setProducts([]);
       setStores([]);
+      setStoreSearch("");
+      setStoreToDelete(null);
+      window.sessionStorage.removeItem(ADMIN_SECRET_STORAGE_KEY);
       setCertificationDates({});
       setCertificationDurations({});
       setStoreCertificationDates({});
@@ -83,6 +107,7 @@ export default function AdminPage() {
 
     setProducts(loadedProducts);
     setStores(loadedStores);
+    window.sessionStorage.setItem(ADMIN_SECRET_STORAGE_KEY, adminSecret);
     setIsUnlocked(true);
     setIsLoading(false);
   }
@@ -170,13 +195,33 @@ export default function AdminPage() {
     setIsLoading(false);
   }
 
+  async function handleDeleteStore() {
+    if (!storeToDelete) {
+      return;
+    }
+
+    setDeletingStoreSlug(storeToDelete.slug);
+    setMessage(null);
+
+    try {
+      await deleteSupabaseStore(storeToDelete.slug, adminSecret);
+      setStores((currentStores) => currentStores.filter((store) => store.slug !== storeToDelete.slug));
+      setStoreToDelete(null);
+      setMessage({ key: "admin.storeDeleted" });
+    } catch {
+      setMessage({ key: "admin.storeDeleteFailed" });
+    } finally {
+      setDeletingStoreSlug("");
+    }
+  }
+
   return (
     <main className="min-h-screen bg-gray-50 transition-colors dark:bg-gray-950">
       <Navbar />
 
-      <section className="mx-auto max-w-5xl px-4 py-10">
-        <div className="mb-7">
-          <p className="text-sm font-black uppercase tracking-wide text-orange-500">{t("admin.kicker")}</p>
+      <section className="mx-auto max-w-6xl px-4 py-10">
+        <div className="mb-7 rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-gray-900">
+          <p className="text-sm font-black uppercase tracking-wide text-orange-500">Shop<span className="text-gray-950 dark:text-white">fy</span> Admin</p>
           <h1 className="mt-2 text-4xl font-black tracking-tight text-gray-950 dark:text-white">{t("admin.title")}</h1>
           <p className="mt-3 max-w-2xl leading-7 text-gray-600 dark:text-gray-300">
             {t("admin.description")}
@@ -205,10 +250,16 @@ export default function AdminPage() {
         ) : (
           <div className="grid gap-6">
             {message ? (
-              <p className="rounded-2xl border border-gray-100 bg-white p-4 text-sm font-bold text-gray-700">
+              <p className="rounded-lg border border-gray-100 bg-white p-4 text-sm font-bold text-gray-700 shadow-sm dark:border-white/10 dark:bg-gray-900 dark:text-gray-200">
                 {t(message.key, message.values)}
               </p>
             ) : null}
+
+            <section className="grid gap-3 sm:grid-cols-3">
+              <AdminMetric label={storeCopy.metricStores} value={stores.length} />
+              <AdminMetric label={storeCopy.metricCertified} value={stores.filter((store) => store.isCertified).length} />
+              <AdminMetric label={storeCopy.metricProducts} value={stores.reduce((total, store) => total + store.products.length, 0)} />
+            </section>
 
             <section className="grid gap-3">
               <div>
@@ -299,17 +350,25 @@ export default function AdminPage() {
             </section>
 
             <section className="grid gap-3">
-              <div>
-                <h2 className="text-2xl font-black text-gray-950 dark:text-white">{storeCopy.title}</h2>
-                <p className="mt-1 text-sm font-semibold text-gray-500 dark:text-gray-300">{storeCopy.description}</p>
+              <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                <div>
+                  <h2 className="text-2xl font-black text-gray-950 dark:text-white">{storeCopy.title}</h2>
+                  <p className="mt-1 text-sm font-semibold text-gray-500 dark:text-gray-300">{storeCopy.description}</p>
+                </div>
+                <input
+                  value={storeSearch}
+                  onChange={(event) => setStoreSearch(event.target.value)}
+                  placeholder={storeCopy.searchPlaceholder}
+                  className="min-h-11 w-full rounded-md border border-gray-200 bg-white px-4 text-sm font-bold text-gray-950 outline-none transition focus:border-orange-300 focus:ring-4 focus:ring-orange-100 dark:border-white/10 dark:bg-gray-900 dark:text-white md:max-w-sm"
+                />
               </div>
 
-              {stores.length === 0 ? (
+              {filteredStores.length === 0 ? (
                 <p className="rounded-2xl border border-gray-100 bg-white p-4 text-sm font-bold text-gray-500 shadow-sm">
                   {storeCopy.noStores}
                 </p>
               ) : (
-                stores.map((store) => {
+                filteredStores.map((store) => {
                   const isResellerDraft = store.kind === "reseller" && !store.ownerUserId;
                   const resellerContact = store.reseller;
                   const ownerContact = store.futureOwner;
@@ -317,7 +376,7 @@ export default function AdminPage() {
                   return (
                   <article key={store.slug} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
                     <div className="flex flex-col gap-4 sm:flex-row">
-                      <img src={store.logoUrl || store.bannerUrl} alt={store.name} className="h-28 w-28 rounded-xl object-cover" />
+                      <img src={store.logoUrl || store.bannerUrl} alt={store.name} className="h-28 w-28 rounded-xl bg-white object-contain p-2" />
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <h3 className="font-black text-gray-950">{store.name}</h3>
@@ -370,6 +429,18 @@ export default function AdminPage() {
                           </select>
                         </label>
 
+                        <a
+                          href={`/dashboard?adminStore=${encodeURIComponent(store.slug)}`}
+                          className="inline-flex min-h-10 items-center justify-center rounded-full bg-gray-950 px-4 text-sm font-black text-white transition hover:bg-orange-500"
+                        >
+                          {storeCopy.openDashboard}
+                        </a>
+                        <a
+                          href={`/store/${store.slug}`}
+                          className="inline-flex min-h-10 items-center justify-center rounded-full border border-gray-200 px-4 text-sm font-black text-gray-900 transition hover:border-orange-200 hover:text-orange-600"
+                        >
+                          {storeCopy.viewStore}
+                        </a>
                         <button
                           type="button"
                           onClick={() => handleStoreCertification(store, true)}
@@ -386,6 +457,14 @@ export default function AdminPage() {
                         >
                           {t("admin.removeCertification")}
                         </button>
+                        <button
+                          type="button"
+                          onClick={() => setStoreToDelete(store)}
+                          disabled={isLoading || deletingStoreSlug === store.slug}
+                          className="min-h-10 rounded-full border border-red-200 px-4 text-sm font-black text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {deletingStoreSlug === store.slug ? storeCopy.deleting : storeCopy.deleteStore}
+                        </button>
                       </div>
                     </div>
                   </article>
@@ -397,8 +476,46 @@ export default function AdminPage() {
         )}
       </section>
 
+      {storeToDelete ? (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-gray-950/50 px-4">
+          <div className="w-full max-w-md rounded-lg border border-gray-200 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-gray-900">
+            <h2 className="text-xl font-black text-gray-950 dark:text-white">{storeCopy.deleteTitle}</h2>
+            <p className="mt-3 leading-7 text-gray-600 dark:text-gray-300">
+              {storeCopy.deleteDescription.replace("{store}", storeToDelete.name)}
+            </p>
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setStoreToDelete(null)}
+                disabled={Boolean(deletingStoreSlug)}
+                className="inline-flex min-h-10 items-center justify-center rounded-md border border-gray-200 px-4 text-sm font-black text-gray-900 transition hover:border-orange-200 hover:text-orange-600 disabled:opacity-50 dark:border-white/10 dark:text-gray-100"
+              >
+                {storeCopy.cancel}
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteStore}
+                disabled={Boolean(deletingStoreSlug)}
+                className="inline-flex min-h-10 items-center justify-center rounded-md bg-red-600 px-4 text-sm font-black text-white transition hover:bg-red-700 disabled:cursor-wait disabled:opacity-60"
+              >
+                {deletingStoreSlug ? storeCopy.deleting : storeCopy.confirmDelete}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <Footer />
     </main>
+  );
+}
+
+function AdminMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-900">
+      <p className="text-xs font-black uppercase tracking-wide text-gray-500 dark:text-gray-400">{label}</p>
+      <p className="mt-2 text-3xl font-black text-gray-950 dark:text-white">{value}</p>
+    </div>
   );
 }
 
@@ -470,6 +587,10 @@ function getAdminStoreCopy(language: "fr" | "en") {
       description: "Certify or remove certification from seller stores.",
       certifiedBadge: "Certified store",
       noStores: "No store has been created yet.",
+      searchPlaceholder: "Search stores...",
+      metricStores: "Stores",
+      metricCertified: "Certified",
+      metricProducts: "Products",
       typeLabel: "Type",
       personalType: "Personal",
       resellerType: "Reseller",
@@ -482,6 +603,14 @@ function getAdminStoreCopy(language: "fr" | "en") {
       locationLabel: "Location",
       whatsappLabel: "WhatsApp",
       whatsappAction: "Open WhatsApp",
+      openDashboard: "Open dashboard",
+      viewStore: "View store",
+      deleteStore: "Delete store",
+      deleting: "Deleting...",
+      deleteTitle: "Delete store",
+      deleteDescription: "Delete {store} and its products/orders permanently?",
+      cancel: "Cancel",
+      confirmDelete: "Delete permanently",
       notProvided: "Not provided",
     };
   }
@@ -491,6 +620,10 @@ function getAdminStoreCopy(language: "fr" | "en") {
     description: "Certifie ou retire la certification des boutiques vendeur.",
     certifiedBadge: "Boutique certifiée",
     noStores: "Aucune boutique creee pour le moment.",
+    searchPlaceholder: "Rechercher une boutique...",
+    metricStores: "Boutiques",
+    metricCertified: "Certifiees",
+    metricProducts: "Produits",
     typeLabel: "Type",
     personalType: "Personnelle",
     resellerType: "Revendeur",
@@ -503,6 +636,14 @@ function getAdminStoreCopy(language: "fr" | "en") {
     locationLabel: "Localisation",
     whatsappLabel: "WhatsApp",
     whatsappAction: "Ouvrir WhatsApp",
+    openDashboard: "Ouvrir le dashboard",
+    viewStore: "Voir la boutique",
+    deleteStore: "Supprimer la boutique",
+    deleting: "Suppression...",
+    deleteTitle: "Supprimer la boutique",
+    deleteDescription: "Supprimer definitivement {store}, ses produits et ses commandes ?",
+    cancel: "Annuler",
+    confirmDelete: "Supprimer definitivement",
     notProvided: "Non renseigne",
   };
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getAdminSecretFromRequest, isValidAdminSecret } from "@/lib/adminAuth";
 import { createSupabaseRequestClient } from "@/lib/supabaseAdmin";
 import { mapProductRow, type ProductRow } from "@/lib/storeRows";
 import { cleanImage, cleanPrice, cleanText, hasUnsafeObjectKeys } from "@/lib/validation";
@@ -14,6 +15,8 @@ type StoreProductRouteContext = {
 type UpdateProductRequest = {
   product?: Partial<StoreProduct>;
 };
+
+const DESCRIPTION_MAX_LENGTH = 500;
 
 export async function PATCH(request: Request, context: StoreProductRouteContext) {
   const { slug, productId } = await context.params;
@@ -33,7 +36,7 @@ export async function PATCH(request: Request, context: StoreProductRouteContext)
   const imageUrl = product.image === undefined ? undefined : cleanImage(product.image) || cleanText(product.image);
   const payload = {
     ...(product.title !== undefined ? { title: cleanText(product.title) } : {}),
-    ...(product.description !== undefined ? { description: cleanText(product.description) } : {}),
+    ...(product.description !== undefined ? { description: cleanText(product.description).slice(0, DESCRIPTION_MAX_LENGTH) } : {}),
     ...(product.category !== undefined ? { category: cleanText(product.category, "General") } : {}),
     ...(imageUrl !== undefined ? { image_url: imageUrl } : {}),
     ...(product.price !== undefined ? { price: cleanPrice(product.price) } : {}),
@@ -51,10 +54,11 @@ export async function PATCH(request: Request, context: StoreProductRouteContext)
   }
 
   try {
+    const hasAdminAccess = isValidAdminSecret(getAdminSecretFromRequest(request));
     const supabase = createSupabaseRequestClient(request);
     const { data: authData, error: authError } = await supabase.auth.getUser();
 
-    if (authError || !authData.user) {
+    if (!hasAdminAccess && (authError || !authData.user)) {
       return NextResponse.json({ message: "Connectez-vous pour modifier un produit." }, { status: 401 });
     }
 
@@ -68,7 +72,7 @@ export async function PATCH(request: Request, context: StoreProductRouteContext)
       return NextResponse.json({ message: "Store not found." }, { status: 404 });
     }
 
-    if (storeData.owner_user_id !== authData.user.id) {
+    if (!hasAdminAccess && storeData.owner_user_id !== authData.user?.id) {
       return NextResponse.json({ message: "Vous ne pouvez modifier que votre propre boutique." }, { status: 403 });
     }
 
@@ -100,10 +104,11 @@ export async function DELETE(request: Request, context: StoreProductRouteContext
   }
 
   try {
+    const hasAdminAccess = isValidAdminSecret(getAdminSecretFromRequest(request));
     const supabase = createSupabaseRequestClient(request);
     const { data: authData, error: authError } = await supabase.auth.getUser();
 
-    if (authError || !authData.user) {
+    if (!hasAdminAccess && (authError || !authData.user)) {
       return NextResponse.json({ message: "Connectez-vous pour retirer un produit." }, { status: 401 });
     }
 
@@ -117,7 +122,7 @@ export async function DELETE(request: Request, context: StoreProductRouteContext
       return NextResponse.json({ message: "Store not found." }, { status: 404 });
     }
 
-    if (storeData.owner_user_id !== authData.user.id) {
+    if (!hasAdminAccess && storeData.owner_user_id !== authData.user?.id) {
       return NextResponse.json({ message: "Vous ne pouvez modifier que votre propre boutique." }, { status: 403 });
     }
 

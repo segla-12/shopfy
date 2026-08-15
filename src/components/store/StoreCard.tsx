@@ -54,8 +54,8 @@ export function StoreCard({ store }: StoreCardProps) {
 
       <div className="grid gap-4 p-4 sm:p-5">
         <div className="flex min-w-0 items-start gap-3">
-          <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-gray-100 bg-gray-50 dark:border-white/10 dark:bg-gray-950">
-            <Image src={store.logoUrl} alt={`${store.name} logo`} fill sizes="56px" className="object-cover" />
+          <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-gray-100 bg-white p-1 dark:border-white/10 dark:bg-gray-950">
+            <Image src={store.logoUrl} alt={`${store.name} logo`} fill sizes="56px" className="object-contain" />
           </div>
           <div className="min-w-0">
             <p className="text-xs font-black uppercase text-orange-500">{copy.badge}</p>

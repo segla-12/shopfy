@@ -108,9 +108,9 @@ export function ProductDetail({ productId, initialProduct = null }: ProductDetai
     );
   }
 
-  const galleryImages = (product.images && product.images.length > 0 ? product.images : [product.image]).slice(0, 3);
+  const galleryImages = (product.images && product.images.length > 0 ? product.images : [product.image]).filter(Boolean).slice(0, 3);
   const safeSelectedImageIndex = Math.min(selectedImageIndex, Math.max(0, galleryImages.length - 1));
-  const selectedImage = galleryImages[safeSelectedImageIndex] || galleryImages[0] || product.image;
+  const selectedImage = galleryImages[safeSelectedImageIndex] || galleryImages[0] || "";
   const productLocation = product.location || product.city || categoryLabel(product.category);
   const locationText = [countryLabel(product.country), product.city || productLocation].filter(Boolean).join(" - ");
   const coordinatesText = formatCoordinates(product.latitude, product.longitude);
@@ -131,13 +131,19 @@ export function ProductDetail({ productId, initialProduct = null }: ProductDetai
                 onClick={() => setEnlargedImage(selectedImage)}
                 className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-lg border border-gray-100 bg-white p-3 transition hover:border-orange-200 focus:outline-none focus:ring-4 focus:ring-orange-100 dark:border-white/10 dark:bg-gray-950 dark:focus:ring-orange-400/20"
               >
-                <img
-                  src={selectedImage}
-                  alt={product.title}
-                  loading="eager"
-                  decoding="async"
-                  className="h-full w-full object-contain object-center"
-                />
+                {selectedImage ? (
+                  <img
+                    src={selectedImage}
+                    alt={product.title}
+                    loading="eager"
+                    decoding="async"
+                    className="h-full w-full object-contain object-center"
+                  />
+                ) : (
+                  <span className="flex h-full w-full items-center justify-center bg-gray-100 text-xs font-black uppercase text-gray-400 dark:bg-gray-950 dark:text-gray-600">
+                    Shopfy
+                  </span>
+                )}
               </button>
 
               <FavoriteButton productId={product.id} compact className="absolute left-3 top-3" />

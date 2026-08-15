@@ -1,4 +1,5 @@
 import type { CreateStoreInput } from "@/lib/createdStores";
+import { ADMIN_SECRET_HEADER } from "@/lib/adminAuth";
 import { supabase } from "@/lib/supabase";
 import type { ShopfyStore, StoreOrder, StoreOrderStatus, StoreProduct } from "@/types/storefront";
 
@@ -85,6 +86,13 @@ async function getAuthenticatedHeaders(includeJson = true): Promise<HeadersInit>
   };
 }
 
+function getAdminHeaders(adminSecret: string, includeJson = true): HeadersInit {
+  return {
+    ...(includeJson ? { "Content-Type": "application/json" } : {}),
+    [ADMIN_SECRET_HEADER]: adminSecret,
+  };
+}
+
 export async function getSupabaseStores(): Promise<ShopfyStore[]> {
   const response = await fetch("/api/stores", { cache: "no-store" });
 
@@ -107,6 +115,21 @@ export async function getMySupabaseStores(): Promise<ShopfyStore[]> {
 
   const result = (await response.json()) as StoreListResponse;
   return result.stores || [];
+}
+
+export async function getAdminSupabaseStore(storeSlug: string, adminSecret: string): Promise<ShopfyStore> {
+  const response = await fetch(`/api/stores/${encodeURIComponent(storeSlug)}?admin=true`, {
+    headers: getAdminHeaders(adminSecret, false),
+    cache: "no-store",
+  });
+
+  const result = (await response.json().catch(() => ({}))) as StoreResponse;
+
+  if (!response.ok || !result.store) {
+    throw new Error(result.message || "Unable to load this store.");
+  }
+
+  return result.store;
 }
 
 export async function getSupabaseStore(slug: string): Promise<ShopfyStore | null> {
@@ -139,8 +162,8 @@ export async function createSupabaseStore(input: CreateStoreInput): Promise<Shop
   return result.store;
 }
 
-export async function updateSupabaseStore(storeSlug: string, store: StoreUpdateInput): Promise<ShopfyStore> {
-  const headers = await getAuthenticatedHeaders();
+export async function updateSupabaseStore(storeSlug: string, store: StoreUpdateInput, adminSecret = ""): Promise<ShopfyStore> {
+  const headers = adminSecret ? getAdminHeaders(adminSecret) : await getAuthenticatedHeaders();
   const response = await fetch(`/api/stores/${encodeURIComponent(storeSlug)}`, {
     method: "PATCH",
     headers,
@@ -173,8 +196,8 @@ export async function importSupabaseStoreProduct(storeSlug: string, product: Sto
   return result.product;
 }
 
-export async function addManualSupabaseStoreProduct(storeSlug: string, product: StoreProduct): Promise<StoreProduct> {
-  const headers = await getAuthenticatedHeaders();
+export async function addManualSupabaseStoreProduct(storeSlug: string, product: StoreProduct, adminSecret = ""): Promise<StoreProduct> {
+  const headers = adminSecret ? getAdminHeaders(adminSecret) : await getAuthenticatedHeaders();
   const response = await fetch(`/api/stores/${encodeURIComponent(storeSlug)}/products`, {
     method: "POST",
     headers,
@@ -203,12 +226,37 @@ export async function deleteSupabaseStoreProduct(storeSlug: string, productId: s
   }
 }
 
+export async function deleteSupabaseStore(storeSlug: string, adminSecret: string) {
+  const response = await fetch(`/api/stores/${encodeURIComponent(storeSlug)}`, {
+    method: "DELETE",
+    headers: getAdminHeaders(adminSecret, false),
+  });
+
+  if (!response.ok) {
+    const result = (await response.json().catch(() => ({}))) as { message?: string };
+    throw new Error(result.message || "Store deletion failed.");
+  }
+}
+
+export async function deleteAdminSupabaseStoreProduct(storeSlug: string, productId: string, adminSecret: string) {
+  const response = await fetch(
+    `/api/stores/${encodeURIComponent(storeSlug)}/products/${encodeURIComponent(productId)}`,
+    { method: "DELETE", headers: getAdminHeaders(adminSecret, false) },
+  );
+
+  if (!response.ok) {
+    const result = (await response.json().catch(() => ({}))) as { message?: string };
+    throw new Error(result.message || "Product removal failed.");
+  }
+}
+
 export async function updateSupabaseStoreProduct(
   storeSlug: string,
   productId: string,
   product: Partial<StoreProduct>,
+  adminSecret = "",
 ): Promise<StoreProduct> {
-  const headers = await getAuthenticatedHeaders();
+  const headers = adminSecret ? getAdminHeaders(adminSecret) : await getAuthenticatedHeaders();
   const response = await fetch(
     `/api/stores/${encodeURIComponent(storeSlug)}/products/${encodeURIComponent(productId)}`,
     {
@@ -255,8 +303,9 @@ export async function createPendingStoreOrder(
 export async function createManualSupabaseStoreSale(
   storeSlug: string,
   sale: ManualStoreSaleInput,
+  adminSecret = "",
 ): Promise<StoreOrder> {
-  const headers = await getAuthenticatedHeaders();
+  const headers = adminSecret ? getAdminHeaders(adminSecret) : await getAuthenticatedHeaders();
   const response = await fetch(`/api/stores/${encodeURIComponent(storeSlug)}/orders`, {
     method: "POST",
     headers,
@@ -318,12 +367,28 @@ export async function getMySupabaseStoreOrders(storeSlug: string): Promise<Store
   return result.orders || [];
 }
 
+export async function getAdminSupabaseStoreOrders(storeSlug: string, adminSecret: string): Promise<StoreOrder[]> {
+  const response = await fetch(`/api/stores/${encodeURIComponent(storeSlug)}/orders`, {
+    headers: getAdminHeaders(adminSecret, false),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const result = (await response.json().catch(() => ({}))) as OrderListResponse;
+    throw new Error(result.message || "Unable to load orders.");
+  }
+
+  const result = (await response.json()) as OrderListResponse;
+  return result.orders || [];
+}
+
 export async function updateSupabaseStoreOrderStatus(
   storeSlug: string,
   orderId: string,
   status: StoreOrderStatus,
+  adminSecret = "",
 ): Promise<StoreOrder> {
-  const headers = await getAuthenticatedHeaders();
+  const headers = adminSecret ? getAdminHeaders(adminSecret) : await getAuthenticatedHeaders();
   const response = await fetch(
     `/api/stores/${encodeURIComponent(storeSlug)}/orders/${encodeURIComponent(orderId)}`,
     {
@@ -342,8 +407,8 @@ export async function updateSupabaseStoreOrderStatus(
   return result.order;
 }
 
-export async function deleteSupabaseStoreOrder(storeSlug: string, orderId: string) {
-  const headers = await getAuthenticatedHeaders(false);
+export async function deleteSupabaseStoreOrder(storeSlug: string, orderId: string, adminSecret = "") {
+  const headers = adminSecret ? getAdminHeaders(adminSecret, false) : await getAuthenticatedHeaders(false);
   const response = await fetch(
     `/api/stores/${encodeURIComponent(storeSlug)}/orders/${encodeURIComponent(orderId)}`,
     { method: "DELETE", headers },

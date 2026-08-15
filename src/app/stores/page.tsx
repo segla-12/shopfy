@@ -15,13 +15,14 @@ export const metadata = {
 };
 
 type StoresPageProps = {
-  searchParams?: {
+  searchParams?: Promise<{
     q?: string;
-  };
+  }>;
 };
 
 export default async function StoresPage({ searchParams }: StoresPageProps) {
-  const query = cleanText(searchParams?.q || "");
+  const resolvedSearchParams = await searchParams;
+  const query = cleanText(resolvedSearchParams?.q || "");
   const cookiesStore = await cookies();
   const languageCookie = cookiesStore.get(LANGUAGE_COOKIE_KEY)?.value;
   const language = isLanguage(languageCookie) ? languageCookie : DEFAULT_LANGUAGE;

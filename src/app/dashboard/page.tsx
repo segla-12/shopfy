@@ -9,17 +9,23 @@ export const metadata = {
   description: "Manage a Shopfy seller store.",
 };
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ adminStore?: string }>;
+}) {
+  const params = await searchParams;
+  const adminStoreSlug = typeof params?.adminStore === "string" ? params.adminStore : "";
   const user = await getServerAuthUser();
 
-  if (!user) {
+  if (!user && !adminStoreSlug) {
     redirect("/auth?next=/dashboard");
   }
 
   return (
     <main className="min-h-screen bg-gray-50 transition-colors dark:bg-gray-950">
       <Navbar />
-      <SellerDashboardMvp />
+      <SellerDashboardMvp adminStoreSlug={adminStoreSlug} />
       <Footer />
     </main>
   );

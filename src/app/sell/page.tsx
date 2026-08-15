@@ -21,7 +21,6 @@ import { uploadImageFile } from "@/services/imageService";
 import type { ProductCategory } from "@/types/marketplace";
 import { PhoneInput } from "@/ui/PhoneInput";
 
-const fallbackImage = "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=900&q=80";
 const SUPPLIER_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 function readFileAsDataUrl(file: File): Promise<string> {
@@ -158,8 +157,8 @@ export default function SellPage() {
     const uploadedImages = imageFiles.length > 0
       ? await Promise.all(imageFiles.map((file) => uploadImageFile(file)))
       : [];
-    const productImages = uploadedImages.length > 0 ? uploadedImages : [fallbackImage];
-    const image = productImages[0];
+    const productImages = uploadedImages;
+    const image = productImages[0] || "";
     const sellerPhoto = await uploadImageFile(sellerPhotoFile);
     const description = buildEnglishWholesaleDescription(String(formData.get("description") || ""), {
       version: 1,

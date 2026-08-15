@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getAdminSecretFromRequest, isValidAdminSecret } from "@/lib/adminAuth";
 import { createSupabaseAdminClient, createSupabaseRequestClient } from "@/lib/supabaseAdmin";
 // Online payment providers removed. Orders are created as manual by default.
 import { mapOrderRow, ORDER_SELECT_FIELDS, type OrderRow } from "@/lib/orderRows";
@@ -218,10 +219,11 @@ async function createManualSale(request: Request, cleanSlug: string, body: Creat
   }
 
   try {
+    const hasAdminAccess = isValidAdminSecret(getAdminSecretFromRequest(request));
     const requestSupabase = createSupabaseRequestClient(request);
     const { data: authData, error: authError } = await requestSupabase.auth.getUser();
 
-    if (authError || !authData.user) {
+    if (!hasAdminAccess && (authError || !authData.user)) {
       return NextResponse.json({ message: "Authentication required." }, { status: 401 });
     }
 
@@ -236,7 +238,7 @@ async function createManualSale(request: Request, cleanSlug: string, body: Creat
       return NextResponse.json({ message: "Store not found." }, { status: 404 });
     }
 
-    if (storeData.owner_user_id !== authData.user.id) {
+    if (!hasAdminAccess && storeData.owner_user_id !== authData.user?.id) {
       return NextResponse.json({ message: "Vous ne pouvez modifier que vos propres commandes." }, { status: 403 });
     }
 
@@ -398,10 +400,11 @@ export async function GET(request: Request, context: StoreOrdersRouteContext) {
   }
 
   try {
+    const hasAdminAccess = isValidAdminSecret(getAdminSecretFromRequest(request));
     const supabase = createSupabaseRequestClient(request);
     const { data: authData, error: authError } = await supabase.auth.getUser();
 
-    if (authError || !authData.user) {
+    if (!hasAdminAccess && (authError || !authData.user)) {
       return NextResponse.json({ orders: [], message: "Authentication required." }, { status: 401 });
     }
 
@@ -415,7 +418,7 @@ export async function GET(request: Request, context: StoreOrdersRouteContext) {
       return NextResponse.json({ orders: [], message: "Store not found." }, { status: 404 });
     }
 
-    if (storeData.owner_user_id !== authData.user.id) {
+    if (!hasAdminAccess && storeData.owner_user_id !== authData.user?.id) {
       return NextResponse.json({ orders: [], message: "Vous ne pouvez voir que vos propres commandes." }, { status: 403 });
     }
 
