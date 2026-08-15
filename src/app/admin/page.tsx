@@ -221,7 +221,10 @@ export default function AdminPage() {
 
       <section className="mx-auto max-w-6xl px-4 py-10">
         <div className="mb-7 rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-gray-900">
-          <p className="text-sm font-black uppercase tracking-wide text-orange-500">Shop<span className="text-gray-950 dark:text-white">fy</span> Admin</p>
+          <p className="text-sm font-black tracking-wide">
+            <span className="text-gray-950">Shop</span><span className="text-orange-500">fy</span>
+            <span className="ml-2 uppercase text-gray-500 dark:text-gray-300">Administration</span>
+          </p>
           <h1 className="mt-2 text-4xl font-black tracking-tight text-gray-950 dark:text-white">{t("admin.title")}</h1>
           <p className="mt-3 max-w-2xl leading-7 text-gray-600 dark:text-gray-300">
             {t("admin.description")}
@@ -352,7 +355,7 @@ export default function AdminPage() {
             <section className="grid gap-3">
               <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                 <div>
-                  <h2 className="text-2xl font-black text-gray-950 dark:text-white">{storeCopy.title}</h2>
+                  <h2 className="text-2xl font-black text-gray-950 dark:text-white">{storeCopy.managementTitle}</h2>
                   <p className="mt-1 text-sm font-semibold text-gray-500 dark:text-gray-300">{storeCopy.description}</p>
                 </div>
                 <input
@@ -584,6 +587,7 @@ function getAdminStoreCopy(language: "fr" | "en") {
   if (language === "en") {
     return {
       title: "Stores",
+      managementTitle: "Store management",
       description: "Certify or remove certification from seller stores.",
       certifiedBadge: "Certified store",
       noStores: "No store has been created yet.",
@@ -617,6 +621,7 @@ function getAdminStoreCopy(language: "fr" | "en") {
 
   return {
     title: "Boutiques",
+    managementTitle: "Gestion des boutiques",
     description: "Certifie ou retire la certification des boutiques vendeur.",
     certifiedBadge: "Boutique certifiée",
     noStores: "Aucune boutique creee pour le moment.",

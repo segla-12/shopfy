@@ -870,7 +870,9 @@ export function SellerDashboardMvp({ adminStoreSlug = "" }: { adminStoreSlug?: s
     <section className="mx-auto grid max-w-6xl gap-6 px-4 py-10">
       {isAdminMode ? (
         <div className="rounded-lg border border-orange-200 bg-orange-50 p-4 text-sm font-black text-orange-900 dark:border-orange-400/30 dark:bg-orange-400/10 dark:text-orange-100">
-          {copy.adminModeNotice.replace("{store}", activeStore.name)}
+          <p className="uppercase tracking-wide">{copy.adminModeTitle}</p>
+          <p className="mt-2 text-gray-950 dark:text-white">{copy.adminViewedStore}</p>
+          <p className="mt-1 text-lg text-gray-950 dark:text-white">{activeStore.name}</p>
           <Link href="/admin" className="mt-3 inline-flex min-h-10 items-center justify-center rounded-md bg-gray-950 px-4 text-sm font-black text-white transition hover:bg-orange-500 dark:bg-white dark:text-gray-950">
             {copy.backToAdmin}
           </Link>
@@ -1853,8 +1855,10 @@ function getDashboardCopy(language: string) {
     return {
       kicker: "Dashboard vendeur",
       title: "Gestion de boutique",
+      adminModeTitle: "MODE ADMINISTRATEUR",
+      adminViewedStore: "Boutique consultee :",
       adminModeNotice: "MODE ADMINISTRATEUR - Vous consultez le dashboard de {store}",
-      backToAdmin: "Retour a l'administration",
+      backToAdmin: "<- Retour a l'administration",
       viewStore: "Voir la boutique",
       createStore: "Creer une boutique",
       addManualProduct: "Ajouter des produits",
@@ -2021,8 +2025,10 @@ function getDashboardCopy(language: string) {
   return {
     kicker: "Seller dashboard",
     title: "Store management",
+    adminModeTitle: "ADMINISTRATOR MODE",
+    adminViewedStore: "Viewed store:",
     adminModeNotice: "ADMINISTRATOR MODE - You are viewing {store}'s dashboard",
-    backToAdmin: "Back to admin",
+    backToAdmin: "<- Back to admin",
     viewStore: "View store",
     createStore: "Create a store",
     addManualProduct: "Add products",
