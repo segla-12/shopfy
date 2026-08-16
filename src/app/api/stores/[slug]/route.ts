@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getAdminSecretFromRequest, isValidAdminSecret } from "@/lib/adminAuth";
-import { createSupabaseAdminClient, createSupabaseRequestClient, createSupabaseServerClient } from "@/lib/supabaseAdmin";
+import { createSupabaseAdminClient, createSupabaseRequestClient } from "@/lib/supabaseAdmin";
 import { mapStoreRow, STORE_SELECT_FIELDS, type StoreRow } from "@/lib/storeRows";
 import { cleanImage, cleanText, hasUnsafeObjectKeys } from "@/lib/validation";
 import { isValidWhatsappPhone, normalizeWhatsappPhone } from "@/lib/whatsapp";
@@ -151,7 +152,7 @@ export async function DELETE(request: Request, context: StoreRouteContext) {
   }
 
   try {
-    const supabase = createSupabaseServerClient();
+    const supabase = createSupabaseAdminClient();
     const { data: storeData, error: storeError } = await supabase
       .from("shopfy_stores")
       .select("id")
@@ -198,14 +199,21 @@ export async function DELETE(request: Request, context: StoreRouteContext) {
       return NextResponse.json({ message: productsError.message }, { status: 500 });
     }
 
-    const { error: deleteError } = await supabase
+    const { data: deletedStore, error: deleteError } = await supabase
       .from("shopfy_stores")
       .delete()
-      .eq("id", storeId);
+      .eq("id", storeId)
+      .select("id")
+      .single();
 
-    if (deleteError) {
-      return NextResponse.json({ message: deleteError.message }, { status: deleteError.code === "42501" ? 403 : 500 });
+    if (deleteError || !deletedStore) {
+      return NextResponse.json(
+        { message: deleteError?.message || "Store deletion failed." },
+        { status: deleteError?.code === "42501" ? 403 : 500 },
+      );
     }
+
+    revalidatePath("/stores");
 
     return NextResponse.json({ success: true });
   } catch (error) {
