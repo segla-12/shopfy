@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Invalid request payload." }, { status: 400 });
   }
 
-  const kind = body.kind === "reseller" ? "reseller" : "personal";
+  const kind = body.kind;
   const reseller = cleanContact(body.reseller);
   const futureOwner = cleanContact(body.futureOwner);
   const name = cleanText(body.name);
@@ -69,6 +69,10 @@ export async function POST(request: Request) {
   const category = cleanText(body.category, "General");
   const slug = createStoreSlug(name);
   const allowedCurrencies = new Set(["XOF", "USD", "EUR", "GBP", "CAD"]);
+
+  if (kind !== "personal" && kind !== "reseller") {
+    return NextResponse.json({ message: "Store kind is required." }, { status: 400 });
+  }
 
   if (!name || !ownerName || !city || !country || !whatsappPhone) {
     return NextResponse.json({ message: "Store name, owner, city, country, and WhatsApp are required." }, { status: 400 });

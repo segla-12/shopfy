@@ -236,7 +236,7 @@ export function CreateStoreWizard() {
           <h1 className="mt-2 text-3xl font-black text-gray-950 dark:text-white">{copy.authTitle}</h1>
           <p className="mt-3 text-base leading-7 text-gray-600 dark:text-gray-300">{copy.authText}</p>
           <Link
-            href="/auth?next=/dashboard"
+            href="/auth?next=/create-store"
             className="mt-5 inline-flex min-h-11 items-center justify-center rounded-md bg-orange-500 px-5 text-sm font-black text-white transition hover:bg-orange-600"
           >
             {copy.authAction}
