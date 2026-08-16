@@ -207,7 +207,9 @@ export function SellerAuth() {
       <div className="grid gap-3">
         <p className="text-sm font-black uppercase tracking-wide text-orange-500">{copy.kicker}</p>
         <h1 className="text-3xl font-black tracking-tight text-gray-950 md:text-5xl dark:text-white">{copy.title}</h1>
-        <p className="max-w-2xl text-base leading-7 text-gray-600 dark:text-gray-300">{copy.description}</p>
+        {copy.description ? (
+          <p className="max-w-2xl text-base leading-7 text-gray-600 dark:text-gray-300">{copy.description}</p>
+        ) : null}
         <div className="mt-2 grid gap-2 text-sm font-bold text-gray-600 dark:text-gray-300">
           <p>{copy.ruleStores}</p>
           <p>{copy.ruleProducts}</p>
@@ -412,7 +414,7 @@ function getAuthCopy(language: string) {
     return {
       kicker: "Compte vendeur",
       title: "Connectez-vous pour gerer votre boutique",
-      description: "La version securisee lie chaque boutique a un compte vendeur Supabase Auth avant toute creation ou modification.",
+      description: "",
       ruleStores: "Creation boutique : vendeur connecte obligatoire.",
       ruleProducts: "Import et suppression produits : proprietaire uniquement.",
       rulePublic: "Boutiques publiques : visibles par les visiteurs sans compte.",
@@ -458,7 +460,7 @@ function getAuthCopy(language: string) {
   return {
     kicker: "Seller account",
     title: "Sign in to manage your store",
-    description: "The secured version links every store to a Supabase Auth seller account before any creation or edit.",
+    description: "",
     ruleStores: "Store creation requires a signed-in seller.",
     ruleProducts: "Product imports and removals are owner-only.",
     rulePublic: "Public stores remain visible to visitors without an account.",

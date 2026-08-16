@@ -11,7 +11,7 @@ export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const hasSession = Boolean(request.cookies.get(authCookieName)?.value);
 
-  if (pathname.startsWith("/auth") && hasSession) {
+  if (pathname === "/auth" && hasSession && request.nextUrl.searchParams.get("reset") !== "1") {
     const dashboardUrl = new URL("/dashboard", request.url);
     return withSecurityHeaders(NextResponse.redirect(dashboardUrl));
   }
