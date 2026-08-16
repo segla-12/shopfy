@@ -3,14 +3,6 @@ export type StoreTheme = {
   accent: string;
 };
 
-export type StoreContact = {
-  firstName?: string;
-  lastName?: string;
-  country?: string;
-  city?: string;
-  whatsappPhone?: string;
-};
-
 export type StoreProduct = {
   id: string;
   slug: string;
@@ -29,7 +21,7 @@ export type StoreProduct = {
 
 export type ShopfyStore = {
   ownerUserId?: string;
-  kind?: "personal" | "reseller";
+  kind?: "personal";
   slug: string;
   name: string;
   tagline: string;
@@ -41,8 +33,6 @@ export type ShopfyStore = {
   country: string;
   currency: string;
   whatsappPhone?: string;
-  reseller?: StoreContact;
-  futureOwner?: StoreContact;
   isCertified?: boolean;
   createdAt?: string;
   trialEndsAt?: string;

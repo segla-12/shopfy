@@ -1,9 +1,8 @@
 import type { ShopfyStore } from "@/types/storefront";
 import { normalizeWhatsappPhone } from "@/lib/whatsapp";
-import type { StoreContact, StoreKind } from "@/lib/resellerStore";
 
 export type CreateStoreInput = {
-  kind?: StoreKind;
+  kind: "personal";
   name: string;
   category: string;
   ownerName: string;
@@ -15,8 +14,6 @@ export type CreateStoreInput = {
   whatsappPhone: string;
   logoUrl?: string;
   bannerUrl?: string;
-  reseller?: StoreContact;
-  futureOwner?: StoreContact;
 };
 
 export function createStoreSlug(name: string) {

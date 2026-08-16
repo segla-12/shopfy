@@ -1,5 +1,4 @@
 import type { ShopfyStore, StoreProduct } from "@/types/storefront";
-import { splitStoreDescriptionMetadata } from "@/lib/resellerStore";
 
 export type StoreRow = {
   id: string;
@@ -72,11 +71,11 @@ export function mapStoreRow(row: StoreRow): ShopfyStore {
   const trialStatus = getStoreTrialStatus(row.created_at);
   const certificationExpiresAt = row.certification_expires_at || undefined;
   const isCertificationActive = Boolean(row.is_certified) && isFutureOrMissingDate(certificationExpiresAt);
-  const { description, metadata } = splitStoreDescriptionMetadata(row.description);
+  const description = stripLegacyStoreMetadata(row.description);
 
   return {
     ownerUserId: row.owner_user_id || undefined,
-    kind: metadata.kind,
+    kind: "personal",
     slug: row.slug,
     name: row.name,
     tagline: row.tagline || "",
@@ -88,8 +87,6 @@ export function mapStoreRow(row: StoreRow): ShopfyStore {
     country: row.country || "",
     currency: row.currency || "XOF",
     whatsappPhone: row.whatsapp_phone || "",
-    reseller: metadata.reseller,
-    futureOwner: metadata.futureOwner,
     isCertified: isCertificationActive,
     ...trialStatus,
     createdAt: row.created_at || undefined,
@@ -112,6 +109,20 @@ export function mapStoreRow(row: StoreRow): ShopfyStore {
       conversionRate: Number(row.conversion_rate || 0),
     },
   };
+}
+
+function stripLegacyStoreMetadata(description?: string | null) {
+  const rawDescription = String(description || "");
+  const metadataStart = "[SHOPFY_STORE_META]";
+  const metadataEnd = "[/SHOPFY_STORE_META]";
+  const startIndex = rawDescription.indexOf(metadataStart);
+  const endIndex = rawDescription.indexOf(metadataEnd);
+
+  if (startIndex < 0 || endIndex < startIndex) {
+    return rawDescription;
+  }
+
+  return `${rawDescription.slice(0, startIndex)}${rawDescription.slice(endIndex + metadataEnd.length)}`.trim();
 }
 
 export function doesStoreRequireCertification(row: {
