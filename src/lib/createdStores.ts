@@ -27,9 +27,15 @@ const defaultStoreImages: Record<string, string> = {
   other: "https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?auto=format&fit=crop&w=900&q=80",
 };
 
+const defaultStoreLogo = "/shopfy-logo-clean.png";
+
 export function getDefaultStoreImage(category: string) {
   const normalizedCategory = category.trim().toLowerCase();
   return defaultStoreImages[normalizedCategory] || defaultStoreImages.general;
+}
+
+export function getDefaultStoreLogo() {
+  return defaultStoreLogo;
 }
 
 export function createStoreSlug(name: string) {
@@ -51,7 +57,7 @@ export function buildCreatedStore(input: CreateStoreInput): ShopfyStore {
     name: input.name.trim(),
     tagline: input.tagline.trim() || `Boutique ${input.category.toLowerCase()} creee avec Shopfy.`,
     description: input.description.trim() || "Une boutique vendeur neutre creee sur Shopfy.",
-    logoUrl: input.logoUrl?.trim() || defaultImage,
+    logoUrl: input.logoUrl?.trim() || getDefaultStoreLogo(),
     bannerUrl: input.bannerUrl?.trim() || defaultImage,
     ownerName: input.ownerName.trim(),
     city: input.city.trim(),

@@ -1,5 +1,5 @@
 import type { ShopfyStore, StoreProduct } from "@/types/storefront";
-import { getDefaultStoreImage } from "@/lib/createdStores";
+import { getDefaultStoreImage, getDefaultStoreLogo } from "@/lib/createdStores";
 
 export type StoreRow = {
   id: string;
@@ -81,7 +81,7 @@ export function mapStoreRow(row: StoreRow): ShopfyStore {
     name: row.name,
     tagline: row.tagline || "",
     description,
-    logoUrl: row.logo_url || defaultImage,
+    logoUrl: row.logo_url || getDefaultStoreLogo(),
     bannerUrl: row.banner_url || defaultImage,
     ownerName: row.owner_name || "",
     city: row.city || "",

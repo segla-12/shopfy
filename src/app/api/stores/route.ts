@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createStoreSlug, getDefaultStoreImage, type CreateStoreInput } from "@/lib/createdStores";
+import { createStoreSlug, getDefaultStoreImage, getDefaultStoreLogo, type CreateStoreInput } from "@/lib/createdStores";
 import { createSupabaseRequestClient } from "@/lib/supabaseAdmin";
 import { mapStoreRow, STORE_SELECT_FIELDS, type StoreRow } from "@/lib/storeRows";
 import { cleanImage, cleanText, hasUnsafeObjectKeys } from "@/lib/validation";
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
     name,
     tagline: cleanText(body.tagline),
     description,
-    logo_url: cleanImage(body.logoUrl) || defaultImage,
+    logo_url: cleanImage(body.logoUrl) || getDefaultStoreLogo(),
     banner_url: cleanImage(body.bannerUrl) || defaultImage,
     owner_name: ownerName,
     city,
