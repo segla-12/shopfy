@@ -12,8 +12,8 @@ export function middleware(request: NextRequest) {
   const hasSession = Boolean(request.cookies.get(authCookieName)?.value);
 
   if (pathname === "/auth" && hasSession && request.nextUrl.searchParams.get("reset") !== "1") {
-    const dashboardUrl = new URL("/dashboard", request.url);
-    return withSecurityHeaders(NextResponse.redirect(dashboardUrl));
+    const nextPath = getSafeNextPath(request.nextUrl.searchParams.get("next"), "/dashboard");
+    return withSecurityHeaders(NextResponse.redirect(new URL(nextPath, request.url)));
   }
 
   if (protectedPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`))) {
@@ -33,6 +33,20 @@ export function middleware(request: NextRequest) {
   }
 
   return withSecurityHeaders(NextResponse.next());
+}
+
+function getSafeNextPath(nextPath: string | null, fallbackPath: string) {
+  if (
+    !nextPath ||
+    !nextPath.startsWith("/") ||
+    nextPath.startsWith("//") ||
+    nextPath.includes("\\") ||
+    nextPath.startsWith("/auth")
+  ) {
+    return fallbackPath;
+  }
+
+  return nextPath;
 }
 
 function applyApiRateLimit(request: NextRequest) {

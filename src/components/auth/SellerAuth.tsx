@@ -30,9 +30,11 @@ export function SellerAuth() {
     let isActive = true;
 
     async function loadSession() {
-      const isRecoveryRequest = window.location.search.includes("reset=1");
+      const params = new URLSearchParams(window.location.search);
+      const isRecoveryRequest = params.has("reset");
       setIsPasswordRecovery(isRecoveryRequest);
       setMode(getInitialAuthMode());
+      setErrorMessage(params.get("error") || "");
 
       const { data } = await supabase.auth.getSession();
 
@@ -328,6 +330,17 @@ export function SellerAuth() {
               </div>
             )}
 
+            {mode === "reset" ? null : (
+              <button
+                type="button"
+                onClick={signInWithGmail}
+                disabled={isOAuthSubmitting}
+                className="inline-flex min-h-11 items-center justify-center rounded-md border border-gray-200 px-5 text-sm font-black text-gray-900 transition hover:border-orange-200 hover:text-orange-600 dark:border-white/10 dark:text-gray-100"
+              >
+                {isOAuthSubmitting ? copy.redirectingToGmail : copy.continueWithGmail}
+              </button>
+            )}
+
             <form onSubmit={handleSubmit} className="grid gap-3">
               <label className="grid gap-2">
                 <span className="text-sm font-black text-gray-950 dark:text-white">{copy.email}</span>
@@ -379,16 +392,6 @@ export function SellerAuth() {
                 className="text-left text-sm font-black text-orange-600 transition hover:text-orange-700 dark:text-orange-300"
               >
                 {copy.forgotPassword}
-              </button>
-            )}
-            {mode === "reset" ? null : (
-              <button
-                type="button"
-                onClick={signInWithGmail}
-                disabled={isOAuthSubmitting}
-                className="inline-flex min-h-11 items-center justify-center rounded-md border border-gray-200 px-5 text-sm font-black text-gray-900 transition hover:border-orange-200 hover:text-orange-600 dark:border-white/10 dark:text-gray-100"
-              >
-                {isOAuthSubmitting ? copy.redirectingToGmail : copy.continueWithGmail}
               </button>
             )}
           </div>

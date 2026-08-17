@@ -19,17 +19,25 @@ function getSafeNextPath(nextPath: string | null) {
 }
 
 function redirectWithError(request: NextRequest, message: string) {
+  const requestUrl = new URL(request.url);
+  const nextPath = getSafeNextPath(requestUrl.searchParams.get("next"));
   const url = new URL("/auth", request.url);
   url.searchParams.set("error", message);
+  url.searchParams.set("next", nextPath);
   return NextResponse.redirect(url);
 }
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
+  const authError = requestUrl.searchParams.get("error_description") || requestUrl.searchParams.get("error");
   const nextPath = getSafeNextPath(requestUrl.searchParams.get("next"));
   const redirectUrl = new URL(nextPath, request.url);
   let response = NextResponse.redirect(redirectUrl);
+
+  if (authError) {
+    return redirectWithError(request, authError);
+  }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

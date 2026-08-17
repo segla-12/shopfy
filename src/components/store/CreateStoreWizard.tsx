@@ -73,6 +73,7 @@ export function CreateStoreWizard() {
         setIsAuthenticated(Boolean(data.session));
         setAuthEmail(data.session?.user.email || "");
         setEmailConfirmation(data.session?.user.email || "");
+        setIsEmailConfirmed(Boolean(data.session?.user.email));
         setIsCheckingAuth(false);
       });
     });
@@ -81,6 +82,7 @@ export function CreateStoreWizard() {
       setIsAuthenticated(Boolean(session));
       setAuthEmail(session?.user.email || "");
       setEmailConfirmation(session?.user.email || "");
+      setIsEmailConfirmed(Boolean(session?.user.email));
       setIsCheckingAuth(false);
     });
 
