@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { isValidAdminSecret } from "@/lib/adminAuth";
-import { splitStoreDescriptionMetadata } from "@/lib/resellerStore";
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import { cleanText } from "@/lib/validation";
 
@@ -76,25 +75,17 @@ export async function POST(request: Request) {
     const entityId = storeSlug || productId;
 
     if (storeSlug && body.isCertified) {
-      const { data: storeData, error: storeLookupError } = await supabaseAdmin
-        .from("shopfy_stores")
-        .select("owner_user_id, description")
-        .eq("slug", storeSlug)
-        .single();
+  const { data: storeData, error: storeLookupError } = await supabaseAdmin
+    .from("shopfy_stores")
+    .select("owner_user_id")
+    .eq("slug", storeSlug)
+    .single();
 
-      if (storeLookupError || !storeData) {
-        error = storeLookupError;
-      } else {
-        const { metadata } = splitStoreDescriptionMetadata(storeData.description);
-
-        if (metadata.kind === "reseller" && !storeData.owner_user_id) {
-          return NextResponse.json(
-            { success: false, message: "Owner account required before publication." },
-            { status: 400 },
-          );
-        }
-      }
-    }
+  if (storeLookupError || !storeData) {
+    error = storeLookupError;
+  }
+}
+      
 
     if (error) {
       return NextResponse.json(

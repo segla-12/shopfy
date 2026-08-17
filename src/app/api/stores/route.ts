@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createStoreSlug, type CreateStoreInput } from "@/lib/createdStores";
+import { createStoreSlug, getDefaultStoreImage, type CreateStoreInput } from "@/lib/createdStores";
 import { createSupabaseRequestClient } from "@/lib/supabaseAdmin";
 import { mapStoreRow, STORE_SELECT_FIELDS, type StoreRow } from "@/lib/storeRows";
 import { cleanImage, cleanText, hasUnsafeObjectKeys } from "@/lib/validation";
@@ -15,7 +15,7 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const onlyMine = url.searchParams.get("mine") === "true";
-  const supabase = createSupabaseRequestClient(request);
+    const supabase = createSupabaseRequestClient(request);
     let ownerUserId = "";
 
     if (onlyMine) {
@@ -56,7 +56,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Invalid request payload." }, { status: 400 });
   }
 
-  const kind = body.kind;
   const name = cleanText(body.name);
   const ownerName = cleanText(body.ownerName);
   const city = cleanText(body.city);
@@ -66,10 +65,6 @@ export async function POST(request: Request) {
   const category = cleanText(body.category, "General");
   const slug = createStoreSlug(name);
   const allowedCurrencies = new Set(["XOF", "USD", "EUR", "GBP", "CAD"]);
-
-  if (kind !== "personal") {
-    return NextResponse.json({ message: "Only personal stores can be created." }, { status: 400 });
-  }
 
   if (!name || !ownerName || !city || !country || !whatsappPhone) {
     return NextResponse.json({ message: "Store name, owner, city, country, and WhatsApp are required." }, { status: 400 });
@@ -86,13 +81,14 @@ export async function POST(request: Request) {
   const baseDescription = cleanText(body.description).slice(0, DESCRIPTION_MAX_LENGTH);
   const description = baseDescription;
 
+  const defaultImage = getDefaultStoreImage(category);
   const payload = {
     slug,
     name,
     tagline: cleanText(body.tagline),
     description,
-    logo_url: cleanImage(body.logoUrl),
-    banner_url: cleanImage(body.bannerUrl),
+    logo_url: cleanImage(body.logoUrl) || defaultImage,
+    banner_url: cleanImage(body.bannerUrl) || defaultImage,
     owner_name: ownerName,
     city,
     country,

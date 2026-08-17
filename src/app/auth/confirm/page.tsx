@@ -18,7 +18,13 @@ const supportedOtpTypes = new Set<SupportedOtpType>([
 ]);
 
 function getSafeNextPath(nextPath: string | null, fallbackPath: string) {
-  if (!nextPath || !nextPath.startsWith("/") || nextPath.startsWith("//") || nextPath.includes("\\")) {
+  if (
+    !nextPath ||
+    !nextPath.startsWith("/") ||
+    nextPath.startsWith("//") ||
+    nextPath.includes("\\") ||
+    nextPath.startsWith("/auth")
+  ) {
     return fallbackPath;
   }
 

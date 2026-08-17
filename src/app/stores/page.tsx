@@ -3,7 +3,7 @@ import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { StoresDirectory } from "@/components/store/StoresDirectory";
 import { createSupabaseAnonClient } from "@/lib/supabaseAdmin";
-import { getDemoStore, demoStores } from "@/lib/demoStores";
+import { demoStores } from "@/lib/demoStores";
 import { mapStoreRow, STORE_SELECT_FIELDS, type StoreRow } from "@/lib/storeRows";
 import { cleanText } from "@/lib/validation";
 import { DEFAULT_LANGUAGE, isLanguage, LANGUAGE_COOKIE_KEY } from "@/lib/languageConfig";
@@ -49,12 +49,8 @@ async function getPublicStores(): Promise<ShopfyStore[]> {
       return demoStores;
     }
 
-    return (data as StoreRow[]).map(mapStoreRow).filter(isPublicStore);
+    return (data as StoreRow[]).map(mapStoreRow);
   } catch {
     return demoStores;
   }
-}
-
-function isPublicStore(store: ShopfyStore) {
-  return store.kind !== "reseller" || Boolean(store.isCertified && store.ownerUserId);
 }

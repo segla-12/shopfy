@@ -1,4 +1,5 @@
 import type { ShopfyStore, StoreProduct } from "@/types/storefront";
+import { getDefaultStoreImage } from "@/lib/createdStores";
 
 export type StoreRow = {
   id: string;
@@ -72,16 +73,16 @@ export function mapStoreRow(row: StoreRow): ShopfyStore {
   const certificationExpiresAt = row.certification_expires_at || undefined;
   const isCertificationActive = Boolean(row.is_certified) && isFutureOrMissingDate(certificationExpiresAt);
   const description = stripLegacyStoreMetadata(row.description);
+  const defaultImage = getDefaultStoreImage(products[0]?.category || "General");
 
   return {
     ownerUserId: row.owner_user_id || undefined,
-    kind: "personal",
     slug: row.slug,
     name: row.name,
     tagline: row.tagline || "",
     description,
-    logoUrl: row.logo_url || "",
-    bannerUrl: row.banner_url || "",
+    logoUrl: row.logo_url || defaultImage,
+    bannerUrl: row.banner_url || defaultImage,
     ownerName: row.owner_name || "",
     city: row.city || "",
     country: row.country || "",

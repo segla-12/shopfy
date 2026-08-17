@@ -17,7 +17,6 @@ import type { ShopfyStore } from "@/types/storefront";
 import { StoreQrCode } from "./StoreQrCode";
 
 type WizardValues = {
-  kind: "personal";
   name: string;
   category: string;
   ownerName: string;
@@ -32,7 +31,6 @@ type WizardValues = {
 };
 
 const initialValues: WizardValues = {
-  kind: "personal",
   name: "",
   category: "General",
   ownerName: "",
@@ -104,7 +102,6 @@ export function CreateStoreWizard() {
     try {
       const store = await createSupabaseStore({
         ...values,
-        kind: "personal",
         whatsappPhone: normalizeWhatsappPhone(values.whatsappPhone),
       });
       setCreatedStore(store);

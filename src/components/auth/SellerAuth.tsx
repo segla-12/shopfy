@@ -13,7 +13,7 @@ export function SellerAuth() {
   const router = useRouter();
   const { language } = useLanguage();
   const copy = getAuthCopy(language);
-  const [mode, setMode] = useState<AuthMode>("signin");
+  const [mode, setMode] = useState<AuthMode>(() => getInitialAuthMode());
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -32,6 +32,7 @@ export function SellerAuth() {
     async function loadSession() {
       const isRecoveryRequest = window.location.search.includes("reset=1");
       setIsPasswordRecovery(isRecoveryRequest);
+      setMode(getInitialAuthMode());
 
       const { data } = await supabase.auth.getSession();
 
@@ -541,12 +542,18 @@ function getAuthCallbackUrl(nextPath: string) {
   return callbackUrl.toString();
 }
 
-function hasRequestedNextPath() {
+function getInitialAuthMode(): AuthMode {
   if (typeof window === "undefined") {
-    return false;
+    return "signin";
   }
 
-  return new URLSearchParams(window.location.search).has("next");
+  const params = new URLSearchParams(window.location.search);
+
+  if (params.get("reset") === "1") {
+    return "reset";
+  }
+
+  return getSafeNextPath(params.get("next"), "/dashboard") === "/create-store" ? "signup" : "signin";
 }
 
 function getRequestedNextPath(fallbackPath: string) {

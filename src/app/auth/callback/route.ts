@@ -5,7 +5,13 @@ import { SHOPFY_AUTH_COOKIE } from "@/lib/serverAuth";
 const cookieMaxAge = 10 * 60;
 
 function getSafeNextPath(nextPath: string | null) {
-  if (!nextPath || !nextPath.startsWith("/") || nextPath.startsWith("//") || nextPath.includes("\\")) {
+  if (
+    !nextPath ||
+    !nextPath.startsWith("/") ||
+    nextPath.startsWith("//") ||
+    nextPath.includes("\\") ||
+    nextPath.startsWith("/auth")
+  ) {
     return "/dashboard";
   }
 

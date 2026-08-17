@@ -21,7 +21,6 @@ export type StoreProduct = {
 
 export type ShopfyStore = {
   ownerUserId?: string;
-  kind?: "personal";
   slug: string;
   name: string;
   tagline: string;

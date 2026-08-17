@@ -8,7 +8,6 @@ import { Navbar } from "@/components/Navbar";
 import { formatPrice } from "@/lib/format";
 import { TranslationKey } from "@/lib/i18n";
 import { useLanguage } from "@/lib/language";
-import { getContactDisplayName } from "@/lib/resellerStore";
 import { buildWholesaleSuppliers } from "@/lib/supplierDirectory";
 import { useInactivityTimeout } from "@/lib/useInactivityTimeout";
 import { getProducts } from "@/services/productService";
@@ -26,6 +25,7 @@ const ADMIN_SECRET_STORAGE_KEY = "shopfy_admin_secret";
 
 export default function AdminPage() {
   const { language, t, categoryLabel } = useLanguage();
+
   const [adminSecret, setAdminSecret] = useState("");
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -35,11 +35,21 @@ export default function AdminPage() {
   const [storeSearch, setStoreSearch] = useState("");
   const [deletingStoreSlug, setDeletingStoreSlug] = useState("");
   const [storeToDelete, setStoreToDelete] = useState<ShopfyStore | null>(null);
-  const [certificationDates, setCertificationDates] = useState<Record<string, string>>({});
-  const [certificationDurations, setCertificationDurations] = useState<Record<string, number>>({});
-  const [storeCertificationDates, setStoreCertificationDates] = useState<Record<string, string>>({});
-  const [storeCertificationDurations, setStoreCertificationDurations] = useState<Record<string, number>>({});
-  const suppliers = useMemo(() => buildWholesaleSuppliers(products), [products]);
+
+  const [certificationDates, setCertificationDates] =
+    useState<Record<string, string>>({});
+  const [certificationDurations, setCertificationDurations] =
+    useState<Record<string, number>>({});
+  const [storeCertificationDates, setStoreCertificationDates] =
+    useState<Record<string, string>>({});
+  const [storeCertificationDurations, setStoreCertificationDurations] =
+    useState<Record<string, number>>({});
+
+  const suppliers = useMemo(
+    () => buildWholesaleSuppliers(products),
+    [products],
+  );
+
   const filteredStores = useMemo(() => {
     const query = storeSearch.trim().toLowerCase();
 
@@ -47,15 +57,20 @@ export default function AdminPage() {
       return stores;
     }
 
-    return stores.filter((store) => [
-      store.name,
-      store.slug,
-      store.city,
-      store.country,
-      store.ownerName,
-      store.whatsappPhone,
-    ].some((value) => String(value || "").toLowerCase().includes(query)));
+    return stores.filter((store) =>
+      [
+        store.name,
+        store.slug,
+        store.city,
+        store.country,
+        store.ownerName,
+        store.whatsappPhone,
+      ].some((value) =>
+        String(value || "").toLowerCase().includes(query),
+      ),
+    );
   }, [storeSearch, stores]);
+
   const supplierCopy = getAdminSupplierCopy(language);
   const storeCopy = getAdminStoreCopy(language);
 
@@ -82,6 +97,7 @@ export default function AdminPage() {
 
   async function handleUnlock(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
     setIsLoading(true);
     setMessage(null);
 
@@ -92,10 +108,16 @@ export default function AdminPage() {
       },
       body: JSON.stringify({ adminSecret }),
     });
+
     const result = await response.json();
 
     if (!result.success) {
-      setMessage({ key: getAdminMessageKey(result.message, "admin.incorrectCode") });
+      setMessage({
+        key: getAdminMessageKey(
+          result.message,
+          "admin.incorrectCode",
+        ),
+      });
       setIsLoading(false);
       return;
     }
@@ -107,91 +129,155 @@ export default function AdminPage() {
 
     setProducts(loadedProducts);
     setStores(loadedStores);
-    window.sessionStorage.setItem(ADMIN_SECRET_STORAGE_KEY, adminSecret);
+
+    window.sessionStorage.setItem(
+      ADMIN_SECRET_STORAGE_KEY,
+      adminSecret,
+    );
+
     setIsUnlocked(true);
     setIsLoading(false);
   }
 
-  async function handleCertification(product: Product, isCertified: boolean) {
+  async function handleCertification(
+    product: Product,
+    isCertified: boolean,
+  ) {
     setIsLoading(true);
     setMessage(null);
 
-    const durationMonths = certificationDurations[product.id] || 1;
-    const certificationStartDate = certificationDates[product.id] || getTodayInputDate();
-    const response = await fetch("/api/admin/certification", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+    const durationMonths =
+      certificationDurations[product.id] || 1;
+
+    const certificationStartDate =
+      certificationDates[product.id] ||
+      getTodayInputDate();
+
+    const response = await fetch(
+      "/api/admin/certification",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          adminSecret,
+          productId: product.id,
+          isCertified,
+          certificationStartDate,
+          durationMonths,
+        }),
       },
-      body: JSON.stringify({
-        adminSecret,
-        productId: product.id,
-        isCertified,
-        certificationStartDate,
-        durationMonths,
-      }),
-    });
+    );
 
     const result = await response.json();
 
     if (!result.success) {
-      setMessage({ key: getAdminMessageKey(result.message, "admin.actionDenied") });
+      setMessage({
+        key: getAdminMessageKey(
+          result.message,
+          "admin.actionDenied",
+        ),
+      });
+
       setIsLoading(false);
       return;
     }
 
     const loadedProducts = await getProducts();
+
     setProducts(loadedProducts);
-    setMessage(result.message
-      ? { key: getAdminMessageKey(result.message, "admin.actionDenied") }
-      : {
-          key: getCertificationMessageKey(isCertified, durationMonths),
-          values: { count: durationMonths },
-        });
+
+    setMessage(
+      result.message
+        ? {
+            key: getAdminMessageKey(
+              result.message,
+              "admin.actionDenied",
+            ),
+          }
+        : {
+            key: getCertificationMessageKey(
+              isCertified,
+              durationMonths,
+            ),
+            values: {
+              count: durationMonths,
+            },
+          },
+    );
+
     setIsLoading(false);
   }
 
-  async function handleStoreCertification(store: ShopfyStore, isCertified: boolean) {
-    if (isCertified && store.kind === "reseller" && !store.ownerUserId) {
-      setMessage({ key: "admin.actionDenied" });
-      return;
-    }
-
+  async function handleStoreCertification(
+    store: ShopfyStore,
+    isCertified: boolean,
+  ) {
     setIsLoading(true);
     setMessage(null);
 
-    const durationMonths = storeCertificationDurations[store.slug] || 1;
-    const certificationStartDate = storeCertificationDates[store.slug] || getTodayInputDate();
-    const response = await fetch("/api/admin/certification", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+    const durationMonths =
+      storeCertificationDurations[store.slug] || 1;
+
+    const certificationStartDate =
+      storeCertificationDates[store.slug] ||
+      getTodayInputDate();
+
+    const response = await fetch(
+      "/api/admin/certification",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          adminSecret,
+          storeSlug: store.slug,
+          isCertified,
+          certificationStartDate,
+          durationMonths,
+        }),
       },
-      body: JSON.stringify({
-        adminSecret,
-        storeSlug: store.slug,
-        isCertified,
-        certificationStartDate,
-        durationMonths,
-      }),
-    });
+    );
 
     const result = await response.json();
 
     if (!result.success) {
-      setMessage({ key: getAdminMessageKey(result.message, "admin.actionDenied") });
+      setMessage({
+        key: getAdminMessageKey(
+          result.message,
+          "admin.actionDenied",
+        ),
+      });
+
       setIsLoading(false);
       return;
     }
 
     const loadedStores = await getSupabaseStores();
+
     setStores(loadedStores);
-    setMessage(result.message
-      ? { key: getAdminMessageKey(result.message, "admin.actionDenied") }
-      : {
-          key: getStoreCertificationMessageKey(isCertified, durationMonths),
-          values: { count: durationMonths },
-        });
+
+    setMessage(
+      result.message
+        ? {
+            key: getAdminMessageKey(
+              result.message,
+              "admin.actionDenied",
+            ),
+          }
+        : {
+            key: getStoreCertificationMessageKey(
+              isCertified,
+              durationMonths,
+            ),
+            values: {
+              count: durationMonths,
+            },
+          },
+    );
+
     setIsLoading(false);
   }
 
@@ -204,12 +290,27 @@ export default function AdminPage() {
     setMessage(null);
 
     try {
-      await deleteSupabaseStore(storeToDelete.slug, adminSecret);
-      setStores((currentStores) => currentStores.filter((store) => store.slug !== storeToDelete.slug));
+      await deleteSupabaseStore(
+        storeToDelete.slug,
+        adminSecret,
+      );
+
+      setStores((currentStores) =>
+        currentStores.filter(
+          (store) =>
+            store.slug !== storeToDelete.slug,
+        ),
+      );
+
       setStoreToDelete(null);
-      setMessage({ key: "admin.storeDeleted" });
+
+      setMessage({
+        key: "admin.storeDeleted",
+      });
     } catch {
-      setMessage({ key: "admin.storeDeleteFailed" });
+      setMessage({
+        key: "admin.storeDeleteFailed",
+      });
     } finally {
       setDeletingStoreSlug("");
     }
@@ -222,128 +323,310 @@ export default function AdminPage() {
       <section className="mx-auto max-w-6xl px-4 py-10">
         <div className="mb-7 rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-gray-900">
           <p className="text-sm font-black tracking-wide">
-            <span className="text-gray-950">Shop</span><span className="text-orange-500">fy</span>
-            <span className="ml-2 uppercase text-gray-500 dark:text-gray-300">Administration</span>
+            <span className="text-gray-950">
+              Shop
+            </span>
+            <span className="text-orange-500">
+              fy
+            </span>
+
+            <span className="ml-2 uppercase text-gray-500 dark:text-gray-300">
+              Administration
+            </span>
           </p>
-          <h1 className="mt-2 text-4xl font-black tracking-tight text-gray-950 dark:text-white">{t("admin.title")}</h1>
+
+          <h1 className="mt-2 text-4xl font-black tracking-tight text-gray-950 dark:text-white">
+            {t("admin.title")}
+          </h1>
+
           <p className="mt-3 max-w-2xl leading-7 text-gray-600 dark:text-gray-300">
             {t("admin.description")}
           </p>
         </div>
 
         {!isUnlocked ? (
-          <form onSubmit={handleUnlock} className="grid max-w-xl gap-4 rounded-3xl border border-gray-100 bg-white p-5 shadow-sm md:p-8">
+          <form
+            onSubmit={handleUnlock}
+            className="grid max-w-xl gap-4 rounded-3xl border border-gray-100 bg-white p-5 shadow-sm md:p-8"
+          >
             <label className="grid gap-2">
-              <span className="text-sm font-black text-gray-900">{t("admin.codeLabel")}</span>
+              <span className="text-sm font-black text-gray-900">
+                {t("admin.codeLabel")}
+              </span>
+
               <input
                 value={adminSecret}
-                onChange={(event) => setAdminSecret(event.target.value)}
+                onChange={(event) =>
+                  setAdminSecret(event.target.value)
+                }
                 required
                 type="password"
                 suppressHydrationWarning
-                placeholder={t("admin.codePlaceholder")}
+                placeholder={t(
+                  "admin.codePlaceholder",
+                )}
                 className="min-h-12 rounded-2xl border border-gray-200 px-4 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100"
               />
             </label>
 
-            <button disabled={isLoading} className="min-h-12 rounded-full bg-orange-500 px-5 text-sm font-black text-white transition hover:bg-orange-600 disabled:cursor-wait disabled:opacity-70">
-              {isLoading ? t("admin.verifying") : t("admin.enter")}
+            <button
+              disabled={isLoading}
+              className="min-h-12 rounded-full bg-orange-500 px-5 text-sm font-black text-white transition hover:bg-orange-600 disabled:cursor-wait disabled:opacity-70"
+            >
+              {isLoading
+                ? t("admin.verifying")
+                : t("admin.enter")}
             </button>
           </form>
         ) : (
           <div className="grid gap-6">
             {message ? (
               <p className="rounded-lg border border-gray-100 bg-white p-4 text-sm font-bold text-gray-700 shadow-sm dark:border-white/10 dark:bg-gray-900 dark:text-gray-200">
-                {t(message.key, message.values)}
+                {t(
+                  message.key,
+                  message.values,
+                )}
               </p>
             ) : null}
 
             <section className="grid gap-3 sm:grid-cols-3">
-              <AdminMetric label={storeCopy.metricStores} value={stores.length} />
-              <AdminMetric label={storeCopy.metricCertified} value={stores.filter((store) => store.isCertified).length} />
-              <AdminMetric label={storeCopy.metricProducts} value={stores.reduce((total, store) => total + store.products.length, 0)} />
+              <AdminMetric
+                label={storeCopy.metricStores}
+                value={stores.length}
+              />
+
+              <AdminMetric
+                label={storeCopy.metricCertified}
+                value={
+                  stores.filter(
+                    (store) =>
+                      store.isCertified,
+                  ).length
+                }
+              />
+
+              <AdminMetric
+                label={storeCopy.metricProducts}
+                value={stores.reduce(
+                  (total, store) =>
+                    total + store.products.length,
+                  0,
+                )}
+              />
             </section>
 
             <section className="grid gap-3">
               <div>
-                <h2 className="text-2xl font-black text-gray-950 dark:text-white">{supplierCopy.title}</h2>
-                <p className="mt-1 text-sm font-semibold text-gray-500 dark:text-gray-300">{supplierCopy.description}</p>
+                <h2 className="text-2xl font-black text-gray-950 dark:text-white">
+                  {supplierCopy.title}
+                </h2>
+
+                <p className="mt-1 text-sm font-semibold text-gray-500 dark:text-gray-300">
+                  {supplierCopy.description}
+                </p>
               </div>
 
               {suppliers.map((supplier) => {
-                const product = getSupplierCertificationProduct(supplier);
+                const product =
+                  getSupplierCertificationProduct(
+                    supplier,
+                  );
 
                 if (!product) {
                   return null;
                 }
 
-                const categories = supplier.categories.map(categoryLabel).join(" / ");
+                const categories =
+                  supplier.categories
+                    .map(categoryLabel)
+                    .join(" / ");
 
                 return (
-                  <article key={supplier.id} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+                  <article
+                    key={supplier.id}
+                    className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm"
+                  >
                     <div className="flex flex-col gap-4 sm:flex-row">
-                      <img src={supplier.photo || supplier.firstProductImage || product.image} alt={supplier.name} className="h-28 w-28 rounded-xl object-cover" />
+                      <img
+                        src={
+                          supplier.photo ||
+                          supplier.firstProductImage ||
+                          product.image
+                        }
+                        alt={supplier.name}
+                        className="h-28 w-28 rounded-xl object-cover"
+                      />
+
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="font-black text-gray-950">{supplier.name}</h3>
-                          {supplier.isCertified ? <CertifiedBadge /> : null}
+                          <h3 className="font-black text-gray-950">
+                            {supplier.name}
+                          </h3>
+
+                          {supplier.isCertified ? (
+                            <CertifiedBadge />
+                          ) : null}
                         </div>
-                        <p className="mt-1 font-black text-orange-500">{supplierCopy.productCount(supplier.productCount)}</p>
-                        <p className="mt-1 text-sm text-gray-500">{categories || supplierCopy.noCategory}</p>
+
+                        <p className="mt-1 font-black text-orange-500">
+                          {supplierCopy.productCount(
+                            supplier.productCount,
+                          )}
+                        </p>
+
+                        <p className="mt-1 text-sm text-gray-500">
+                          {categories ||
+                            supplierCopy.noCategory}
+                        </p>
+
                         <div className="mt-3 grid gap-1 text-sm text-gray-500">
-                          <p>{t("admin.certificationLabel")}: {getCertificationStatus(product, t)}</p>
-                          <p>{t("admin.expirationLabel")}: {formatCertificationDate(product.certificationExpiresAt, language, t)}</p>
-                          <p>{t("admin.amountLabel")}: {formatPrice(product.certificationAmount || getCertificationAmount(certificationDurations[product.id] || 1))} FCFA</p>
+                          <p>
+                            {t(
+                              "admin.certificationLabel",
+                            )}
+                            :{" "}
+                            {getCertificationStatus(
+                              product,
+                              t,
+                            )}
+                          </p>
+
+                          <p>
+                            {t(
+                              "admin.expirationLabel",
+                            )}
+                            :{" "}
+                            {formatCertificationDate(
+                              product.certificationExpiresAt,
+                              language,
+                              t,
+                            )}
+                          </p>
+
+                          <p>
+                            {t(
+                              "admin.amountLabel",
+                            )}
+                            :{" "}
+                            {formatPrice(
+                              product.certificationAmount ||
+                                getCertificationAmount(
+                                  certificationDurations[
+                                    product.id
+                                  ] || 1,
+                                ),
+                            )}{" "}
+                            FCFA
+                          </p>
                         </div>
                       </div>
 
                       <div className="grid gap-2 sm:w-64">
                         <label className="grid gap-1">
-                          <span className="text-xs font-black uppercase tracking-wide text-gray-500">{t("admin.startDateLabel")}</span>
+                          <span className="text-xs font-black uppercase tracking-wide text-gray-500">
+                            {t(
+                              "admin.startDateLabel",
+                            )}
+                          </span>
+
                           <input
                             type="date"
                             suppressHydrationWarning
-                            value={certificationDates[product.id] || getTodayInputDate()}
-                            onChange={(event) => setCertificationDates((dates) => ({
-                              ...dates,
-                              [product.id]: event.target.value,
-                            }))}
+                            value={
+                              certificationDates[
+                                product.id
+                              ] ||
+                              getTodayInputDate()
+                            }
+                            onChange={(event) =>
+                              setCertificationDates(
+                                (dates) => ({
+                                  ...dates,
+                                  [product.id]:
+                                    event.target.value,
+                                }),
+                              )
+                            }
                             className="min-h-10 rounded-xl border border-gray-200 px-3 text-sm outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100"
                           />
                         </label>
 
                         <label className="grid gap-1">
-                          <span className="text-xs font-black uppercase tracking-wide text-gray-500">{t("admin.durationLabel")}</span>
+                          <span className="text-xs font-black uppercase tracking-wide text-gray-500">
+                            {t(
+                              "admin.durationLabel",
+                            )}
+                          </span>
+
                           <select
-                            value={certificationDurations[product.id] || 1}
+                            value={
+                              certificationDurations[
+                                product.id
+                              ] || 1
+                            }
                             suppressHydrationWarning
-                            onChange={(event) => setCertificationDurations((durations) => ({
-                              ...durations,
-                              [product.id]: Number(event.target.value),
-                            }))}
+                            onChange={(event) =>
+                              setCertificationDurations(
+                                (durations) => ({
+                                  ...durations,
+                                  [product.id]:
+                                    Number(
+                                      event.target.value,
+                                    ),
+                                }),
+                              )
+                            }
                             className="min-h-10 rounded-xl border border-gray-200 px-3 text-sm font-bold outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100"
                           >
-                            {[1, 2, 3, 6, 12].map((months) => (
-                              <option key={months} value={months}>{formatDurationOption(months, t)}</option>
-                            ))}
+                            {[1, 2, 3, 6, 12].map(
+                              (months) => (
+                                <option
+                                  key={months}
+                                  value={months}
+                                >
+                                  {formatDurationOption(
+                                    months,
+                                    t,
+                                  )}
+                                </option>
+                              ),
+                            )}
                           </select>
                         </label>
 
                         <button
                           type="button"
-                          onClick={() => handleCertification(product, true)}
+                          onClick={() =>
+                            handleCertification(
+                              product,
+                              true,
+                            )
+                          }
                           disabled={isLoading}
                           className="min-h-10 rounded-full bg-blue-600 px-4 text-sm font-black text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          {product.isCertified ? t("admin.renew") : t("admin.certify")}
+                          {product.isCertified
+                            ? t("admin.renew")
+                            : t("admin.certify")}
                         </button>
+
                         <button
                           type="button"
-                          onClick={() => handleCertification(product, false)}
-                          disabled={isLoading || !product.isCertified}
+                          onClick={() =>
+                            handleCertification(
+                              product,
+                              false,
+                            )
+                          }
+                          disabled={
+                            isLoading ||
+                            !product.isCertified
+                          }
                           className="min-h-10 rounded-full border border-gray-200 px-4 text-sm font-black text-gray-900 transition hover:border-red-200 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          {t("admin.removeCertification")}
+                          {t(
+                            "admin.removeCertification",
+                          )}
                         </button>
                       </div>
                     </div>
@@ -355,13 +638,25 @@ export default function AdminPage() {
             <section className="grid gap-3">
               <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                 <div>
-                  <h2 className="text-2xl font-black text-gray-950 dark:text-white">{storeCopy.managementTitle}</h2>
-                  <p className="mt-1 text-sm font-semibold text-gray-500 dark:text-gray-300">{storeCopy.description}</p>
+                  <h2 className="text-2xl font-black text-gray-950 dark:text-white">
+                    {storeCopy.managementTitle}
+                  </h2>
+
+                  <p className="mt-1 text-sm font-semibold text-gray-500 dark:text-gray-300">
+                    {storeCopy.description}
+                  </p>
                 </div>
+
                 <input
                   value={storeSearch}
-                  onChange={(event) => setStoreSearch(event.target.value)}
-                  placeholder={storeCopy.searchPlaceholder}
+                  onChange={(event) =>
+                    setStoreSearch(
+                      event.target.value,
+                    )
+                  }
+                  placeholder={
+                    storeCopy.searchPlaceholder
+                  }
                   className="min-h-11 w-full rounded-md border border-gray-200 bg-white px-4 text-sm font-bold text-gray-950 outline-none transition focus:border-orange-300 focus:ring-4 focus:ring-orange-100 dark:border-white/10 dark:bg-gray-900 dark:text-white md:max-w-sm"
                 />
               </div>
@@ -371,108 +666,260 @@ export default function AdminPage() {
                   {storeCopy.noStores}
                 </p>
               ) : (
-                filteredStores.map((store) => {
-                  const isResellerDraft = store.kind === "reseller" && !store.ownerUserId;
-                  const resellerContact = store.reseller;
-                  const ownerContact = store.futureOwner;
-
-                  return (
-                  <article key={store.slug} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+                filteredStores.map((store) => (
+                  <article
+                    key={store.slug}
+                    className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm"
+                  >
                     <div className="flex flex-col gap-4 sm:flex-row">
-                      <img src={store.logoUrl || store.bannerUrl} alt={store.name} className="h-28 w-28 rounded-xl bg-white object-contain p-2" />
+                      <img
+                        src={
+                          store.logoUrl ||
+                          store.bannerUrl
+                        }
+                        alt={store.name}
+                        className="h-28 w-28 rounded-xl bg-white object-contain p-2"
+                      />
+
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="font-black text-gray-950">{store.name}</h3>
-                          {store.isCertified ? <CertifiedBadge label={storeCopy.certifiedBadge} /> : null}
+                          <h3 className="font-black text-gray-950">
+                            {store.name}
+                          </h3>
+
+                          {store.isCertified ? (
+                            <CertifiedBadge
+                              label={
+                                storeCopy.certifiedBadge
+                              }
+                            />
+                          ) : null}
                         </div>
-                        <p className="mt-1 font-black text-orange-500">@{store.slug}</p>
-                        <p className="mt-1 text-sm text-gray-500">{store.city}, {store.country}</p>
+
+                        <p className="mt-1 font-black text-orange-500">
+                          @{store.slug}
+                        </p>
+
+                        <p className="mt-1 text-sm text-gray-500">
+                          {store.city},{" "}
+                          {store.country}
+                        </p>
+
                         <div className="mt-3 grid gap-1 text-sm text-gray-500">
-                          <p>{storeCopy.typeLabel}: {store.kind === "reseller" ? storeCopy.resellerType : storeCopy.personalType}</p>
-                          <p>{storeCopy.publicationLabel}: {store.isCertified ? storeCopy.publishedStatus : storeCopy.draftStatus}</p>
-                          <p>{t("admin.certificationLabel")}: {getStoreCertificationStatus(store, t)}</p>
-                          <p>{t("admin.expirationLabel")}: {formatCertificationDate(store.certificationExpiresAt, language, t)}</p>
-                          <p>{t("admin.amountLabel")}: {formatPrice(store.certificationAmount || getCertificationAmount(storeCertificationDurations[store.slug] || 1))} FCFA</p>
+                          <p>
+                            {storeCopy.publicationLabel}:{" "}
+                            {store.isCertified
+                              ? storeCopy.publishedStatus
+                              : storeCopy.draftStatus}
+                          </p>
+
+                          <p>
+                            {t(
+                              "admin.certificationLabel",
+                            )}
+                            :{" "}
+                            {getStoreCertificationStatus(
+                              store,
+                              t,
+                            )}
+                          </p>
+
+                          <p>
+                            {t(
+                              "admin.expirationLabel",
+                            )}
+                            :{" "}
+                            {formatCertificationDate(
+                              store.certificationExpiresAt,
+                              language,
+                              t,
+                            )}
+                          </p>
+
+                          <p>
+                            {t(
+                              "admin.amountLabel",
+                            )}
+                            :{" "}
+                            {formatPrice(
+                              store.certificationAmount ||
+                                getCertificationAmount(
+                                  storeCertificationDurations[
+                                    store.slug
+                                  ] || 1,
+                                ),
+                            )}{" "}
+                            FCFA
+                          </p>
                         </div>
-                        <div className="mt-4 grid gap-3 rounded-xl border border-gray-100 p-3 text-sm text-gray-600">
-                          <ContactBlock title={storeCopy.resellerContactTitle} contact={resellerContact} copy={storeCopy} />
-                          <ContactBlock title={storeCopy.ownerContactTitle} contact={ownerContact} fallbackName={store.kind === "personal" ? store.ownerName : ""} fallbackCity={store.kind === "personal" ? store.city : ""} fallbackCountry={store.kind === "personal" ? store.country : ""} fallbackPhone={store.kind === "personal" ? store.whatsappPhone : ""} copy={storeCopy} />
+
+                        <div className="mt-4 grid gap-2 rounded-xl border border-gray-100 p-3 text-sm text-gray-600">
+                          <ContactBlock
+                            title={
+                              storeCopy.ownerContactTitle
+                            }
+                            name={
+                              store.ownerName
+                            }
+                            city={
+                              store.city
+                            }
+                            country={
+                              store.country
+                            }
+                            phone={
+                              store.whatsappPhone
+                            }
+                            copy={storeCopy}
+                          />
                         </div>
                       </div>
 
                       <div className="grid gap-2 sm:w-64">
                         <label className="grid gap-1">
-                          <span className="text-xs font-black uppercase tracking-wide text-gray-500">{t("admin.startDateLabel")}</span>
+                          <span className="text-xs font-black uppercase tracking-wide text-gray-500">
+                            {t(
+                              "admin.startDateLabel",
+                            )}
+                          </span>
+
                           <input
                             type="date"
                             suppressHydrationWarning
-                            value={storeCertificationDates[store.slug] || getTodayInputDate()}
-                            onChange={(event) => setStoreCertificationDates((dates) => ({
-                              ...dates,
-                              [store.slug]: event.target.value,
-                            }))}
+                            value={
+                              storeCertificationDates[
+                                store.slug
+                              ] ||
+                              getTodayInputDate()
+                            }
+                            onChange={(event) =>
+                              setStoreCertificationDates(
+                                (dates) => ({
+                                  ...dates,
+                                  [store.slug]:
+                                    event.target.value,
+                                }),
+                              )
+                            }
                             className="min-h-10 rounded-xl border border-gray-200 px-3 text-sm outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100"
                           />
                         </label>
 
                         <label className="grid gap-1">
-                          <span className="text-xs font-black uppercase tracking-wide text-gray-500">{t("admin.durationLabel")}</span>
+                          <span className="text-xs font-black uppercase tracking-wide text-gray-500">
+                            {t(
+                              "admin.durationLabel",
+                            )}
+                          </span>
+
                           <select
-                            value={storeCertificationDurations[store.slug] || 1}
+                            value={
+                              storeCertificationDurations[
+                                store.slug
+                              ] || 1
+                            }
                             suppressHydrationWarning
-                            onChange={(event) => setStoreCertificationDurations((durations) => ({
-                              ...durations,
-                              [store.slug]: Number(event.target.value),
-                            }))}
+                            onChange={(event) =>
+                              setStoreCertificationDurations(
+                                (durations) => ({
+                                  ...durations,
+                                  [store.slug]:
+                                    Number(
+                                      event.target.value,
+                                    ),
+                                }),
+                              )
+                            }
                             className="min-h-10 rounded-xl border border-gray-200 px-3 text-sm font-bold outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100"
                           >
-                            {[1, 2, 3, 6, 12].map((months) => (
-                              <option key={months} value={months}>{formatDurationOption(months, t)}</option>
-                            ))}
+                            {[1, 2, 3, 6, 12].map(
+                              (months) => (
+                                <option
+                                  key={months}
+                                  value={months}
+                                >
+                                  {formatDurationOption(
+                                    months,
+                                    t,
+                                  )}
+                                </option>
+                              ),
+                            )}
                           </select>
                         </label>
 
                         <a
-                          href={`/dashboard?adminStore=${encodeURIComponent(store.slug)}`}
+                          href={`/dashboard?adminStore=${encodeURIComponent(
+                            store.slug,
+                          )}`}
                           className="inline-flex min-h-10 items-center justify-center rounded-full bg-gray-950 px-4 text-sm font-black text-white transition hover:bg-orange-500"
                         >
                           {storeCopy.openDashboard}
                         </a>
+
                         <a
                           href={`/store/${store.slug}`}
                           className="inline-flex min-h-10 items-center justify-center rounded-full border border-gray-200 px-4 text-sm font-black text-gray-900 transition hover:border-orange-200 hover:text-orange-600"
                         >
                           {storeCopy.viewStore}
                         </a>
+
                         <button
                           type="button"
-                          onClick={() => handleStoreCertification(store, true)}
-                          disabled={isLoading || isResellerDraft}
+                          onClick={() =>
+                            handleStoreCertification(
+                              store,
+                              true,
+                            )
+                          }
+                          disabled={isLoading}
                           className="min-h-10 rounded-full bg-blue-600 px-4 text-sm font-black text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          {store.isCertified ? t("admin.renew") : t("admin.certify")}
+                          {store.isCertified
+                            ? t("admin.renew")
+                            : t("admin.certify")}
                         </button>
+
                         <button
                           type="button"
-                          onClick={() => handleStoreCertification(store, false)}
-                          disabled={isLoading || !store.isCertified}
+                          onClick={() =>
+                            handleStoreCertification(
+                              store,
+                              false,
+                            )
+                          }
+                          disabled={
+                            isLoading ||
+                            !store.isCertified
+                          }
                           className="min-h-10 rounded-full border border-gray-200 px-4 text-sm font-black text-gray-900 transition hover:border-red-200 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          {t("admin.removeCertification")}
+                          {t(
+                            "admin.removeCertification",
+                          )}
                         </button>
+
                         <button
                           type="button"
-                          onClick={() => setStoreToDelete(store)}
-                          disabled={isLoading || deletingStoreSlug === store.slug}
+                          onClick={() =>
+                            setStoreToDelete(store)
+                          }
+                          disabled={
+                            isLoading ||
+                            deletingStoreSlug ===
+                              store.slug
+                          }
                           className="min-h-10 rounded-full border border-red-200 px-4 text-sm font-black text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          {deletingStoreSlug === store.slug ? storeCopy.deleting : storeCopy.deleteStore}
+                          {deletingStoreSlug ===
+                          store.slug
+                            ? storeCopy.deleting
+                            : storeCopy.deleteStore}
                         </button>
                       </div>
                     </div>
                   </article>
-                  );
-                })
+                ))
               )}
             </section>
           </div>
@@ -482,26 +929,42 @@ export default function AdminPage() {
       {storeToDelete ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-gray-950/50 px-4">
           <div className="w-full max-w-md rounded-lg border border-gray-200 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-gray-900">
-            <h2 className="text-xl font-black text-gray-950 dark:text-white">{storeCopy.deleteTitle}</h2>
+            <h2 className="text-xl font-black text-gray-950 dark:text-white">
+              {storeCopy.deleteTitle}
+            </h2>
+
             <p className="mt-3 leading-7 text-gray-600 dark:text-gray-300">
-              {storeCopy.deleteDescription.replace("{store}", storeToDelete.name)}
+              {storeCopy.deleteDescription.replace(
+                "{store}",
+                storeToDelete.name,
+              )}
             </p>
+
             <div className="mt-5 flex flex-wrap justify-end gap-2">
               <button
                 type="button"
-                onClick={() => setStoreToDelete(null)}
-                disabled={Boolean(deletingStoreSlug)}
+                onClick={() =>
+                  setStoreToDelete(null)
+                }
+                disabled={Boolean(
+                  deletingStoreSlug,
+                )}
                 className="inline-flex min-h-10 items-center justify-center rounded-md border border-gray-200 px-4 text-sm font-black text-gray-900 transition hover:border-orange-200 hover:text-orange-600 disabled:opacity-50 dark:border-white/10 dark:text-gray-100"
               >
                 {storeCopy.cancel}
               </button>
+
               <button
                 type="button"
                 onClick={handleDeleteStore}
-                disabled={Boolean(deletingStoreSlug)}
+                disabled={Boolean(
+                  deletingStoreSlug,
+                )}
                 className="inline-flex min-h-10 items-center justify-center rounded-md bg-red-600 px-4 text-sm font-black text-white transition hover:bg-red-700 disabled:cursor-wait disabled:opacity-60"
               >
-                {deletingStoreSlug ? storeCopy.deleting : storeCopy.confirmDelete}
+                {deletingStoreSlug
+                  ? storeCopy.deleting
+                  : storeCopy.confirmDelete}
               </button>
             </div>
           </div>
@@ -513,43 +976,65 @@ export default function AdminPage() {
   );
 }
 
-function AdminMetric({ label, value }: { label: string; value: number }) {
+function AdminMetric({
+  label,
+  value,
+}: {
+  label: string;
+  value: number;
+}) {
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-900">
-      <p className="text-xs font-black uppercase tracking-wide text-gray-500 dark:text-gray-400">{label}</p>
-      <p className="mt-2 text-3xl font-black text-gray-950 dark:text-white">{value}</p>
+      <p className="text-xs font-black uppercase tracking-wide text-gray-500 dark:text-gray-400">
+        {label}
+      </p>
+
+      <p className="mt-2 text-3xl font-black text-gray-950 dark:text-white">
+        {value}
+      </p>
     </div>
   );
 }
 
 function ContactBlock({
   title,
-  contact,
-  fallbackName = "",
-  fallbackCity = "",
-  fallbackCountry = "",
-  fallbackPhone = "",
+  name = "",
+  city = "",
+  country = "",
+  phone = "",
   copy,
 }: {
   title: string;
-  contact?: ShopfyStore["reseller"];
-  fallbackName?: string;
-  fallbackCity?: string;
-  fallbackCountry?: string;
-  fallbackPhone?: string;
+  name?: string;
+  city?: string;
+  country?: string;
+  phone?: string;
   copy: ReturnType<typeof getAdminStoreCopy>;
 }) {
-  const name = getContactDisplayName(contact) || fallbackName;
-  const city = contact?.city || fallbackCity;
-  const country = contact?.country || fallbackCountry;
-  const phone = contact?.whatsappPhone || fallbackPhone;
-
   return (
-    <div className="grid gap-2 border-t border-gray-100 pt-3 first:border-t-0 first:pt-0">
-      <p className="font-black text-gray-950">{title}</p>
-      <p>{copy.nameLabel}: {name || copy.notProvided}</p>
-      <p>{copy.locationLabel}: {[city, country].filter(Boolean).join(", ") || copy.notProvided}</p>
-      <p>{copy.whatsappLabel}: {phone || copy.notProvided}</p>
+    <div className="grid gap-2">
+      <p className="font-black text-gray-950">
+        {title}
+      </p>
+
+      <p>
+        {copy.nameLabel}:{" "}
+        {name || copy.notProvided}
+      </p>
+
+      <p>
+        {copy.locationLabel}:{" "}
+        {[city, country]
+          .filter(Boolean)
+          .join(", ") ||
+          copy.notProvided}
+      </p>
+
+      <p>
+        {copy.whatsappLabel}:{" "}
+        {phone || copy.notProvided}
+      </p>
+
       <AdminWhatsappButton
         phone={phone}
         disabled={!phone}
@@ -561,47 +1046,64 @@ function ContactBlock({
   );
 }
 
-function getSupplierCertificationProduct(supplier: WholesaleSupplier) {
-  return supplier.products.find((product) => product.isCertified) || supplier.products[0];
+function getSupplierCertificationProduct(
+  supplier: WholesaleSupplier,
+) {
+  return (
+    supplier.products.find(
+      (product) => product.isCertified,
+    ) || supplier.products[0]
+  );
 }
 
-function getAdminSupplierCopy(language: "fr" | "en") {
+function getAdminSupplierCopy(
+  language: "fr" | "en",
+) {
   if (language === "en") {
     return {
       title: "Wholesale suppliers",
-      description: "Certify or remove certification from supplier profiles.",
+      description:
+        "Certify or remove certification from supplier profiles.",
       noCategory: "No category",
-      productCount: (count: number) => `${count} catalog product${count > 1 ? "s" : ""}`,
+      productCount: (count: number) =>
+        `${count} catalog product${
+          count > 1 ? "s" : ""
+        }`,
     };
   }
 
   return {
     title: "Fournisseurs grossistes",
-    description: "Certifie ou retire la certification des profils fournisseurs.",
+    description:
+      "Certifie ou retire la certification des profils fournisseurs.",
     noCategory: "Aucune categorie",
-    productCount: (count: number) => `${count} produit${count > 1 ? "s" : ""} au catalogue`,
+    productCount: (count: number) =>
+      `${count} produit${
+        count > 1 ? "s" : ""
+      } au catalogue`,
   };
 }
 
-function getAdminStoreCopy(language: "fr" | "en") {
+function getAdminStoreCopy(
+  language: "fr" | "en",
+) {
   if (language === "en") {
     return {
       title: "Stores",
       managementTitle: "Store management",
-      description: "Certify or remove certification from seller stores.",
+      description:
+        "Certify or remove certification from seller stores.",
       certifiedBadge: "Certified store",
-      noStores: "No store has been created yet.",
-      searchPlaceholder: "Search stores...",
+      noStores:
+        "No store has been created yet.",
+      searchPlaceholder:
+        "Search stores...",
       metricStores: "Stores",
       metricCertified: "Certified",
       metricProducts: "Products",
-      typeLabel: "Type",
-      personalType: "Personal",
-      resellerType: "Reseller",
       publicationLabel: "Publication",
       publishedStatus: "Published",
       draftStatus: "Unpublished",
-      resellerContactTitle: "Reseller / creator",
       ownerContactTitle: "Owner",
       nameLabel: "Name",
       locationLabel: "Location",
@@ -612,146 +1114,231 @@ function getAdminStoreCopy(language: "fr" | "en") {
       deleteStore: "Delete store",
       deleting: "Deleting...",
       deleteTitle: "Delete store",
-      deleteDescription: "Delete {store} and its products/orders permanently?",
+      deleteDescription:
+        "Delete {store} and its products/orders permanently?",
       cancel: "Cancel",
-      confirmDelete: "Delete permanently",
+      confirmDelete:
+        "Delete permanently",
       notProvided: "Not provided",
     };
   }
 
   return {
     title: "Boutiques",
-    managementTitle: "Gestion des boutiques",
-    description: "Certifie ou retire la certification des boutiques vendeur.",
-    certifiedBadge: "Boutique certifiée",
-    noStores: "Aucune boutique creee pour le moment.",
-    searchPlaceholder: "Rechercher une boutique...",
+    managementTitle:
+      "Gestion des boutiques",
+    description:
+      "Certifie ou retire la certification des boutiques vendeur.",
+    certifiedBadge:
+      "Boutique certifiée",
+    noStores:
+      "Aucune boutique creee pour le moment.",
+    searchPlaceholder:
+      "Rechercher une boutique...",
     metricStores: "Boutiques",
     metricCertified: "Certifiees",
     metricProducts: "Produits",
-    typeLabel: "Type",
-    personalType: "Personnelle",
-    resellerType: "Revendeur",
     publicationLabel: "Publication",
     publishedStatus: "Publiee",
     draftStatus: "Non publiee",
-    resellerContactTitle: "Revendeur / createur",
     ownerContactTitle: "Proprietaire",
     nameLabel: "Nom",
     locationLabel: "Localisation",
     whatsappLabel: "WhatsApp",
-    whatsappAction: "Ouvrir WhatsApp",
-    openDashboard: "Ouvrir le dashboard",
+    whatsappAction:
+      "Ouvrir WhatsApp",
+    openDashboard:
+      "Ouvrir le dashboard",
     viewStore: "Voir la boutique",
-    deleteStore: "Supprimer la boutique",
+    deleteStore:
+      "Supprimer la boutique",
     deleting: "Suppression...",
-    deleteTitle: "Supprimer la boutique",
-    deleteDescription: "Supprimer definitivement {store}, ses produits et ses commandes ?",
+    deleteTitle:
+      "Supprimer la boutique",
+    deleteDescription:
+      "Supprimer definitivement {store}, ses produits et ses commandes ?",
     cancel: "Annuler",
-    confirmDelete: "Supprimer definitivement",
+    confirmDelete:
+      "Supprimer definitivement",
     notProvided: "Non renseigne",
   };
 }
 
 function getTodayInputDate() {
-  return new Date().toISOString().slice(0, 10);
+  return new Date()
+    .toISOString()
+    .slice(0, 10);
 }
 
-function getCertificationAmount(durationMonths: number) {
+function getCertificationAmount(
+  durationMonths: number,
+) {
   return durationMonths * 1500;
 }
 
 function formatDurationOption(
   durationMonths: number,
-  t: (key: TranslationKey, values?: Record<string, string | number>) => string,
+  t: (
+    key: TranslationKey,
+    values?: Record<
+      string,
+      string | number
+    >,
+  ) => string,
 ) {
-  const key = durationMonths === 1 ? "admin.durationOne" : "admin.durationMany";
+  const key =
+    durationMonths === 1
+      ? "admin.durationOne"
+      : "admin.durationMany";
 
   return t(key, {
     count: durationMonths,
-    price: formatPrice(getCertificationAmount(durationMonths)),
+    price: formatPrice(
+      getCertificationAmount(
+        durationMonths,
+      ),
+    ),
   });
 }
 
 function formatCertificationDate(
   date: string | undefined,
   language: "fr" | "en",
-  t: (key: TranslationKey, values?: Record<string, string | number>) => string,
+  t: (
+    key: TranslationKey,
+    values?: Record<
+      string,
+      string | number
+    >,
+  ) => string,
 ) {
   if (!date) {
     return t("admin.notDefined");
   }
 
-  return new Intl.DateTimeFormat(language === "fr" ? "fr-FR" : "en-US", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(new Date(date));
+  return new Intl.DateTimeFormat(
+    language === "fr"
+      ? "fr-FR"
+      : "en-US",
+    {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    },
+  ).format(new Date(date));
 }
 
 function getCertificationStatus(
   product: Product,
-  t: (key: TranslationKey, values?: Record<string, string | number>) => string,
+  t: (
+    key: TranslationKey,
+    values?: Record<
+      string,
+      string | number
+    >,
+  ) => string,
 ) {
   if (product.isCertified) {
     return t("admin.statusActive");
   }
 
-  if (product.certificationExpiresAt && new Date(product.certificationExpiresAt).getTime() <= Date.now()) {
+  if (
+    product.certificationExpiresAt &&
+    new Date(
+      product.certificationExpiresAt,
+    ).getTime() <= Date.now()
+  ) {
     return t("admin.statusExpired");
   }
 
-  return t("admin.statusUncertified");
+  return t(
+    "admin.statusUncertified",
+  );
 }
 
 function getStoreCertificationStatus(
   store: ShopfyStore,
-  t: (key: TranslationKey, values?: Record<string, string | number>) => string,
+  t: (
+    key: TranslationKey,
+    values?: Record<
+      string,
+      string | number
+    >,
+  ) => string,
 ) {
   if (store.isCertified) {
-    return t("admin.storeStatusActive");
+    return t(
+      "admin.storeStatusActive",
+    );
   }
 
-  if (store.certificationExpiresAt && new Date(store.certificationExpiresAt).getTime() <= Date.now()) {
-    return t("admin.statusExpired");
+  if (
+    store.certificationExpiresAt &&
+    new Date(
+      store.certificationExpiresAt,
+    ).getTime() <= Date.now()
+  ) {
+    return t(
+      "admin.statusExpired",
+    );
   }
 
-  return t("admin.storeStatusUncertified");
+  return t(
+    "admin.storeStatusUncertified",
+  );
 }
 
-function getCertificationMessageKey(isCertified: boolean, durationMonths: number): TranslationKey {
+function getCertificationMessageKey(
+  isCertified: boolean,
+  durationMonths: number,
+): TranslationKey {
   if (!isCertified) {
     return "admin.certificationRemoved";
   }
 
-  return durationMonths === 1 ? "admin.certifiedForOneMonth" : "admin.certifiedForMonths";
+  return durationMonths === 1
+    ? "admin.certifiedForOneMonth"
+    : "admin.certifiedForMonths";
 }
 
-function getStoreCertificationMessageKey(isCertified: boolean, durationMonths: number): TranslationKey {
+function getStoreCertificationMessageKey(
+  isCertified: boolean,
+  durationMonths: number,
+): TranslationKey {
   if (!isCertified) {
     return "admin.certificationRemoved";
   }
 
-  return durationMonths === 1 ? "admin.storeCertifiedForOneMonth" : "admin.storeCertifiedForMonths";
+  return durationMonths === 1
+    ? "admin.storeCertifiedForOneMonth"
+    : "admin.storeCertifiedForMonths";
 }
 
-function getAdminMessageKey(message: string | undefined, fallback: TranslationKey): TranslationKey {
+function getAdminMessageKey(
+  message: string | undefined,
+  fallback: TranslationKey,
+): TranslationKey {
   switch (message) {
     case "Admin access denied.":
     case "Acces admin refuse.":
       return "admin.accessDenied";
+
     case "Incomplete request.":
     case "Requete incomplete.":
       return "admin.incompleteRequest";
+
     case "Certification failed.":
     case "Certification impossible.":
       return "admin.certificationImpossible";
+
     case "Missing server configuration.":
     case "Configuration serveur manquante.":
       return "admin.serverMissing";
+
     case "Certification updated, but the date columns are missing in Supabase.":
     case "Certification mise a jour, mais les colonnes de dates manquent dans Supabase.":
       return "admin.updatedMissingColumns";
+
     default:
       return fallback;
   }

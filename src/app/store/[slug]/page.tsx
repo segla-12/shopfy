@@ -64,13 +64,7 @@ async function getPublicStore(slug: string): Promise<ShopfyStore | null> {
       .single();
 
     if (!error && data) {
-      const store = mapStoreRow(data as StoreRow);
-
-      if (store.kind === "reseller" && (!store.isCertified || !store.ownerUserId)) {
-        return null;
-      }
-
-      return store;
+      return mapStoreRow(data as StoreRow);
     }
   } catch {
     // The public page should still be able to render local demo stores without Supabase.
