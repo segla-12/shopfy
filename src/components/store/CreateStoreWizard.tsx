@@ -4,7 +4,7 @@ import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { createStoreSlug } from "@/lib/createdStores";
 import { useLanguage } from "@/lib/language";
-import { phoneCountries } from "@/lib/phoneCountries";
+import { phoneCountries, type PhoneCountry } from "@/lib/phoneCountries";
 import { supabase } from "@/lib/supabase";
 import { getStorePublicUrl, getStoreQrUrl } from "@/lib/storeLinks";
 import {
@@ -54,7 +54,14 @@ export function CreateStoreWizard() {
   const [isSaving, setIsSaving] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authEmail, setAuthEmail] = useState("");
+  const [emailConfirmation, setEmailConfirmation] = useState("");
+  const [isEmailConfirmed, setIsEmailConfirmed] = useState(false);
   const slug = useMemo(() => createStoreSlug(values.name), [values.name]);
+  const selectedCountry = useMemo(
+    () => getSelectedPhoneCountry(values.country),
+    [values.country],
+  );
   const countryOptions = useMemo(
     () => phoneCountries.map((country) => country.name[language === "fr" ? "fr" : "en"]),
     [language],
@@ -64,12 +71,16 @@ export function CreateStoreWizard() {
     const frameId = window.requestAnimationFrame(() => {
       supabase.auth.getSession().then(({ data }) => {
         setIsAuthenticated(Boolean(data.session));
+        setAuthEmail(data.session?.user.email || "");
+        setEmailConfirmation(data.session?.user.email || "");
         setIsCheckingAuth(false);
       });
     });
 
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
       setIsAuthenticated(Boolean(session));
+      setAuthEmail(session?.user.email || "");
+      setEmailConfirmation(session?.user.email || "");
       setIsCheckingAuth(false);
     });
 
@@ -81,6 +92,40 @@ export function CreateStoreWizard() {
 
   function updateValue(field: keyof WizardValues, value: string) {
     setValues((currentValues) => ({ ...currentValues, [field]: value }));
+  }
+
+  function updateCountry(countryName: string) {
+    setValues((currentValues) => {
+      const previousCountry = getSelectedPhoneCountry(currentValues.country);
+      const nextCountry = getSelectedPhoneCountry(countryName);
+      const currentPhone = currentValues.whatsappPhone.trim();
+      const nationalPhone = previousCountry && currentPhone.startsWith(previousCountry.dialCode)
+        ? currentPhone.slice(previousCountry.dialCode.length).replace(/\D/g, "")
+        : currentPhone.replace(/\D/g, "");
+
+      return {
+        ...currentValues,
+        country: countryName,
+        whatsappPhone: nextCountry ? `${nextCountry.dialCode}${nationalPhone}` : currentValues.whatsappPhone,
+      };
+    });
+  }
+
+  function updateNationalPhone(nationalPhone: string) {
+    const digits = nationalPhone.replace(/\D/g, "");
+    updateValue("whatsappPhone", selectedCountry ? `${selectedCountry.dialCode}${digits}` : digits);
+  }
+
+  function confirmEmail(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setErrorMessage("");
+
+    if (emailConfirmation.trim().toLowerCase() !== authEmail.trim().toLowerCase()) {
+      setErrorMessage(copy.emailMismatch);
+      return;
+    }
+
+    setIsEmailConfirmed(true);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -176,6 +221,39 @@ export function CreateStoreWizard() {
     );
   }
 
+  if (!isEmailConfirmed) {
+    return (
+      <section className="mx-auto grid max-w-4xl gap-5 px-4 py-10">
+        <form onSubmit={confirmEmail} className="grid gap-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-gray-900">
+          <div>
+            <p className="text-sm font-black uppercase tracking-wide text-orange-500">{copy.emailConfirmKicker}</p>
+            <h1 className="mt-2 text-3xl font-black text-gray-950 dark:text-white">{copy.emailConfirmTitle}</h1>
+            <p className="mt-3 text-base leading-7 text-gray-600 dark:text-gray-300">{copy.emailConfirmText}</p>
+          </div>
+          <TextField
+            label={copy.email}
+            value={emailConfirmation}
+            onChange={setEmailConfirmation}
+            required
+            type="email"
+            autoComplete="email"
+          />
+          {errorMessage ? (
+            <p className="rounded-md border border-red-100 bg-red-50 p-3 text-sm font-bold text-red-700 dark:border-red-400/20 dark:bg-red-400/10 dark:text-red-200">
+              {errorMessage}
+            </p>
+          ) : null}
+          <button
+            type="submit"
+            className="inline-flex min-h-11 items-center justify-center rounded-md bg-orange-500 px-5 text-sm font-black text-white transition hover:bg-orange-600"
+          >
+            {copy.emailConfirmAction}
+          </button>
+        </form>
+      </section>
+    );
+  }
+
   return (
     <section className="mx-auto grid max-w-5xl gap-6 px-4 py-10">
       <div className="grid gap-3">
@@ -211,8 +289,8 @@ export function CreateStoreWizard() {
           <div className="grid gap-4 md:grid-cols-2">
             <TextField label={copy.ownerName} value={values.ownerName} onChange={(value) => updateValue("ownerName", value)} required />
             <TextField label={copy.city} value={values.city} onChange={(value) => updateValue("city", value)} required />
-            <SelectField label={copy.country} value={values.country} onChange={(value) => updateValue("country", value)} options={countryOptions} required placeholder={copy.selectCountry} />
-            <TextField label={copy.whatsappPhone} value={values.whatsappPhone} onChange={(value) => updateValue("whatsappPhone", value)} required placeholder={copy.whatsappPlaceholder} />
+            <SelectField label={copy.country} value={values.country} onChange={updateCountry} options={countryOptions} required placeholder={copy.selectCountry} />
+            <PhoneField label={copy.whatsappPhone} dialCode={selectedCountry?.dialCode || ""} value={getNationalPhone(values.whatsappPhone, selectedCountry)} onChange={updateNationalPhone} required placeholder={copy.whatsappPlaceholder} />
             <TextField label={copy.storeName} value={values.name} onChange={(value) => updateValue("name", value)} required />
             <SelectField label={copy.category} value={values.category} onChange={(value) => updateValue("category", value)} options={["General", "Fashion", "Beauty", "Shoes", "Electronics", "Home", "Food", "Other"]} />
             <SelectField label={copy.currency} value={values.currency} onChange={(value) => updateValue("currency", value)} options={["XOF", "USD", "EUR", "GBP", "CAD"]} />
@@ -290,6 +368,8 @@ function TextField({
   placeholder,
   required,
   maxLength,
+  type = "text",
+  autoComplete,
 }: {
   label: string;
   value: string;
@@ -297,18 +377,56 @@ function TextField({
   placeholder?: string;
   required?: boolean;
   maxLength?: number;
+  type?: string;
+  autoComplete?: string;
 }) {
   return (
     <label className="grid gap-2">
       <span className="text-sm font-black text-gray-950 dark:text-white">{label}</span>
       <input
+        type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         required={required}
         maxLength={maxLength}
+        autoComplete={autoComplete}
         placeholder={placeholder}
         className="min-h-11 rounded-md border border-gray-200 bg-white px-4 text-sm text-gray-950 outline-none transition focus:border-orange-300 focus:ring-4 focus:ring-orange-100 dark:border-white/10 dark:bg-gray-950 dark:text-white"
       />
+    </label>
+  );
+}
+
+function PhoneField({
+  label,
+  dialCode,
+  value,
+  onChange,
+  placeholder,
+  required,
+}: {
+  label: string;
+  dialCode: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  required?: boolean;
+}) {
+  return (
+    <label className="grid gap-2">
+      <span className="text-sm font-black text-gray-950 dark:text-white">{label}</span>
+      <div className="flex min-h-11 overflow-hidden rounded-md border border-gray-200 bg-white text-sm text-gray-950 focus-within:border-orange-300 focus-within:ring-4 focus-within:ring-orange-100 dark:border-white/10 dark:bg-gray-950 dark:text-white">
+        <span className="inline-flex items-center border-r border-gray-200 px-4 font-black dark:border-white/10">{dialCode || "+"}</span>
+        <input
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          required={required}
+          inputMode="tel"
+          autoComplete="tel-national"
+          placeholder={placeholder}
+          className="min-w-0 flex-1 bg-transparent px-4 outline-none"
+        />
+      </div>
     </label>
   );
 }
@@ -363,7 +481,13 @@ function getCreateStoreCopy(language: string) {
       city: "Ville",
       country: "Pays",
       whatsappPhone: "WhatsApp de commande",
-      whatsappPlaceholder: "+ indicatif pays et numero",
+      whatsappPlaceholder: "Numero national",
+      email: "Email",
+      emailConfirmKicker: "Email confirme",
+      emailConfirmTitle: "Confirmez votre email",
+      emailConfirmText: "Utilisez l'email de votre session ou celui propose par votre navigateur pour continuer.",
+      emailConfirmAction: "Continuer",
+      emailMismatch: "Confirmez l'email connecte a votre session.",
       selectCountry: "Selectionner un pays",
       tagline: "Phrase courte",
       descriptionLabel: "Description",
@@ -410,7 +534,13 @@ function getCreateStoreCopy(language: string) {
     city: "City",
     country: "Country",
     whatsappPhone: "Order WhatsApp",
-    whatsappPlaceholder: "+ country code and number",
+    whatsappPlaceholder: "National number",
+    email: "Email",
+    emailConfirmKicker: "Email confirmed",
+    emailConfirmTitle: "Confirm your email",
+    emailConfirmText: "Use your session email or the email suggested by your browser to continue.",
+    emailConfirmAction: "Continue",
+    emailMismatch: "Confirm the email connected to your session.",
     selectCountry: "Select a country",
     tagline: "Short tagline",
     descriptionLabel: "Description",
@@ -440,4 +570,22 @@ function getCreateStoreCopy(language: string) {
     authText: "The secured version attaches each store to its owner. Create or open your seller account to continue.",
     authAction: "Open my seller account",
   };
+}
+
+function getSelectedPhoneCountry(countryName: string) {
+  return phoneCountries.find((country) => (
+    country.name.fr === countryName || country.name.en === countryName
+  ));
+}
+
+function getNationalPhone(phone: string, country?: PhoneCountry) {
+  const normalizedPhone = phone.trim();
+
+  if (!country) {
+    return normalizedPhone.replace(/\D/g, "");
+  }
+
+  return normalizedPhone.startsWith(country.dialCode)
+    ? normalizedPhone.slice(country.dialCode.length).replace(/\D/g, "")
+    : normalizedPhone.replace(/\D/g, "");
 }
