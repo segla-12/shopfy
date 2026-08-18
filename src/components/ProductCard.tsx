@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { formatPrice } from "@/lib/format";
 import { useLanguage } from "@/lib/language";
@@ -10,6 +9,7 @@ import { buildWhatsAppLink } from "@/lib/whatsapp";
 import type { Product } from "@/types/marketplace";
 import { CertifiedBadge } from "@/ui/CertifiedBadge";
 import { FavoriteButton } from "@/ui/FavoriteButton";
+import { StoreProductImage } from "@/components/store/StoreProductImage";
 
 type ProductCardProps = {
   product: Product;
@@ -19,7 +19,6 @@ type ProductCardProps = {
 export function ProductCard({ product, action = "supplier" }: ProductCardProps) {
   const { language, t } = useLanguage();
   const hasProductImage = Boolean(product.image);
-  const isLocalImage = product.image.startsWith("data:");
   const supplierHref = getSellerProfileHref(product);
   const copy = getProductCardCopy(language);
   const moq = formatMoq(product, copy);
@@ -28,13 +27,12 @@ export function ProductCard({ product, action = "supplier" }: ProductCardProps) 
   const imageContent = (
     <>
       {hasProductImage ? (
-        <Image
+        <StoreProductImage
           src={product.image}
           alt={product.title}
-          fill
-          unoptimized={isLocalImage}
           sizes="(min-width: 640px) 192px, 132px"
           className="object-contain object-center p-3"
+          fallbackLabel="Shopfy"
         />
       ) : (
         <div

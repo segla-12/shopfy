@@ -31,22 +31,45 @@ export type StoreRow = {
 
 export type ProductRow = {
   id: string;
-  slug: string;
-  title: string;
-  description: string | null;
-  category: string | null;
-  image_url: string | null;
-  price: number | string | null;
-  compare_at_price: number | string | null;
-  currency: string | null;
-  inventory_quantity: number | null;
-  source_supplier_name: string | null;
-  source_supplier_slug: string | null;
-  source_product_id: string | null;
+  slug?: string | null;
+  title?: string | null;
+  description?: string | null;
+  category?: string | null;
+  image_url?: string | null;
+  price?: number | string | null;
+  compare_at_price?: number | string | null;
+  currency?: string | null;
+  inventory_quantity?: number | null;
+  source_supplier_name?: string | null;
+  source_supplier_slug?: string | null;
+  source_product_id?: string | null;
 };
 
 export const STORE_SELECT_FIELDS = `
-  *,
+  id,
+  owner_user_id,
+  slug,
+  name,
+  tagline,
+  description,
+  logo_url,
+  banner_url,
+  owner_name,
+  city,
+  country,
+  currency,
+  whatsapp_phone,
+  is_certified,
+  certification_started_at,
+  certification_expires_at,
+  certification_duration_months,
+  certification_amount,
+  created_at,
+  primary_color,
+  accent_color,
+  orders_count,
+  revenue_amount,
+  conversion_rate,
   shopfy_store_products (
     id,
     slug,
@@ -61,6 +84,36 @@ export const STORE_SELECT_FIELDS = `
     source_supplier_name,
     source_supplier_slug,
     source_product_id
+  )
+`;
+
+export const STORE_LIST_SELECT_FIELDS = `
+  id,
+  owner_user_id,
+  slug,
+  name,
+  tagline,
+  description,
+  logo_url,
+  banner_url,
+  owner_name,
+  city,
+  country,
+  currency,
+  whatsapp_phone,
+  is_certified,
+  certification_started_at,
+  certification_expires_at,
+  certification_duration_months,
+  certification_amount,
+  created_at,
+  primary_color,
+  accent_color,
+  orders_count,
+  revenue_amount,
+  conversion_rate,
+  shopfy_store_products (
+    id
   )
 `;
 
@@ -163,8 +216,8 @@ function getValidTime(date?: string | null) {
 export function mapProductRow(row: ProductRow): StoreProduct {
   return {
     id: row.id,
-    slug: row.slug,
-    title: row.title,
+    slug: row.slug || row.id,
+    title: row.title || "",
     description: row.description || "",
     category: row.category || "General",
     image: row.image_url || "",

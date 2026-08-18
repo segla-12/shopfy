@@ -21,14 +21,16 @@ export async function getProducts(): Promise<Product[]> {
     .from("products")
     .select(PRODUCT_SELECT_FIELDS_WITH_FEATURES)
     .order("is_certified", { ascending: false })
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(60);
 
   if (result.error) {
     const fallback = await supabase
       .from("products")
       .select(PRODUCT_SELECT_FIELDS)
       .order("is_certified", { ascending: false })
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(60);
 
     return fallback.error ? [] : mapProductRows(fallback.data);
   }

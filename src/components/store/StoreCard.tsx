@@ -1,11 +1,11 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/lib/language";
 import type { ShopfyStore } from "@/types/storefront";
 import { CertifiedBadge } from "@/ui/CertifiedBadge";
+import { StoreProductImage } from "./StoreProductImage";
 
 type StoreCardProps = {
   store: ShopfyStore;
@@ -43,19 +43,19 @@ export function StoreCard({ store }: StoreCardProps) {
   return (
     <article className="grid overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:border-orange-300 hover:shadow-md dark:border-white/10 dark:bg-gray-900 md:grid-cols-[220px_minmax(0,1fr)]">
       <Link href={`/store/${store.slug}`} className="relative min-h-56 overflow-hidden bg-gray-100 dark:bg-gray-950">
-        <Image
+        <StoreProductImage
           src={store.bannerUrl}
           alt={store.name}
-          fill
           sizes="(min-width: 768px) 220px, 100vw"
           className="object-cover"
+          fallbackLabel={store.name}
         />
       </Link>
 
       <div className="grid gap-4 p-4 sm:p-5">
         <div className="flex min-w-0 items-start gap-3">
           <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-gray-100 bg-white p-1 dark:border-white/10 dark:bg-gray-950">
-            <Image src={store.logoUrl} alt={`${store.name} logo`} fill sizes="56px" className="object-contain" />
+            <StoreProductImage src={store.logoUrl} alt={`${store.name} logo`} sizes="56px" className="object-contain" fallbackLabel={store.name.slice(0, 2)} />
           </div>
           <div className="min-w-0">
             <p className="text-xs font-black uppercase text-orange-500">{copy.badge}</p>

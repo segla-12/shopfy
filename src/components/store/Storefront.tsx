@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useState } from "react";
 import { formatStoreMoney } from "@/lib/demoStores";
 import { useLanguage } from "@/lib/language";
@@ -129,13 +128,13 @@ function StorefrontContent({ store }: StorefrontProps) {
       <div className="bg-gray-50 transition-colors dark:bg-gray-950">
         <section className="mx-auto grid max-w-5xl gap-5 px-4 py-10">
           <div className="relative min-h-[300px] overflow-hidden rounded-lg bg-gray-950">
-            <Image
+            <StoreProductImage
               src={store.bannerUrl}
               alt={store.name}
-              fill
               priority
               sizes="100vw"
               className="object-cover opacity-50"
+              fallbackLabel={store.name}
             />
             <div className="absolute inset-0 flex items-end">
               <div className="grid max-w-3xl gap-3 p-5 sm:p-8">
@@ -172,19 +171,19 @@ function StorefrontContent({ store }: StorefrontProps) {
       <section className="bg-white dark:bg-gray-950">
         <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6">
           <div className="relative min-h-[320px] overflow-hidden rounded-lg bg-gray-950">
-            <Image
+            <StoreProductImage
               src={store.bannerUrl}
               alt={store.name}
-              fill
               priority
               sizes="100vw"
               className="object-cover opacity-70"
+              fallbackLabel={store.name}
             />
             <div className="absolute inset-0 flex items-end">
               <div className="grid max-w-3xl gap-4 p-5 sm:p-8">
                 <div className="flex items-center gap-3">
                   <div className="relative h-16 w-16 overflow-hidden rounded-lg border border-white/40 bg-white">
-                    <Image src={store.logoUrl} alt={`${store.name} logo`} fill sizes="64px" className="object-contain p-1" />
+                    <StoreProductImage src={store.logoUrl} alt={`${store.name} logo`} sizes="64px" className="object-contain p-1" fallbackLabel={store.name.slice(0, 2)} />
                   </div>
                   <div>
                     <p className="text-xs font-black uppercase tracking-wide text-orange-200">{store.city}, {store.country}</p>

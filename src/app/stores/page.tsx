@@ -4,7 +4,7 @@ import { Navbar } from "@/components/Navbar";
 import { StoresDirectory } from "@/components/store/StoresDirectory";
 import { createSupabaseAnonClient } from "@/lib/supabaseAdmin";
 import { demoStores } from "@/lib/demoStores";
-import { mapStoreRow, STORE_SELECT_FIELDS, type StoreRow } from "@/lib/storeRows";
+import { mapStoreRow, STORE_LIST_SELECT_FIELDS, type StoreRow } from "@/lib/storeRows";
 import { cleanText } from "@/lib/validation";
 import { DEFAULT_LANGUAGE, isLanguage, LANGUAGE_COOKIE_KEY } from "@/lib/languageConfig";
 import type { ShopfyStore } from "@/types/storefront";
@@ -42,8 +42,9 @@ async function getPublicStores(): Promise<ShopfyStore[]> {
     const supabase = createSupabaseAnonClient();
     const { data, error } = await supabase
       .from("shopfy_stores")
-      .select(STORE_SELECT_FIELDS)
-      .order("created_at", { ascending: false });
+      .select(STORE_LIST_SELECT_FIELDS)
+      .order("created_at", { ascending: false })
+      .limit(24);
 
     if (error || !data) {
       return demoStores;

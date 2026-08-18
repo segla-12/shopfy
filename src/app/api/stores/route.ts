@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createStoreSlug, getDefaultStoreImage, getDefaultStoreLogo, type CreateStoreInput } from "@/lib/createdStores";
 import { createSupabaseRequestClient } from "@/lib/supabaseAdmin";
-import { mapStoreRow, STORE_SELECT_FIELDS, type StoreRow } from "@/lib/storeRows";
+import { mapStoreRow, STORE_LIST_SELECT_FIELDS, STORE_SELECT_FIELDS, type StoreRow } from "@/lib/storeRows";
 import { cleanImage, cleanText, hasUnsafeObjectKeys } from "@/lib/validation";
 import {
   getInternationalWhatsappPhoneError,
@@ -30,11 +30,13 @@ export async function GET(request: Request) {
 
     let query = supabase
       .from("shopfy_stores")
-      .select(STORE_SELECT_FIELDS)
+      .select(onlyMine ? STORE_SELECT_FIELDS : STORE_LIST_SELECT_FIELDS)
       .order("created_at", { ascending: false });
 
     if (onlyMine) {
       query = query.eq("owner_user_id", ownerUserId);
+    } else {
+      query = query.limit(24);
     }
 
     const { data, error } = await query;

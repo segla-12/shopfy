@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import { StoreProductImage } from "@/components/store/StoreProductImage";
 import { formatPrice } from "@/lib/format";
 import { useLanguage } from "@/lib/language";
 import { getSupplierProfileHref } from "@/lib/seller";
@@ -31,13 +31,12 @@ export function SupplierCard({ supplier }: SupplierCardProps) {
         className="relative h-[clamp(204px,58vw,232px)] overflow-hidden border-r border-gray-100 bg-gray-50 sm:h-[clamp(196px,24vw,224px)] dark:border-white/10 dark:bg-gray-950"
       >
         {supplierImage ? (
-          <Image
+          <StoreProductImage
             src={supplierImage}
             alt={supplierName}
-            fill
-            unoptimized={supplierImage.startsWith("data:")}
             sizes="(min-width: 1024px) 220px, (min-width: 640px) 190px, 132px"
             className="object-contain object-center p-3"
+            fallbackLabel="Shopfy"
           />
         ) : (
           <div className="flex h-full items-center justify-center p-3">
