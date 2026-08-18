@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
+import { createSupabaseAdminClient, createSupabaseRequestClient } from "@/lib/supabaseAdmin";
 import { mapSupabaseProduct, PRODUCT_SELECT_FIELDS } from "@/lib/productMapping";
 import { toEnglishText } from "@/lib/englishText";
 import { toEnglishWholesaleDescription } from "@/lib/productWholesale";
@@ -19,6 +19,11 @@ type ManageRequest = {
     location?: string;
     category?: string;
   };
+};
+
+type ProductOwnerCheck = {
+  productId: string;
+  phoneMatches: string[];
 };
 
 export async function PATCH(request: Request) {
@@ -52,6 +57,11 @@ export async function PATCH(request: Request) {
   let error;
 
   try {
+    const ownerCheck = await verifyProductOwner(request, { productId, phoneMatches });
+    if (ownerCheck) {
+      return ownerCheck;
+    }
+
     const supabaseAdmin = createSupabaseAdminClient();
     const result = await supabaseAdmin
       .from("products")
@@ -90,24 +100,71 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ success: false }, { status: 400 });
   }
 
+  let data;
   let error;
 
   try {
+    const ownerCheck = await verifyProductOwner(request, { productId, phoneMatches });
+    if (ownerCheck) {
+      return ownerCheck;
+    }
+
     const supabaseAdmin = createSupabaseAdminClient();
     const result = await supabaseAdmin
       .from("products")
       .delete()
       .eq("id", productId)
-      .in("phone", phoneMatches);
+      .in("phone", phoneMatches)
+      .select("id")
+      .single();
 
+    data = result.data;
     error = result.error;
   } catch {
     return NextResponse.json({ success: false, message: "Missing server configuration." }, { status: 500 });
   }
 
-  if (error) {
+  if (error || !data) {
     return NextResponse.json({ success: false }, { status: 403 });
   }
 
   return NextResponse.json({ success: true });
+}
+
+async function verifyProductOwner(request: Request, { productId, phoneMatches }: ProductOwnerCheck) {
+  const requestSupabase = createSupabaseRequestClient(request);
+  const { data: authData, error: authError } = await requestSupabase.auth.getUser();
+
+  if (authError || !authData.user) {
+    return NextResponse.json({ success: false, message: "Authentication required." }, { status: 401 });
+  }
+
+  const supabaseAdmin = createSupabaseAdminClient();
+  const { data: product, error: productError } = await supabaseAdmin
+    .from("products")
+    .select("id, phone")
+    .eq("id", productId)
+    .in("phone", phoneMatches)
+    .single();
+
+  if (productError || !product) {
+    return NextResponse.json({ success: false }, { status: 403 });
+  }
+
+  const storedProductPhone = cleanText(product.phone);
+  const normalizedProductPhone = normalizeWhatsappPhone(storedProductPhone);
+  const storePhoneMatches = Array.from(new Set([storedProductPhone, normalizedProductPhone].filter(Boolean)));
+  const { data: store, error: storeError } = await supabaseAdmin
+    .from("shopfy_stores")
+    .select("id")
+    .eq("owner_user_id", authData.user.id)
+    .in("whatsapp_phone", storePhoneMatches)
+    .limit(1)
+    .maybeSingle();
+
+  if (storeError || !store) {
+    return NextResponse.json({ success: false, message: "You can only manage your own products." }, { status: 403 });
+  }
+
+  return null;
 }

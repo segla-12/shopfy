@@ -21,8 +21,6 @@ type MessageState = {
   values?: Record<string, string | number>;
 };
 
-const ADMIN_SECRET_STORAGE_KEY = "shopfy_admin_secret";
-
 export default function AdminPage() {
   const { language, t, categoryLabel } = useLanguage();
 
@@ -87,7 +85,6 @@ export default function AdminPage() {
       setStores([]);
       setStoreSearch("");
       setStoreToDelete(null);
-      window.sessionStorage.removeItem(ADMIN_SECRET_STORAGE_KEY);
       setCertificationDates({});
       setCertificationDurations({});
       setStoreCertificationDates({});
@@ -129,11 +126,6 @@ export default function AdminPage() {
 
     setProducts(loadedProducts);
     setStores(loadedStores);
-
-    window.sessionStorage.setItem(
-      ADMIN_SECRET_STORAGE_KEY,
-      adminSecret,
-    );
 
     setIsUnlocked(true);
     setIsLoading(false);

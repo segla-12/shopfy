@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { isValidAdminSecret } from "@/lib/adminAuth";
+import {
+  ADMIN_SESSION_COOKIE,
+  createAdminSessionCookieValue,
+  getAdminSessionMaxAgeSeconds,
+  isValidAdminSecret,
+} from "@/lib/adminAuth";
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import { cleanText } from "@/lib/validation";
 
@@ -29,7 +34,7 @@ export async function POST(request: Request) {
 
   if ((!productId && !storeSlug) || typeof body.isCertified !== "boolean") {
     if (!productId && !storeSlug && typeof body.isCertified === "undefined") {
-      return NextResponse.json({ success: true });
+      return withAdminSession(NextResponse.json({ success: true }));
     }
 
     return NextResponse.json(
@@ -124,7 +129,7 @@ export async function POST(request: Request) {
     );
   }
 
-  return NextResponse.json({
+  return withAdminSession(NextResponse.json({
     success: true,
     certification: body.isCertified
       ? {
@@ -137,7 +142,18 @@ export async function POST(request: Request) {
     message: usedFallback
       ? "Certification updated, but the date columns are missing in Supabase."
       : undefined,
+  }));
+}
+
+function withAdminSession(response: NextResponse) {
+  response.cookies.set(ADMIN_SESSION_COOKIE, createAdminSessionCookieValue(), {
+    httpOnly: true,
+    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: getAdminSessionMaxAgeSeconds(),
+    path: "/",
   });
+  return response;
 }
 
 function normalizeDurationMonths(durationMonths?: number) {

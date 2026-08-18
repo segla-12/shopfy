@@ -39,7 +39,7 @@ type DashboardStatus = "checking" | "unauthenticated" | "missing-store" | "ready
 
 const CERTIFICATION_PRICE_PER_MONTH = 1500;
 const DESCRIPTION_MAX_LENGTH = 500;
-const ADMIN_SECRET_STORAGE_KEY = "shopfy_admin_secret";
+const ADMIN_COOKIE_AUTH_SENTINEL = "cookie-session";
 const certificationDurationOptions = [1, 2, 3, 6, 12];
 
 type ManualProductValues = {
@@ -246,7 +246,7 @@ export function SellerDashboardMvp({ adminStoreSlug = "" }: { adminStoreSlug?: s
     () => allProducts.find((product) => product.id === manualSaleValues.productId),
     [allProducts, manualSaleValues.productId],
   );
-  const adminSecret = typeof window === "undefined" ? "" : window.sessionStorage.getItem(ADMIN_SECRET_STORAGE_KEY) || "";
+  const adminSecret = isAdminMode ? ADMIN_COOKIE_AUTH_SENTINEL : "";
   const manualSaleTotal = Math.max(
     0,
     (Number(manualSaleValues.unitPrice) || 0) * (Number(manualSaleValues.quantity) || 0)
