@@ -2,19 +2,21 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Shopfy - Modern marketplace",
+    name: "Shopfy",
     short_name: "Shopfy",
-    description: "Buy and sell easily with Shopfy.",
+    description:
+      "Shopfy is a modern marketplace connecting buyers with trusted wholesale suppliers and storefronts.",
     start_url: "/",
     scope: "/",
     display: "standalone",
     background_color: "#ffffff",
-    theme_color: "#ffffff",
+    theme_color: "#0f172a",
     icons: [
       {
         src: "/favicon.ico",
         sizes: "any",
         type: "image/x-icon",
+        purpose: "any",
       },
       {
         src: "/shopfy-favicon-clean.png",

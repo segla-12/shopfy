@@ -20,20 +20,50 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://shopfy.site"),
-  title: "Shopfy - Modern marketplace",
-  description: "Buy and sell easily with Shopfy.",
+  title: {
+    default: "Shopfy",
+    template: "%s | Shopfy",
+  },
+  description:
+    "Shopfy is a modern marketplace connecting buyers with trusted wholesale suppliers and storefronts.",
+  applicationName: "Shopfy",
   manifest: "/manifest.webmanifest",
+  alternates: {
+    canonical: "https://shopfy.site",
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://shopfy.site",
+    siteName: "Shopfy",
+    title: "Shopfy",
+    description:
+      "Shopfy is a modern marketplace connecting buyers with trusted wholesale suppliers and storefronts.",
+    images: [
+      {
+        url: "https://shopfy.site/shopfy-logo-clean.png",
+        width: 1200,
+        height: 420,
+        alt: "Shopfy official logo",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    site: "@shopfy",
+    title: "Shopfy",
+    description:
+      "Shopfy is a modern marketplace connecting buyers with trusted wholesale suppliers and storefronts.",
+    images: ["https://shopfy.site/shopfy-logo-clean.png"],
+  },
   icons: {
     icon: [
       { url: "/favicon.ico", type: "image/x-icon", sizes: "any" },
-      { url: "/favicon-shopfy.ico", type: "image/x-icon", sizes: "any" },
       { url: "/shopfy-favicon-clean.png", type: "image/png", sizes: "512x512" },
+      { url: "/shopfy-favicon.png", type: "image/png", sizes: "512x512" },
     ],
-    shortcut: ["/favicon.ico", "/favicon-shopfy.ico"],
+    shortcut: "/favicon.ico",
     apple: "/apple-touch-icon-clean.png",
-  },
-  alternates: {
-    canonical: "/",
   },
   other: {
     google: "notranslate",
