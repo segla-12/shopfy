@@ -16,7 +16,7 @@ const geistSans = Geist({
 export const metadata: Metadata = {
   metadataBase: new URL("https://shopfy.site"),
   title: {
-    default: "Shopfy",
+    default: "Shopfy | Votre boutique en ligne",
     template: "%s | Shopfy",
   },
   description:
@@ -31,12 +31,13 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: "https://shopfy.site",
     siteName: "Shopfy",
-    title: "Shopfy",
+    title: "Shopfy | Votre boutique en ligne",
     description:
       "Shopfy is a modern marketplace connecting buyers with trusted wholesale suppliers and storefronts.",
     images: [
       {
         url: "/shopfy-logo-clean.png",
+        type: "image/png",
         width: 640,
         height: 210,
         alt: "Shopfy official logo",
@@ -49,13 +50,12 @@ export const metadata: Metadata = {
     title: "Shopfy",
     description:
       "Shopfy is a modern marketplace connecting buyers with trusted wholesale suppliers and storefronts.",
-    images: ["/shopfy-logo-clean.png"],
+    images: [{ url: "/shopfy-logo-clean.png", alt: "Logo officiel Shopfy" }],
   },
   icons: {
     icon: [
       { url: "/favicon.ico", type: "image/x-icon", sizes: "any" },
       { url: "/shopfy-favicon-clean.png", type: "image/png", sizes: "512x512" },
-      { url: "/shopfy-favicon.png", type: "image/png", sizes: "512x512" },
     ],
     shortcut: "/favicon.ico",
     apple: "/apple-touch-icon-clean.png",
@@ -63,6 +63,32 @@ export const metadata: Metadata = {
   other: {
     google: "notranslate",
   },
+};
+
+const shopfyStructuredData = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://shopfy.site/#organization",
+      name: "Shopfy",
+      url: "https://shopfy.site/",
+      description: metadata.description,
+      logo: {
+        "@type": "ImageObject",
+        url: "https://shopfy.site/shopfy-favicon-clean.png",
+        width: 512,
+        height: 512,
+      },
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://shopfy.site/#website",
+      name: "Shopfy",
+      url: "https://shopfy.site/",
+      publisher: { "@id": "https://shopfy.site/#organization" },
+    },
+  ],
 };
 
 export default async function RootLayout({
@@ -82,6 +108,10 @@ export default async function RootLayout({
       className={`${geistSans.variable} notranslate h-full antialiased`}
     >
       <body className="min-h-full flex flex-col" translate="no">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(shopfyStructuredData).replace(/</g, "\\u003c") }}
+        />
         <ThemeProvider>
           <LanguageProvider initialLanguage={initialLanguage}>
             <FavoritesProvider>

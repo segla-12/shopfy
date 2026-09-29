@@ -2,28 +2,26 @@ import { cookies } from "next/headers";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { StoresDirectory } from "@/components/store/StoresDirectory";
-import { createSupabaseAnonClient } from "@/lib/supabaseAdmin";
-import { demoStores } from "@/lib/demoStores";
-import { mapStoreRow, STORE_LIST_SELECT_FIELDS, type StoreRow } from "@/lib/storeRows";
+import { getPublicStores } from "@/lib/publicStores";
 import { cleanText } from "@/lib/validation";
 import { DEFAULT_LANGUAGE, isLanguage, LANGUAGE_COOKIE_KEY } from "@/lib/languageConfig";
-import type { ShopfyStore } from "@/types/storefront";
 
 export const metadata = {
-  title: "Seller stores - Shopfy",
+  title: { absolute: "Shopfy | Votre boutique en ligne" },
   description: "Discover seller stores created on Shopfy.",
   alternates: {
-    canonical: "https://shopfy.site/stores",
+    canonical: "https://shopfy.site/",
   },
   openGraph: {
     type: "website",
-    url: "https://shopfy.site/stores",
+    url: "https://shopfy.site/",
     siteName: "Shopfy",
-    title: "Seller stores - Shopfy",
+    title: "Shopfy | Votre boutique en ligne",
     description: "Discover seller stores created on Shopfy.",
     images: [
       {
         url: "/shopfy-logo-clean.png",
+        type: "image/png",
         width: 640,
         height: 210,
         alt: "Shopfy official logo",
@@ -32,9 +30,9 @@ export const metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Seller stores - Shopfy",
+    title: "Shopfy | Votre boutique en ligne",
     description: "Discover seller stores created on Shopfy.",
-    images: ["/shopfy-logo-clean.png"],
+    images: [{ url: "/shopfy-logo-clean.png", alt: "Logo officiel Shopfy" }],
   },
 };
 
@@ -59,23 +57,4 @@ export default async function StoresPage({ searchParams }: StoresPageProps) {
       <Footer />
     </main>
   );
-}
-
-async function getPublicStores(): Promise<ShopfyStore[]> {
-  try {
-    const supabase = createSupabaseAnonClient();
-    const { data, error } = await supabase
-      .from("shopfy_stores")
-      .select(STORE_LIST_SELECT_FIELDS)
-      .order("created_at", { ascending: false })
-      .limit(24);
-
-    if (error || !data) {
-      return demoStores;
-    }
-
-    return (data as StoreRow[]).map(mapStoreRow);
-  } catch {
-    return demoStores;
-  }
 }

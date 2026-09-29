@@ -38,20 +38,13 @@ export async function generateMetadata({ params }: StorePageProps) {
       siteName: "Shopfy",
       title: `${store.name} | Shopfy`,
       description: store.description,
-      images: [
-        {
-          url: "/shopfy-logo-clean.png",
-          width: 640,
-          height: 210,
-          alt: "Shopfy official logo",
-        },
-      ],
+      images: [{ url: store.bannerUrl || store.logoUrl || "/shopfy-logo-clean.png", alt: store.name }],
     },
     twitter: {
       card: "summary_large_image",
       title: `${store.name} | Shopfy`,
       description: store.description,
-      images: ["/shopfy-logo-clean.png"],
+      images: [store.bannerUrl || store.logoUrl || "/shopfy-logo-clean.png"],
     },
   };
 }
