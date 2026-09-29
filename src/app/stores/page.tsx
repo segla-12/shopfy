@@ -12,6 +12,30 @@ import type { ShopfyStore } from "@/types/storefront";
 export const metadata = {
   title: "Seller stores - Shopfy",
   description: "Discover seller stores created on Shopfy.",
+  alternates: {
+    canonical: "https://shopfy.site/stores",
+  },
+  openGraph: {
+    type: "website",
+    url: "https://shopfy.site/stores",
+    siteName: "Shopfy",
+    title: "Seller stores - Shopfy",
+    description: "Discover seller stores created on Shopfy.",
+    images: [
+      {
+        url: "/shopfy-logo-clean.png",
+        width: 640,
+        height: 210,
+        alt: "Shopfy official logo",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Seller stores - Shopfy",
+    description: "Discover seller stores created on Shopfy.",
+    images: ["/shopfy-logo-clean.png"],
+  },
 };
 
 type StoresPageProps = {

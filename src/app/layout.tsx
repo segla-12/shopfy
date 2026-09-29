@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist } from "next/font/google";
 import { FavoritesProvider } from "@/lib/favorites";
 import { LanguageProvider } from "@/lib/language";
 import { DEFAULT_LANGUAGE, isLanguage, LANGUAGE_COOKIE_KEY } from "@/lib/languageConfig";
@@ -10,11 +10,6 @@ import "./globals.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
   subsets: ["latin"],
 });
 
@@ -41,9 +36,9 @@ export const metadata: Metadata = {
       "Shopfy is a modern marketplace connecting buyers with trusted wholesale suppliers and storefronts.",
     images: [
       {
-        url: "https://shopfy.site/shopfy-logo-clean.png",
-        width: 1200,
-        height: 420,
+        url: "/shopfy-logo-clean.png",
+        width: 640,
+        height: 210,
         alt: "Shopfy official logo",
       },
     ],
@@ -54,7 +49,7 @@ export const metadata: Metadata = {
     title: "Shopfy",
     description:
       "Shopfy is a modern marketplace connecting buyers with trusted wholesale suppliers and storefronts.",
-    images: ["https://shopfy.site/shopfy-logo-clean.png"],
+    images: ["/shopfy-logo-clean.png"],
   },
   icons: {
     icon: [
@@ -84,7 +79,7 @@ export default async function RootLayout({
       translate="no"
       suppressHydrationWarning
       data-scroll-behavior="smooth"
-      className={`${geistSans.variable} ${geistMono.variable} notranslate h-full antialiased`}
+      className={`${geistSans.variable} notranslate h-full antialiased`}
     >
       <body className="min-h-full flex flex-col" translate="no">
         <ThemeProvider>

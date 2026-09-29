@@ -13,10 +13,28 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }: SellerPageProps) {
   const { phone } = await params;
   const sellerPhone = safeDecodeRouteParam(phone);
+  const canonicalUrl = `https://shopfy.site/seller/${encodeURIComponent(sellerPhone)}`;
+  const title = "Supplier profile";
+  const description = "Explore a wholesale supplier profile and product catalog on Shopfy.";
 
   return {
-    title: `Supplier ${sellerPhone || "Shopfy"} - Shopfy`,
-    description: "Shopfy wholesale supplier profile",
+    title,
+    description,
+    alternates: { canonical: canonicalUrl },
+    openGraph: {
+      type: "website",
+      url: canonicalUrl,
+      siteName: "Shopfy",
+      title: `${title} | Shopfy`,
+      description,
+      images: ["/shopfy-logo-clean.png"],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${title} | Shopfy`,
+      description,
+      images: ["/shopfy-logo-clean.png"],
+    },
   };
 }
 

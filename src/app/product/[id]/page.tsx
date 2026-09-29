@@ -14,10 +14,28 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: ProductPageProps) {
   const { id } = await params;
+  const canonicalUrl = `https://shopfy.site/product/${encodeURIComponent(id)}`;
+  const title = `Product ${id}`;
+  const description = "View product details and contact the supplier on Shopfy.";
 
   return {
-    title: `Product ${id} - Shopfy`,
-    description: "Shopfy product detail",
+    title,
+    description,
+    alternates: { canonical: canonicalUrl },
+    openGraph: {
+      type: "website",
+      url: canonicalUrl,
+      siteName: "Shopfy",
+      title: `${title} | Shopfy`,
+      description,
+      images: ["/shopfy-logo-clean.png"],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${title} | Shopfy`,
+      description,
+      images: ["/shopfy-logo-clean.png"],
+    },
   };
 }
 

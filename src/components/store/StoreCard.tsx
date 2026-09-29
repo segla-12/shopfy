@@ -42,7 +42,7 @@ export function StoreCard({ store }: StoreCardProps) {
 
   return (
     <article className="grid overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:border-orange-300 hover:shadow-md dark:border-white/10 dark:bg-gray-900 md:grid-cols-[220px_minmax(0,1fr)]">
-      <Link href={`/store/${store.slug}`} className="relative min-h-56 overflow-hidden bg-gray-100 dark:bg-gray-950">
+      <Link href={`/store/${store.slug}`} prefetch={false} className="relative min-h-56 overflow-hidden bg-gray-100 dark:bg-gray-950">
         <StoreProductImage
           src={store.bannerUrl}
           alt={store.name}
@@ -76,6 +76,7 @@ export function StoreCard({ store }: StoreCardProps) {
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href={`/store/${store.slug}`}
+            prefetch={false}
             className="inline-flex min-h-10 items-center justify-center rounded-md bg-orange-500 px-4 text-sm font-black text-white transition hover:bg-orange-600"
           >
             {copy.openStore}

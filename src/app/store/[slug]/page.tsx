@@ -22,12 +22,37 @@ export async function generateMetadata({ params }: StorePageProps) {
   if (!store) {
     return {
       title: "Store not found - Shopfy",
+      robots: { index: false, follow: false },
     };
   }
 
+  const canonicalUrl = `https://shopfy.site/store/${encodeURIComponent(store.slug)}`;
+
   return {
-    title: `${store.name} - Shopfy Store`,
+    title: store.name,
     description: store.description,
+    alternates: { canonical: canonicalUrl },
+    openGraph: {
+      type: "website",
+      url: canonicalUrl,
+      siteName: "Shopfy",
+      title: `${store.name} | Shopfy`,
+      description: store.description,
+      images: [
+        {
+          url: "/shopfy-logo-clean.png",
+          width: 640,
+          height: 210,
+          alt: "Shopfy official logo",
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${store.name} | Shopfy`,
+      description: store.description,
+      images: ["/shopfy-logo-clean.png"],
+    },
   };
 }
 
