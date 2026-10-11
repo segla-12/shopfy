@@ -69,16 +69,18 @@ const shopfyStructuredData = {
   "@context": "https://schema.org",
   "@graph": [
     {
-      "@type": "Organization",
+      "@type": "OnlineStore",
       "@id": "https://shopfy.site/#organization",
       name: "Shopfy",
       url: "https://shopfy.site/",
       description: metadata.description,
       logo: {
         "@type": "ImageObject",
-        url: "https://shopfy.site/shopfy-favicon-clean.png",
-        width: 512,
-        height: 512,
+        "@id": "https://shopfy.site/#logo",
+        url: "https://shopfy.site/shopfy-logo-clean.png",
+        contentUrl: "https://shopfy.site/shopfy-logo-clean.png",
+        width: 640,
+        height: 210,
       },
     },
     {
