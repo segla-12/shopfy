@@ -7,8 +7,8 @@ import { cleanText } from "@/lib/validation";
 import { DEFAULT_LANGUAGE, isLanguage, LANGUAGE_COOKIE_KEY } from "@/lib/languageConfig";
 
 export const metadata = {
-  title: { absolute: "Shopfy | Votre boutique en ligne" },
-  description: "Discover seller stores created on Shopfy.",
+  title: { absolute: "Boutique officielle Shopfy | Marketplace" },
+  description: "Découvrez la boutique officielle Shopfy et les boutiques des vendeurs de la marketplace.",
   alternates: {
     canonical: "https://shopfy.site/",
   },
@@ -16,15 +16,15 @@ export const metadata = {
     type: "website",
     url: "https://shopfy.site/",
     siteName: "Shopfy",
-    title: "Shopfy | Votre boutique en ligne",
-    description: "Discover seller stores created on Shopfy.",
+    title: "Boutique officielle Shopfy | Marketplace",
+    description: "Découvrez la boutique officielle Shopfy et les boutiques des vendeurs de la marketplace.",
     images: [
       {
-        url: "/shopfy-logo-clean.png",
-        type: "image/png",
-        width: 640,
-        height: 210,
-        alt: "Shopfy official logo",
+        url: "/SHO.jpg",
+        type: "image/jpeg",
+        width: 1254,
+        height: 1254,
+        alt: "Logo Shopfy",
       },
     ],
   },
@@ -32,7 +32,7 @@ export const metadata = {
     card: "summary_large_image",
     title: "Shopfy | Votre boutique en ligne",
     description: "Discover seller stores created on Shopfy.",
-    images: [{ url: "/shopfy-logo-clean.png", alt: "Logo officiel Shopfy" }],
+    images: [{ url: "/SHO.jpg", alt: "Logo officiel Shopfy" }],
   },
 };
 
