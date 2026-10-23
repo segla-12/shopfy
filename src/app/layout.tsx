@@ -36,21 +36,20 @@ export const metadata: Metadata = {
       "Shopfy is a modern marketplace connecting buyers with trusted wholesale suppliers and storefronts.",
     images: [
       {
-        url: "/SHO.jpg",
-        type: "image/jpeg",
-        width: 1254,
-        height: 1254,
+        url: "/shopfy-logo-clean.png",
+        type: "image/png",
+        width: 640,
+        height: 210,
         alt: "Shopfy official logo",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    site: "@shopfy",
     title: "Shopfy",
     description:
       "Shopfy is a modern marketplace connecting buyers with trusted wholesale suppliers and storefronts.",
-    images: [{ url: "/SHO.jpg", alt: "Logo officiel Shopfy" }],
+    images: [{ url: "/shopfy-logo-clean.png", alt: "Logo officiel Shopfy" }],
   },
   icons: {
     icon: [
@@ -69,19 +68,12 @@ const shopfyStructuredData = {
   "@context": "https://schema.org",
   "@graph": [
     {
-      "@type": "OnlineStore",
+      "@type": "Organization",
       "@id": "https://shopfy.site/#organization",
       name: "Shopfy",
       url: "https://shopfy.site/",
       description: metadata.description,
-      logo: {
-        "@type": "ImageObject",
-        "@id": "https://shopfy.site/#logo",
-        url: "https://shopfy.site/SHO.jpg",
-        contentUrl: "https://shopfy.site/SHO.jpg",
-        width: 1254,
-        height: 1254,
-      },
+      logo: "https://shopfy.site/shopfy-logo-clean.png",
     },
     {
       "@type": "WebSite",

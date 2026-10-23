@@ -20,10 +20,10 @@ export const metadata = {
     description: "Découvrez la boutique officielle Shopfy et les boutiques des vendeurs de la marketplace.",
     images: [
       {
-        url: "/SHO.jpg",
-        type: "image/jpeg",
-        width: 1254,
-        height: 1254,
+        url: "/shopfy-logo-clean.png",
+        type: "image/png",
+        width: 640,
+        height: 210,
         alt: "Logo Shopfy",
       },
     ],
@@ -32,7 +32,7 @@ export const metadata = {
     card: "summary_large_image",
     title: "Shopfy | Votre boutique en ligne",
     description: "Discover seller stores created on Shopfy.",
-    images: [{ url: "/SHO.jpg", alt: "Logo officiel Shopfy" }],
+    images: [{ url: "/shopfy-logo-clean.png", alt: "Logo officiel Shopfy" }],
   },
 };
 
